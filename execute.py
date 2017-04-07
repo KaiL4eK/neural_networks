@@ -21,8 +21,7 @@ def preprocess_image(img):
 	return img
 
 def execute_model():
-	model = get_unet()
-	model.load_weights('last_weights.h5')
+	model = load_model('last_model.h5')
 
 	for image_name in os.listdir(data_path):
 		img = cv2.imread(os.path.join(data_path, image_name), cv2.IMREAD_COLOR)
