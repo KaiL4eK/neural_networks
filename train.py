@@ -154,8 +154,8 @@ def train_and_predict():
 	print('-'*30)
 	print('Creating and compiling model...')
 	print('-'*30)
-	model = load_model('best_model.h5')
-	# model = get_unet()
+	# model = load_model('best_model.h5')
+	model = get_unet()
 	# model.load_weights('last_weights.h5')
 
 	print('-'*30)

@@ -5,6 +5,7 @@ from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint
 from keras import backend as K
 from keras.utils.layer_utils import print_summary
+from keras.utils.vis_utils import plot_model
 import numpy as np
 
 from data import load_train_data, load_test_data
@@ -97,7 +98,7 @@ def get_unet():
 	model.compile(optimizer=Adam(lr=1e-5), loss=iou_loss, metrics=[])
 	# model.compile(optimizer='sgd', loss=iou_loss, metrics=[dice_coef])
 	print_summary(model)
-
+	plot_model(model, show_shapes=True, to_file='model.png')
 	return model
 
 
