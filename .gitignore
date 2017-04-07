@@ -1,0 +1,7 @@
+*.pyc
+*.npy
+*.csv
+*.h5
+**raw
+*.log
+*.tar.gz
