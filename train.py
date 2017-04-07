@@ -154,7 +154,7 @@ def train_and_predict():
 	print('-'*30)
 	print('Creating and compiling model...')
 	print('-'*30)
-	model = load_model('last_model.h5')
+	model = load_model('best_model.h5')
 	# model = get_unet()
 	# model.load_weights('last_weights.h5')
 
@@ -163,7 +163,7 @@ def train_and_predict():
 	print('-'*30)
 
 	model.fit(imgs_train, imgs_mask_train, batch_size=1, epochs=20, verbose=1, shuffle=True,
-			  validation_split=0.11, callbacks=[ModelCheckpoint('model.h5', monitor='loss', save_best_only=True, verbose=1), TestCallback()])
+			  validation_split=0.11, callbacks=[ModelCheckpoint('best_model.h5', monitor='loss', save_best_only=True, verbose=1), TestCallback()])
 
 
 

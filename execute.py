@@ -3,7 +3,7 @@ from __future__ import print_function
 import os
 import cv2
 import numpy as np
-from keras.models import Model
+from keras.models import Model, load_model
 
 from data import load_train_data, load_test_data
 
@@ -21,7 +21,23 @@ def preprocess_image(img):
 	return img
 
 def execute_model():
-	model = load_model('last_model.h5')
+	model = get_unet()
+	model.load_weights('best_model.h5')
+
+	cap = cv2.VideoCapture('vid.webm')
+	while(cap.isOpened()):
+	    ret, frame = cap.read()
+
+	    # gray = cv2.cvtColor(frame, cv2.IMREAD_COLOR)
+
+	    cv2.imshow('frame',gray)
+	    if cv2.waitKey(0) & 0xFF == ord('q'):
+	        break
+
+	cap.release()
+	cv2.destroyAllWindows()
+	exit(1)
+
 
 	for image_name in os.listdir(data_path):
 		img = cv2.imread(os.path.join(data_path, image_name), cv2.IMREAD_COLOR)
@@ -30,9 +46,7 @@ def execute_model():
 		
 		img = preprocess_image(img)
 
-		imgs_mask = model.predict(np.array([img]), verbose=1)
-		img_mask = (imgs_mask[0, :, :, 0] * 255.).astype(np.uint8)
-
+		imgs_mask = model.predict(np.array([img]))
 		img_mask = cv2.resize(imgs_mask[0], (width, height), interpolation = cv2.INTER_NEAREST)
 		cv2.imshow('2', img_mask)
 
