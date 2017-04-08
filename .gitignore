@@ -4,3 +4,6 @@
 **raw
 *.log
 *.tar.gz
+*old.h5
+*.avi
+*.webm
