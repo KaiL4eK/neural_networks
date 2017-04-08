@@ -6,15 +6,15 @@ import cv2
 
 data_path = 'raw/'
 
-image_rows = 240
-image_cols = 320
+npy_img_height = 240
+npy_img_width = 320
 
 def create_train_data():
     images = os.listdir(data_path)
     total = len(images)
 
-    imgs = np.ndarray((total, image_rows, image_cols, 3), dtype=np.uint8)
-    imgs_mask = np.ndarray((total, image_rows, image_cols), dtype=np.uint8)
+    imgs = np.ndarray((total, npy_img_height, npy_img_width, 3), dtype=np.uint8)
+    imgs_mask = np.ndarray((total, npy_img_height, npy_img_width), dtype=np.uint8)
 
     i = 0
     print('-'*30)
@@ -29,7 +29,7 @@ def create_train_data():
         lr_x = ul_x + max(0, int(info[3]))
         lr_y = ul_y + max(0, int(info[4]))
 
-        imgs_mask[i] = np.zeros((image_rows,image_cols), np.uint8)
+        imgs_mask[i] = np.zeros((npy_img_height, npy_img_width), np.uint8)
         cv2.rectangle(imgs_mask[i], (ul_x, ul_y), (lr_x, lr_y), thickness=-1, color=255 )
 
         if i % 100 == 0:
@@ -53,7 +53,7 @@ def create_test_data():
     images = os.listdir(train_data_path)
     total = len(images)
 
-    imgs = np.ndarray((total, image_rows, image_cols), dtype=np.uint8)
+    imgs = np.ndarray((total, npy_img_height, npy_img_width), dtype=np.uint8)
     imgs_id = np.ndarray((total, ), dtype=np.int32)
 
     i = 0

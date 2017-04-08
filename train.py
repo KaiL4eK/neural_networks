@@ -33,12 +33,12 @@ class TestCallback(Callback):
 		img_mask_truth = np.zeros((240, 320), np.uint8)
 		cv2.rectangle(img_mask_truth, (ul_x, ul_y), (lr_x, lr_y), thickness=-1, color=255 )
 
-		imgs_mask = self.model.predict(np.reshape(test_img, (1, img_side_size, img_side_size, 3)), verbose=0)
+		imgs_mask = self.model.predict(np.reshape(test_img, (1, nn_img_side, nn_img_side, 3)), verbose=0)
 		# img_mask = cv2.resize(imgs_mask[0], (width, height), interpolation = cv2.INTER_NEAREST)
 
 		cv2.imshow('2', imgs_mask[0])
 
-		img_mask_truth = cv2.resize(img_mask_truth, (img_side_size, img_side_size), interpolation = cv2.INTER_NEAREST)
+		img_mask_truth = cv2.resize(img_mask_truth, (nn_img_side, nn_img_side), interpolation = cv2.INTER_NEAREST)
 		img_mask_truth = img_mask_truth.astype('float32')
 		img_mask_truth /= 255.
 		
@@ -47,8 +47,8 @@ class TestCallback(Callback):
 			cv2.destroyAllWindows()
 			exit(1)
 
-		loss = self.model.evaluate( np.reshape(test_img, 	   (1, img_side_size, img_side_size, 3)), 
-									np.reshape(img_mask_truth, (1, img_side_size, img_side_size, 1)), verbose=0, batch_size=1)
+		loss = self.model.evaluate( np.reshape(test_img, 	   (1, nn_img_side, nn_img_side, 3)), 
+									np.reshape(img_mask_truth, (1, nn_img_side, nn_img_side, 1)), verbose=0, batch_size=1)
 		
 		# input_data = self.model.layers[0].get_output()
 		# output_data = self.model.layers[31].get_output()
@@ -59,8 +59,8 @@ class TestCallback(Callback):
 
 
 def preprocess_arrays(imgs, masks):
-	imgs_p  = np.ndarray((imgs.shape[0],  img_side_size, img_side_size, 3), dtype=np.float32)
-	masks_p = np.ndarray((masks.shape[0], img_side_size, img_side_size),    dtype=np.float32)
+	imgs_p  = np.ndarray((imgs.shape[0],  nn_img_side, nn_img_side, 3), dtype=np.float32)
+	masks_p = np.ndarray((masks.shape[0], nn_img_side, nn_img_side),    dtype=np.float32)
 	for i in range(imgs.shape[0]):
 		imgs_p[i]  = preprocess_img(imgs[i])
 		masks_p[i] = preprocess_mask(masks[i])
@@ -80,23 +80,10 @@ def train_and_predict():
 	imgs_train, imgs_mask_train = load_train_data()
 	imgs_train, imgs_mask_train = preprocess_arrays(imgs_train, imgs_mask_train)
 
-	# cv2.imshow('1', imgs_train[0])
-	# cv2.imshow('2', imgs_mask_train[0])
-	# if cv2.waitKey(0) == 27:
-	# 	exit(1)
-	# cv2.destroyAllWindows()
-
-	# imgs_train = imgs_train.astype('float32') 
-	# imgs_train -= mean
-	# imgs_train /= 255.
-
-	# imgs_mask_train = imgs_mask_train.astype('float32')
-	# imgs_mask_train /= 255.  # scale masks to [0, 1]
-
 	print('-'*30)
 	print('Creating and compiling model...')
 	print('-'*30)
-	# model = load_model('best_model.h5')
+
 	model = get_unet()
 	# model.load_weights('last_weights.h5')
 

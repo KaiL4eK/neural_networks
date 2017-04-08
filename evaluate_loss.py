@@ -11,8 +11,8 @@ from data import load_train_data, load_test_data, data_path
 from net import *
 
 def preprocess_arrays(imgs, masks):
-	imgs_p  = np.ndarray((imgs.shape[0],  img_side_size, img_side_size, 3), dtype=np.float32)
-	masks_p = np.ndarray((masks.shape[0], img_side_size, img_side_size),    dtype=np.float32)
+	imgs_p  = np.ndarray((imgs.shape[0],  nn_img_side, nn_img_side, 3), dtype=np.float32)
+	masks_p = np.ndarray((masks.shape[0], nn_img_side, nn_img_side),    dtype=np.float32)
 	for i in range(imgs.shape[0]):
 		imgs_p[i]  = preprocess_img(imgs[i])
 		masks_p[i] = preprocess_mask(masks[i])
