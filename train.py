@@ -104,41 +104,8 @@ def train_and_predict():
 	print('Fitting model...')
 	print('-'*30)
 
-	model.fit(imgs_train, imgs_mask_train, batch_size=1, epochs=2000, verbose=1, shuffle=True, validation_split=0.11, 
-				callbacks=[ModelCheckpoint('best_model.h5', monitor='loss', save_best_only=True, verbose=1)])
-
-
-
-	# print('-'*30)
-	# print('Loading and preprocessing test data...')
-	# print('-'*30)
-	# imgs_test, imgs_id_test = load_test_data()
-	# imgs_test = preprocess(imgs_test)
-
-	# imgs_test = imgs_test.astype('float32')
-	# imgs_test -= mean
-	# imgs_test /= 255.
-
-	# print('-'*30)
-	# print('Loading saved weights...')
-	# print('-'*30)
-	# model.load_weights('weights.h5')
-
-	# print('-'*30)
-	# print('Predicting masks on test data...')
-	# print('-'*30)
-	# imgs_mask_test = model.predict(imgs_test, verbose=1)
-	# np.save('imgs_mask_test.npy', imgs_mask_test)
-
-	# print('-' * 30)
-	# print('Saving predicted masks to files...')
-	# print('-' * 30)
-	# pred_dir = 'preds/'
-	# if not os.path.exists(pred_dir):
-	# 	os.mkdir(pred_dir)
-	# for image, image_id in zip(imgs_mask_test, imgs_id_test):
-	# 	image = (image[:, :, 0] * 255.).astype(np.uint8)
-	# 	imsave(pred_dir + image_id + '_pred.png', image)
+	model.fit(imgs_train, imgs_mask_train, batch_size=32, epochs=2000, verbose=1, shuffle=True, validation_split=0.11, 
+				callbacks=[ModelCheckpoint('best_model.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1)])
 
 if __name__ == '__main__':
 	train_and_predict()
