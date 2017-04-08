@@ -21,7 +21,7 @@ def create_train_data():
     print('Creating training images...')
     print('-'*30)
     for image_name in images:
-        imgs[i] = cv2.imread(os.path.join(data_path, image_name), cv2.IMREAD_COLOR)
+        imgs[i] = cv2.imread(os.path.join(data_path, image_name))
 
         info = image_name.split(';')
         ul_x = max(0, int(info[1]))

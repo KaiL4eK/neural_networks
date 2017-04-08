@@ -7,16 +7,17 @@ from keras import backend as K
 from keras.utils.layer_utils import print_summary
 from keras.utils.vis_utils import plot_model
 import numpy as np
+import cv2
 
 from data import load_train_data, load_test_data
 
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
 img_side_size = 96
-mean = 116.357
+
+### Rates ###
 
 smooth = 1.
-
 def dice_coef(y_true, y_pred):
 	y_true_f = K.flatten(y_true)
 	y_pred_f = K.flatten(y_pred)
@@ -25,6 +26,7 @@ def dice_coef(y_true, y_pred):
 
 def dice_coef_loss(y_true, y_pred):
 	return -dice_coef(y_true, y_pred)
+
 
 def intersect_on_union(y_true, y_pred):
 	y_true_f = K.flatten(y_true)
@@ -36,58 +38,83 @@ def intersect_on_union(y_true, y_pred):
 def iou_loss(y_true, y_pred):
 	return 1-intersect_on_union(y_true, y_pred)
 
+
 def shape_metrics(y_true, y_pred):
-	# y_true_f = K.flatten(y_true)
 	return K.shape(y_true)[0]
+
+### Image preprocessing ###
+
+# Output is resized, BGR, mean subtracted, [0, 1.] scaled by values
+def preprocess_img(img):
+	img = cv2.resize(img, (img_side_size, img_side_size), interpolation = cv2.INTER_LINEAR)
+	img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+	img = img.astype('float32', copy=False)
+	img[:,:,0] -= 103.939
+	img[:,:,1] -= 116.779
+	img[:,:,2] -= 123.68
+	img /= 255.
+
+	return img
+
+def preprocess_mask(img):
+	img = cv2.resize(img, (img_side_size, img_side_size), interpolation = cv2.INTER_NEAREST)
+	img = img.astype('float32', copy=False)
+	img /= 255.
+
+	return img
+
+### Net structure ###
 
 def get_unet():
 	# inputs = Input((img_side_size, img_side_size, 3))
 	model = Sequential()
 
 	model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(img_side_size, img_side_size, 3)))
-	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
 	model.add(MaxPooling2D(pool_size=(2, 2)))
 
 	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(Dropout(0.25))
+
+	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
 	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
 	model.add(MaxPooling2D(pool_size=(2, 2)))
 	model.add(Dropout(0.25))
 
-	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Dropout(0.25))
+	# model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+	# model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(Dropout(0.25))
 
 	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Dropout(0.25))
-
-	model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
+#	model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
 	model.add(Dropout(0.25))
 
 	# up6 = concatenate([UpSampling2D(size=(2, 2))(conv5), conv4], axis=3)
 	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	model.add(Dropout(0.5))
+	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+#	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+	model.add(Dropout(0.25))
 
 	# up7 = concatenate([UpSampling2D(size=(2, 2))(conv6), conv3], axis=3)
-	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-	model.add(Dropout(0.5))
+	# model.add(UpSampling2D(size=(2, 2)))
+	# model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+#	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+	# model.add(Dropout(0.25))
 
 	# up8 = concatenate([UpSampling2D(size=(2, 2))(conv7), conv2], axis=3)
 	model.add(UpSampling2D(size=(2, 2)))
 	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+#	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	model.add(Dropout(0.25))
 
 	# up9 = concatenate([UpSampling2D(size=(2, 2))(conv8), conv1], axis=3)
 	model.add(UpSampling2D(size=(2, 2)))
 	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+#	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+	model.add(Dropout(0.25))
 
 	model.add(Conv2D(1, (1, 1), activation='hard_sigmoid'))
 
@@ -95,11 +122,77 @@ def get_unet():
 	
 
 	# model.compile(optimizer=Adam(lr=1e-5), loss=binary_crossentropy, metrics=[dice_coef, intersect_on_union])
-	model.compile(optimizer=Adam(lr=1e-5), loss=iou_loss, metrics=[])
+	model.compile(optimizer=Adam(lr=1e-5), loss=iou_loss, metrics=[binary_crossentropy])
 	# model.compile(optimizer='sgd', loss=iou_loss, metrics=[dice_coef])
 	print_summary(model)
-	plot_model(model, show_shapes=True, to_file='model.png')
+	plot_model(model, show_shapes=True)
 	return model
+
+
+def get_unet_old():
+	# inputs = Input((img_side_size, img_side_size, 3))
+	model = Sequential()
+
+	model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(img_side_size, img_side_size, 3)))
+	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+	model.add(MaxPooling2D(pool_size=(2, 2)))
+
+	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(Dropout(0.25))
+
+	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+	model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(Dropout(0.25))
+
+	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+	model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(Dropout(0.25))
+
+	model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
+#	model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
+	model.add(Dropout(0.25))
+
+	# up6 = concatenate([UpSampling2D(size=(2, 2))(conv5), conv4], axis=3)
+	model.add(UpSampling2D(size=(2, 2)))
+	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+#	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+	model.add(Dropout(0.25))
+
+	# up7 = concatenate([UpSampling2D(size=(2, 2))(conv6), conv3], axis=3)
+	model.add(UpSampling2D(size=(2, 2)))
+	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+#	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+	model.add(Dropout(0.25))
+
+	# up8 = concatenate([UpSampling2D(size=(2, 2))(conv7), conv2], axis=3)
+	model.add(UpSampling2D(size=(2, 2)))
+	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+#	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	model.add(Dropout(0.25))
+
+	# up9 = concatenate([UpSampling2D(size=(2, 2))(conv8), conv1], axis=3)
+	model.add(UpSampling2D(size=(2, 2)))
+	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+#	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+	model.add(Dropout(0.25))
+
+	model.add(Conv2D(1, (1, 1), activation='hard_sigmoid'))
+
+	# model = Model(inputs=[inputs], outputs=[conv10])
+	
+	# model.compile(optimizer=Adam(lr=1e-5), loss=binary_crossentropy, metrics=[dice_coef, intersect_on_union])
+	model.compile(optimizer=Adam(lr=1e-5), loss=iou_loss, metrics=[binary_crossentropy])
+	# model.compile(optimizer='sgd', loss=iou_loss, metrics=[dice_coef])
+	print_summary(model)
+#	plot_model(model, show_shapes=True)
+	return model
+
+
+### -------------------------------------------------------------------------------
 
 
 def intersect_on_union_bbox(y_true, y_pred):
