@@ -33,6 +33,8 @@ def intersect_over_union(y_true, y_pred):
 	intersection = K.sum(y_true_f * y_pred_f)
 	return intersection / (K.sum(y_true_f) + K.sum(y_pred_f) - intersection)
 
+def iou_loss(y_true, y_pred):
+	return 1 - intersect_over_union(y_true, y_pred)
 
 def shape_metrics(y_true, y_pred):
 	return K.shape(y_true)[0]
@@ -94,69 +96,6 @@ def get_unet():
 
 	model.add(Conv2D(1, (1, 1), activation='hard_sigmoid'))
 
-	model.compile(optimizer=Adam(lr=1e-5), loss=(lambda y_true, y_pred: 1-intersect_over_union(y_true, y_pred)), metrics=[binary_crossentropy])
-	
-	print_summary(model)
-	plot_model(model, show_shapes=True)
-
-	return model
-
-
-def get_unet_old():
-	model = Sequential()
-
-	model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(nn_img_side, nn_img_side, 3)))
-	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-
-	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Dropout(0.25))
-
-	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Dropout(0.25))
-
-	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Dropout(0.25))
-
-	model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
-#	model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
-	model.add(Dropout(0.25))
-
-	# up6 = concatenate([UpSampling2D(size=(2, 2))(conv5), conv4], axis=3)
-	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-#	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	model.add(Dropout(0.25))
-
-	# up7 = concatenate([UpSampling2D(size=(2, 2))(conv6), conv3], axis=3)
-	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-#	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-	model.add(Dropout(0.25))
-
-	# up8 = concatenate([UpSampling2D(size=(2, 2))(conv7), conv2], axis=3)
-	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-#	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	model.add(Dropout(0.25))
-
-	# up9 = concatenate([UpSampling2D(size=(2, 2))(conv8), conv1], axis=3)
-	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-#	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-	model.add(Dropout(0.25))
-
-	model.add(Conv2D(1, (1, 1), activation='hard_sigmoid'))
-
-	model.compile(optimizer=Adam(lr=1e-5), loss=(lambda y_true, y_pred: 1-intersect_over_union(y_true, y_pred)), metrics=[binary_crossentropy])
-
-	print_summary(model)
-	plot_model(model, show_shapes=True)
+	model.compile(optimizer=Adam(lr=1e-5), loss=iou_loss, metrics=[binary_crossentropy])
 	
 	return model

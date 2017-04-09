@@ -9,6 +9,12 @@ import random
 
 from data import load_train_data, load_test_data, data_path
 from net import *
+import argparse
+
+parser = argparse.ArgumentParser(description='Process video with ANN')
+parser.add_argument('-w', '--weights', action='store', help='Path to weights file')
+
+args = parser.parse_args()
 
 class TestCallback(Callback):
 	def __init__(self):
@@ -85,14 +91,18 @@ def train_and_predict():
 	print('-'*30)
 
 	model = get_unet()
-	# model.load_weights('last_weights.h5')
+	print_summary(model)
+	# plot_model(model, show_shapes=True)
+
+	if args.weights:
+		model.load_weights(args.weights)
 
 	print('-'*30)
 	print('Fitting model...')
 	print('-'*30)
 
 	model.fit(imgs_train, imgs_mask_train, batch_size=32, epochs=2000, verbose=1, shuffle=True, validation_split=0.11, 
-				callbacks=[ModelCheckpoint('best_model.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1)])
+				callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1)])
 
 if __name__ == '__main__':
 	train_and_predict()
