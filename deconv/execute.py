@@ -6,12 +6,12 @@ import numpy as np
 import time
 from keras.models import Model, load_model, save_model
 
-from data import load_train_data, load_test_data
+from data import load_train_data
 import rects as R
 from net import *
 import argparse
 
-from skvideo.io import VideoCapture
+# from skvideo.io import VideoCapture
 
 parser = argparse.ArgumentParser(description='Process video with ANN')
 parser.add_argument('videopath', action='store', help='Path to video file to process')
@@ -33,28 +33,38 @@ def get_bbox(frame, model):
 		return None
 
 def execute_model():
-	cap = VideoCapture(args.videopath)
-	if cap is None:
+	cap = cv2.VideoCapture(args.videopath)
+	if cap is None or not cap.isOpened():
+		print('Failed to open file')
 		exit(1)
 
-	
-
 	ret, frame = cap.read()
+	if frame is None:
+		print('Failed to read frame')
+		exit(1)
+
 	f_height, f_width, f_cahnnels = frame.shape
 	scale_x = float(f_width)/nn_img_side
 	scale_y = float(f_height)/nn_img_side
 
 	# model = load_model('test_model.h5', custom_objects={'iou_loss':iou_loss})
 	model = get_unet()
+	print_summary(model)
 	model.load_weights(args.weights)
 
 	if args.fps:
+		bbox_obtain_time = 0
 		num_frames = 120
 		start = time.time()
 		for i in xrange(0, num_frames) :
 			ret, frame = cap.read()
+			if frame is None:
+				exit(1)
+
 			frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+			start_bbox = time.time()
 			bbox = get_bbox(frame, model)
+			bbox_obtain_time += (time.time() - start_bbox)
 
 			if bbox:
 				# print(bbox)
@@ -71,10 +81,13 @@ def execute_model():
 		print('Time taken : {0} seconds'.format(seconds))
 		fps  = num_frames / seconds;
 		print('Estimated frames per second : {0}'.format(fps))
+		print('Bbox obtain mean time : {0}'.format(bbox_obtain_time/num_frames))
 
 	else:	
 		while(cap.isOpened()):
 			ret, frame = cap.read()
+			if frame is None:
+				exit(1)
 
 			frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 			bbox = get_bbox(frame, model)
@@ -91,21 +104,6 @@ def execute_model():
 
 	cap.release()
 	cv2.destroyAllWindows()
-
-	# for image_name in os.listdir(data_path):
-	# 	img = cv2.imread(os.path.join(data_path, image_name), cv2.IMREAD_COLOR)
-	# 	cv2.imshow('1', img)
-	# 	height, width, channels = img.shape
-		
-	# 	img = preprocess_image(img)
-
-	# 	imgs_mask = model.predict(np.array([img]))
-	# 	img_mask = cv2.resize(imgs_mask[0], (width, height), interpolation = cv2.INTER_NEAREST)
-	# 	cv2.imshow('2', img_mask)
-
-	# 	if cv2.waitKey(0) == 27:
-	# 		exit(1)
-
 
 if __name__ == '__main__':
 	execute_model()

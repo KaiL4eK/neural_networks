@@ -7,7 +7,7 @@ from keras.models import Model
 from keras.callbacks import ModelCheckpoint, Callback
 import random
 
-from data import load_train_data, load_test_data, data_path
+from data import load_train_data, data_path
 from net import *
 import argparse
 
@@ -15,54 +15,6 @@ parser = argparse.ArgumentParser(description='Process video with ANN')
 parser.add_argument('-w', '--weights', action='store', help='Path to weights file')
 
 args = parser.parse_args()
-
-class TestCallback(Callback):
-	def __init__(self):
-		pass
-
-	def on_epoch_end(self, epoch, logs={}):
-		images = os.listdir(data_path)
-		total = len(images)
-		i_image = int(random.random() * total)
-
-		test_img = cv2.imread(os.path.join(data_path, images[i_image]))
-		height, width, channels = test_img.shape
-		cv2.imshow('1', test_img)
-		test_img = preprocess_img(test_img)
-		
-		
-		info = images[i_image].split(';')
-		ul_x = max(0, int(info[1]))
-		ul_y = max(0, int(info[2]))
-		lr_x = ul_x + max(0, int(info[3]))
-		lr_y = ul_y + max(0, int(info[4]))
-		img_mask_truth = np.zeros((240, 320), np.uint8)
-		cv2.rectangle(img_mask_truth, (ul_x, ul_y), (lr_x, lr_y), thickness=-1, color=255 )
-
-		imgs_mask = self.model.predict(np.reshape(test_img, (1, nn_img_side, nn_img_side, 3)), verbose=0)
-		# img_mask = cv2.resize(imgs_mask[0], (width, height), interpolation = cv2.INTER_NEAREST)
-
-		cv2.imshow('2', imgs_mask[0])
-
-		img_mask_truth = cv2.resize(img_mask_truth, (nn_img_side, nn_img_side), interpolation = cv2.INTER_NEAREST)
-		img_mask_truth = img_mask_truth.astype('float32')
-		img_mask_truth /= 255.
-		
-		cv2.imshow('3', img_mask_truth)
-		if cv2.waitKey(100) == 27:
-			cv2.destroyAllWindows()
-			exit(1)
-
-		loss = self.model.evaluate( np.reshape(test_img, 	   (1, nn_img_side, nn_img_side, 3)), 
-									np.reshape(img_mask_truth, (1, nn_img_side, nn_img_side, 1)), verbose=0, batch_size=1)
-		
-		# input_data = self.model.layers[0].get_output()
-		# output_data = self.model.layers[31].get_output()
-		# print(input_data.shape, output_data.shape)
-
-		print('\nTesting loss: {}\n'.format(loss))
-
-
 
 def preprocess_arrays(imgs, masks):
 	imgs_p  = np.ndarray((imgs.shape[0],  nn_img_side, nn_img_side, 3), dtype=np.float32)

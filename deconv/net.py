@@ -67,11 +67,11 @@ def get_unet():
 
 	model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(nn_img_side, nn_img_side, 3)))
 	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(MaxPooling2D(pool_size=(3, 3)))
 
 	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
 	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(MaxPooling2D(pool_size=(4, 4)))
 	model.add(Dropout(0.25))
 
 	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
@@ -86,13 +86,13 @@ def get_unet():
 	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
 	model.add(Dropout(0.25))
 
-	model.add(UpSampling2D(size=(2, 2)))
+	model.add(UpSampling2D(size=(4, 4)))
 	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
 	model.add(Dropout(0.25))
 
-	model.add(UpSampling2D(size=(2, 2)))
+	model.add(UpSampling2D(size=(3, 3)))
 	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-	model.add(Dropout(0.25))
+	model.add(Dropout(0.5))
 
 	model.add(Conv2D(1, (1, 1), activation='hard_sigmoid'))
 
