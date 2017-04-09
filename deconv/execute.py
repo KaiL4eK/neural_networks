@@ -22,6 +22,11 @@ args = parser.parse_args()
 
 data_path = 'raw/'
 
+try:
+    xrange
+except NameError:
+    xrange = range
+
 def get_bbox(frame, model):
 	imgs_mask = model.predict(np.array([preprocess_img(frame)]))
 	mask = (imgs_mask[0] * 255).astype('uint8', copy=False)
@@ -61,7 +66,7 @@ def execute_model():
 			if frame is None:
 				exit(1)
 
-			frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+			# frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 			start_bbox = time.time()
 			bbox = get_bbox(frame, model)
 			bbox_obtain_time += (time.time() - start_bbox)
@@ -81,7 +86,7 @@ def execute_model():
 		print('Time taken : {0} seconds'.format(seconds))
 		fps  = num_frames / seconds;
 		print('Estimated frames per second : {0}'.format(fps))
-		print('Bbox obtain mean time : {0}'.format(bbox_obtain_time/num_frames))
+		print('Bbox obtain mean time : {0} ms'.format(bbox_obtain_time/num_frames*1000))
 
 	else:	
 		while(cap.isOpened()):
@@ -89,7 +94,7 @@ def execute_model():
 			if frame is None:
 				exit(1)
 
-			frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+			# frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 			bbox = get_bbox(frame, model)
 
 			if bbox:
