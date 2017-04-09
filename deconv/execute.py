@@ -49,13 +49,13 @@ def execute_model():
 		exit(1)
 
 	f_height, f_width, f_cahnnels = frame.shape
-	scale_x = float(f_width)/nn_img_side
-	scale_y = float(f_height)/nn_img_side
+	scale_x = float(f_width)/nn_out_size
+	scale_y = float(f_height)/nn_out_size
 
 	# model = load_model('test_model.h5', custom_objects={'iou_loss':iou_loss})
 	model = get_unet()
 	print_summary(model)
-	model.load_weights(args.weights)
+	# model.load_weights(args.weights)
 
 	if args.fps:
 		bbox_obtain_time = 0
@@ -81,12 +81,10 @@ def execute_model():
 			if cv2.waitKey(1) & 0xFF == ord('q'):
 				break
 
-		end = time.time()
-		seconds = end - start
-		print('Time taken : {0} seconds'.format(seconds))
-		fps  = num_frames / seconds;
-		print('Estimated frames per second : {0}'.format(fps))
-		print('Bbox obtain mean time : {0} ms'.format(bbox_obtain_time/num_frames*1000))
+		seconds = time.time() - start
+		print('Mean time per frame : {0} ms'.format(seconds / num_frames * 1000))
+		print('Estimated frames per second : {0}'.format(num_frames / seconds))
+		print('Bbox obtain mean time : {0} ms'.format(bbox_obtain_time / num_frames * 1000))
 
 	else:	
 		while(cap.isOpened()):

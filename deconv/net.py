@@ -12,6 +12,7 @@ import cv2
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
 nn_img_side = 96
+nn_out_size = 48
 
 ### Rates ###
 
@@ -24,7 +25,6 @@ def dice_coef(y_true, y_pred):
 
 def dice_coef_loss(y_true, y_pred):
 	return -dice_coef(y_true, y_pred)
-
 
 def intersect_over_union(y_true, y_pred):
 	y_true_f = K.flatten(y_true)
@@ -54,7 +54,7 @@ def preprocess_img(img):
 	return img
 
 def preprocess_mask(img):
-	img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_NEAREST)
+	img = cv2.resize(img, (nn_out_size, nn_out_size), interpolation = cv2.INTER_NEAREST)
 	img = img.astype('float32', copy=False)
 	img /= 255.
 
@@ -83,11 +83,11 @@ def get_unet():
 	model.add(Dropout(0.25))
 
 	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
 	model.add(Dropout(0.25))
 
-	model.add(UpSampling2D(size=(4, 4)))
-	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	model.add(UpSampling2D(size=(2, 2)))
+	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
 	model.add(Dropout(0.25))
 
 	model.add(UpSampling2D(size=(3, 3)))

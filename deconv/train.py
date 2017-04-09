@@ -18,7 +18,7 @@ args = parser.parse_args()
 
 def preprocess_arrays(imgs, masks):
 	imgs_p  = np.ndarray((imgs.shape[0],  nn_img_side, nn_img_side, 3), dtype=np.float32)
-	masks_p = np.ndarray((masks.shape[0], nn_img_side, nn_img_side),    dtype=np.float32)
+	masks_p = np.ndarray((masks.shape[0], nn_out_size, nn_out_size),    dtype=np.float32)
 	for i in range(imgs.shape[0]):
 		imgs_p[i]  = preprocess_img(imgs[i])
 		masks_p[i] = preprocess_mask(masks[i])
