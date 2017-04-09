@@ -4,7 +4,7 @@ import os
 import numpy as np
 import cv2
 
-data_path = 'raw/'
+data_path = '../raw/'
 
 npy_img_height = 240
 npy_img_width = 320
