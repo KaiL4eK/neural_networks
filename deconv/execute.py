@@ -55,7 +55,7 @@ def execute_model():
 	# model = load_model('test_model.h5', custom_objects={'iou_loss':iou_loss})
 	model = get_unet()
 	print_summary(model)
-	# model.load_weights(args.weights)
+	model.load_weights(args.weights)
 
 	if args.fps:
 		bbox_obtain_time = 0

@@ -53,7 +53,7 @@ def train_and_predict():
 	print('Fitting model...')
 	print('-'*30)
 
-	model.fit(imgs_train, imgs_mask_train, batch_size=32, epochs=2000, verbose=1, shuffle=True, validation_split=0.11, 
+	model.fit(imgs_train, imgs_mask_train, batch_size=32, epochs=7000, verbose=1, shuffle=True, validation_split=0.11, 
 				callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1)])
 
 if __name__ == '__main__':
