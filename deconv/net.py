@@ -31,7 +31,8 @@ def intersect_over_union(y_true, y_pred):
 	y_pred_f = K.flatten(y_pred)
 
 	intersection = K.sum(y_true_f * y_pred_f)
-	return intersection / (K.sum(y_true_f) + K.sum(y_pred_f) - intersection)
+	union = K.sum(y_true_f) + K.sum(y_pred_f) - intersection
+	return K.switch( K.equal(union, 0), 0, intersection / union) 
 
 def iou_loss(y_true, y_pred):
 	return 1 - intersect_over_union(y_true, y_pred)
