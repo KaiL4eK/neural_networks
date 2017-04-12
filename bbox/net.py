@@ -24,21 +24,23 @@ def preprocess_img(img):
 	img /= 255.
 	return img
 
-_EPSILON = .001
-
 def intersect_over_union_bbox(y_true, y_pred):
-	# y_true_f = K.flatten(y_true)
-	# y_pred_f = K.flatten(y_pred)
 
 	y_true_f = y_true
 	y_pred_f = y_pred
-
-	# total_tensor = K.shape(y_true)[0]
 
 	pred_ul_x = y_pred_f[:, 0]
 	pred_ul_y = y_pred_f[:, 1]
 	pred_lr_x = y_pred_f[:, 2]
 	pred_lr_y = y_pred_f[:, 3]
+
+	pred1 = K.less_equal( pred_lr_x, pred_ul_x )
+	pred2 = K.less_equal( pred_lr_y, pred_ul_y )
+
+	sess = K.get_session()
+
+	if sess.run(pred1) or sess.run(pred2):
+		return K.variable(0);
 
 	xA = K.maximum(y_true_f[:, 0], pred_ul_x)
 	yA = K.maximum(y_true_f[:, 1], pred_ul_y)
@@ -49,7 +51,10 @@ def intersect_over_union_bbox(y_true, y_pred):
 	boxAArea = (pred_lr_x - pred_ul_x) 			 * (pred_lr_y - pred_ul_y)
 	boxBArea = (y_true_f[:, 2] - y_true_f[:, 0]) * (y_true_f[:, 3] - y_true_f[:, 1])
 	res = intersection / (boxAArea + boxBArea - intersection)
-	return res
+	return K.switch(K.less_equal(res, 0), K.variable(0), res)
+
+def iou_loss(y_true, y_pred):
+	return 1-intersect_over_union_bbox(y_true, y_pred)
 
 def check_shape_metrics(y_true, y_pred):
 	return K.shape(y_true)[0]
@@ -93,7 +98,6 @@ def regression_model():
 	model.add(Dense(4,activation='sigmoid'))
 
 	print_summary(model)
-	# model.compile(optimizer=Adam(lr=1e-5), loss=(lambda y_true, y_pred: 1-intersect_over_union_bbox(y_true, y_pred)), metrics=[check_shape_metrics])
-	model.compile(optimizer=Adam(lr=1e-5), loss=mean_squared_error, metrics=[])
+	model.compile(optimizer=Adam(lr=1e-5), loss=iou_loss, metrics=[])
 
 	return model

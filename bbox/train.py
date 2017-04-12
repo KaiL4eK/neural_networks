@@ -9,6 +9,12 @@ import random
 
 from data import *
 from net import *
+import argparse
+
+parser = argparse.ArgumentParser(description='Process video with ANN')
+parser.add_argument('-w', '--weights', action='store', help='Path to weights file')
+
+args = parser.parse_args()
 
 def preprocess_regress(imgs, bboxes):
 	imgs_p   = np.ndarray((imgs.shape[0],  nn_img_side, nn_img_side, 3), dtype=np.float32)
@@ -76,7 +82,11 @@ def train_regression():
 	print('-'*30)
 
 	model = regression_model()
-	model.load_weights('weights.h5')
+	print_summary(model)
+	# plot_model(model, show_shapes=True)
+
+	if args.weights:
+		model.load_weights(args.weights)
 
 	print('-'*30)
 	print('Fitting model...')
