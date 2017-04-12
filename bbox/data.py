@@ -9,7 +9,7 @@ data_path = '../raw/'
 npy_img_height = 240
 npy_img_width = 320
 
-# Bbox is compiled as [ul_x, ul_y, lr_x, lr_y]
+# Bbox is compiled as [ul_x, ul_y, w, h]
 check_data = False
 
 def create_train_data():
@@ -55,7 +55,7 @@ def create_train_data():
         # cv2.imshow('1', img)
         # cv2.waitKey(0)
 
-        imgs_bbox[i] = np.array([ul_x, ul_y, lr_x, lr_y])
+        imgs_bbox[i] = np.array([ul_x, ul_y, width, height])
 
         if i % 100 == 0:
             print('Done: {0}/{1} images'.format(i, total))

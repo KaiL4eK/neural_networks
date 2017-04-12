@@ -49,28 +49,49 @@ class TestCallback(Callback):
 	def on_epoch_end(self, epoch, logs={}):
 		total = imgs_train.shape[0]
 		i_image = int(random.random() * total)
-
+		img = imgs_train[i_image]
 		true_bbox = imgs_bbox_train[i_image]
 		print(true_bbox)
-		bbox = self.model.predict(np.reshape(imgs_train[i_image], (1, nn_img_side, nn_img_side, 3)), verbose=0)
+		bbox = self.model.predict(np.reshape(img, (1, nn_img_side, nn_img_side, 3)), verbose=0)
 		bbox = bbox[0]
 		print(bbox)
 
-		xA = max(bbox[0], true_bbox[0])
-		yA = max(bbox[1], true_bbox[1])
-		xB = min(bbox[2], true_bbox[2])
-		yB = min(bbox[3], true_bbox[3])
+		pred_ul_x = bbox[0]
+		pred_ul_y = bbox[1]
+		pred_lr_x = bbox[0] + bbox[2]
+		pred_lr_y = bbox[1] + bbox[3]
 
+		pred_lr_x = np.clip(pred_lr_x, 0, 1)
+		pred_lr_y = np.clip(pred_lr_y, 0, 1)
+
+
+		xA = max(pred_ul_x, true_bbox[0])
+		yA = max(pred_ul_y, true_bbox[1])
+		xB = min(pred_lr_x, true_bbox[0] + true_bbox[2])
+		yB = min(pred_lr_y, true_bbox[1] + true_bbox[3])
 		intersection = (xB - xA) * (yB - yA)
 		boxAArea = (bbox[2] - bbox[0]) 			 * (bbox[3] - bbox[1])
 		boxBArea = (true_bbox[2] - true_bbox[0]) * (true_bbox[3] - true_bbox[1])
 		loss = intersection / (boxAArea + boxBArea - intersection)
-
 		print('\nTesting loss: {}'.format(1 - loss))
 
-		eval_loss = self.model.evaluate(np.reshape(imgs_train[i_image], (1, nn_img_side, nn_img_side, 3)), 
-										np.reshape(imgs_bbox_train[i_image], (1, 4)), batch_size=1, verbose=0)
+		eval_loss = self.model.evaluate(np.reshape(img, (1, nn_img_side, nn_img_side, 3)), 
+										np.reshape(true_bbox, (1, 4)), batch_size=1, verbose=0)
 		print('Eval loss: {}\n'.format(eval_loss))
+
+		ul_x = int(pred_ul_x * nn_img_side)
+		ul_y = int(pred_ul_y * nn_img_side)
+		lr_x = int(pred_lr_x * nn_img_side)
+		lr_y = int(pred_lr_y * nn_img_side)
+		cv2.rectangle(img, (ul_x, ul_y), (lr_x, lr_y), thickness=2, color=(255, 0, 0) )
+		ul_x = int(true_bbox[0] * nn_img_side)
+		ul_y = int(true_bbox[1] * nn_img_side)
+		lr_x = int((true_bbox[0]+true_bbox[2]) * nn_img_side)
+		lr_y = int((true_bbox[1]+true_bbox[3]) * nn_img_side)
+		cv2.rectangle(img, (ul_x, ul_y), (lr_x, lr_y), thickness=2, color=(0, 0, 255) )
+		cv2.imshow('1', img)
+		if cv2.waitKey(0) == 27:
+			exit(1)
 
 		if loss < 0:
 			print('Warning!!!!<<<<<<<')
@@ -92,7 +113,7 @@ def train_regression():
 	print('Fitting model...')
 	print('-'*30)
 
-	model.fit(imgs_train, imgs_bbox_train, batch_size=8, epochs=1000, verbose=1, shuffle=True, validation_split=0.11, 
+	model.fit(imgs_train, imgs_bbox_train, batch_size=1, epochs=1000, verbose=1, shuffle=True, validation_split=0.11, 
 				callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1), TestCallback()])
 
 if __name__ == '__main__':

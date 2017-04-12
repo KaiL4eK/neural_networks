@@ -16,7 +16,7 @@ nn_img_side = 144
 # Output is resized, BGR, mean subtracted, [0, 1.] scaled by values
 def preprocess_img(img):
 	img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_LINEAR)
-	img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+	# img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 	img = img.astype('float32', copy=False)
 	img[:,:,0] -= 103.939
 	img[:,:,1] -= 116.779
@@ -31,27 +31,32 @@ def intersect_over_union_bbox(y_true, y_pred):
 
 	pred_ul_x = y_pred_f[:, 0]
 	pred_ul_y = y_pred_f[:, 1]
-	pred_lr_x = y_pred_f[:, 2]
-	pred_lr_y = y_pred_f[:, 3]
+	pred_lr_x = y_pred_f[:, 0] + y_pred_f[:, 2]
+	pred_lr_y = y_pred_f[:, 1] + y_pred_f[:, 3]
 
-	pred1 = K.less_equal( pred_lr_x, pred_ul_x )
-	pred2 = K.less_equal( pred_lr_y, pred_ul_y )
+	# pred_lr_x = K.clip(pred_lr_x, 0, 1)
+	# pred_lr_y = K.clip(pred_lr_y, 0, 1)
 
-	sess = K.get_session()
-
-	if sess.run(pred1) or sess.run(pred2):
-		return K.variable(0);
+	# pred1 = K.less_equal( pred_lr_x, pred_ul_x )
+	# pred2 = K.less_equal( pred_lr_y, pred_ul_y )
+	# sess = K.get_session()
+	# if sess.run(pred1) or sess.run(pred2):
+		# return K.variable(0);
 
 	xA = K.maximum(y_true_f[:, 0], pred_ul_x)
 	yA = K.maximum(y_true_f[:, 1], pred_ul_y)
-	xB = K.minimum(y_true_f[:, 2], pred_lr_x)
-	yB = K.minimum(y_true_f[:, 3], pred_lr_y)
+	xB = K.minimum(y_true_f[:, 0] + y_true_f[:, 2], pred_lr_x)
+	yB = K.minimum(y_true_f[:, 1] + y_true_f[:, 3], pred_lr_y)
 
 	intersection = (xB - xA) * (yB - yA)
 	boxAArea = (pred_lr_x - pred_ul_x) 			 * (pred_lr_y - pred_ul_y)
 	boxBArea = (y_true_f[:, 2] - y_true_f[:, 0]) * (y_true_f[:, 3] - y_true_f[:, 1])
+
+	# intersection = K.switch( pred1, intersection, intersection )
+	# intersection = K.switch( pred2, K.variable(0), intersection )
+
 	res = intersection / (boxAArea + boxBArea - intersection)
-	return K.switch(K.less_equal(res, 0), K.variable(0), res)
+	return res
 
 def iou_loss(y_true, y_pred):
 	return 1-intersect_over_union_bbox(y_true, y_pred)
