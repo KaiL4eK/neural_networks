@@ -16,7 +16,6 @@ nn_img_side = 144
 # Output is resized, BGR, mean subtracted, [0, 1.] scaled by values
 def preprocess_img(img):
 	img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_LINEAR)
-	# img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 	img = img.astype('float32', copy=False)
 	img[:,:,0] -= 103.939
 	img[:,:,1] -= 116.779
