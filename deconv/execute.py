@@ -66,7 +66,6 @@ def execute_model():
 			if frame is None:
 				exit(1)
 
-			# frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 			start_bbox = time.time()
 			bbox = get_bbox(frame, model)
 			bbox_obtain_time += (time.time() - start_bbox)
