@@ -33,8 +33,13 @@ def intersect_over_union_bbox(y_true, y_pred):
 	pred_lr_x = y_pred_f[:, 0] + y_pred_f[:, 2]
 	pred_lr_y = y_pred_f[:, 1] + y_pred_f[:, 3]
 
-	# pred_lr_x = K.clip(pred_lr_x, 0, 1)
-	# pred_lr_y = K.clip(pred_lr_y, 0, 1)
+	true_ul_x = y_true_f[:, 0]
+	true_ul_y = y_true_f[:, 1]
+	true_lr_x = y_true_f[:, 0] + y_true_f[:, 2]
+	true_lr_y = y_true_f[:, 1] + y_true_f[:, 3]
+
+	pred_lr_x = K.clip(pred_lr_x, 0, 1)
+	pred_lr_y = K.clip(pred_lr_y, 0, 1)
 
 	# pred1 = K.less_equal( pred_lr_x, pred_ul_x )
 	# pred2 = K.less_equal( pred_lr_y, pred_ul_y )
@@ -42,20 +47,21 @@ def intersect_over_union_bbox(y_true, y_pred):
 	# if sess.run(pred1) or sess.run(pred2):
 		# return K.variable(0);
 
-	xA = K.maximum(y_true_f[:, 0], pred_ul_x)
-	yA = K.maximum(y_true_f[:, 1], pred_ul_y)
-	xB = K.minimum(y_true_f[:, 0] + y_true_f[:, 2], pred_lr_x)
-	yB = K.minimum(y_true_f[:, 1] + y_true_f[:, 3], pred_lr_y)
+	xA = K.maximum(true_ul_x, pred_ul_x)
+	yA = K.maximum(true_ul_y, pred_ul_y)
+	xB = K.minimum(true_lr_x, pred_lr_x)
+	yB = K.minimum(true_lr_y, pred_lr_y)
+
 
 	intersection = (xB - xA) * (yB - yA)
-	boxAArea = (pred_lr_x - pred_ul_x) 			 * (pred_lr_y - pred_ul_y)
-	boxBArea = (y_true_f[:, 2] - y_true_f[:, 0]) * (y_true_f[:, 3] - y_true_f[:, 1])
+	boxAArea = (pred_lr_x - pred_ul_x) * (pred_lr_y - pred_ul_y)
+	boxBArea = (true_lr_x - true_ul_x) * (true_lr_y - true_ul_y)
 
 	# intersection = K.switch( pred1, intersection, intersection )
 	# intersection = K.switch( pred2, K.variable(0), intersection )
 
 	res = intersection / (boxAArea + boxBArea - intersection)
-	return res
+	return K.clip(res, 0, 1)
 
 def iou_loss(y_true, y_pred):
 	return 1-intersect_over_union_bbox(y_true, y_pred)

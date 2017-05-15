@@ -41,7 +41,6 @@ imgs_train, imgs_bbox_train = load_train_data()
 imgs_train, imgs_bbox_train = preprocess_regress(imgs_train, imgs_bbox_train)
 
 
-
 class TestCallback(Callback):
 	def __init__(self):
 		pass
@@ -61,17 +60,22 @@ class TestCallback(Callback):
 		pred_lr_x = bbox[0] + bbox[2]
 		pred_lr_y = bbox[1] + bbox[3]
 
+		true_ul_x = true_bbox[0]
+		true_ul_y = true_bbox[1]
+		true_lr_x = true_bbox[0] + true_bbox[2]
+		true_lr_y = true_bbox[1] + true_bbox[3]
+
 		pred_lr_x = np.clip(pred_lr_x, 0, 1)
 		pred_lr_y = np.clip(pred_lr_y, 0, 1)
 
+		xA = max(pred_ul_x, true_ul_x)
+		yA = max(pred_ul_y, true_ul_y)
+		xB = min(pred_lr_x, true_lr_x)
+		yB = min(pred_lr_y, true_lr_y)
 
-		xA = max(pred_ul_x, true_bbox[0])
-		yA = max(pred_ul_y, true_bbox[1])
-		xB = min(pred_lr_x, true_bbox[0] + true_bbox[2])
-		yB = min(pred_lr_y, true_bbox[1] + true_bbox[3])
 		intersection = (xB - xA) * (yB - yA)
-		boxAArea = (bbox[2] - bbox[0]) 			 * (bbox[3] - bbox[1])
-		boxBArea = (true_bbox[2] - true_bbox[0]) * (true_bbox[3] - true_bbox[1])
+		boxAArea = (pred_lr_x - pred_ul_x) * (pred_lr_y - pred_ul_y)
+		boxBArea = (true_lr_x - true_ul_x) * (true_lr_y - true_ul_y)
 		loss = intersection / (boxAArea + boxBArea - intersection)
 		print('\nTesting loss: {}'.format(1 - loss))
 
@@ -90,7 +94,7 @@ class TestCallback(Callback):
 		lr_y = int((true_bbox[1]+true_bbox[3]) * nn_img_side)
 		cv2.rectangle(img, (ul_x, ul_y), (lr_x, lr_y), thickness=2, color=(0, 0, 255) )
 		cv2.imshow('1', img)
-		if cv2.waitKey(0) == 27:
+		if cv2.waitKey(1) == 27:
 			exit(1)
 
 		if loss < 0:
@@ -113,8 +117,10 @@ def train_regression():
 	print('Fitting model...')
 	print('-'*30)
 
-	model.fit(imgs_train, imgs_bbox_train, batch_size=1, epochs=1000, verbose=1, shuffle=True, validation_split=0.11, 
-				callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1), TestCallback()])
+	model.fit(imgs_train, imgs_bbox_train, batch_size=20, epochs=1000, verbose=1, shuffle=True, validation_split=0.11, 
+				callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1), 
+						   # TestCallback()
+						   ])
 
 if __name__ == '__main__':
 	train_regression()
