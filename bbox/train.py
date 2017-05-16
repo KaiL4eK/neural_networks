@@ -73,7 +73,13 @@ class TestCallback(Callback):
 		xB = min(pred_lr_x, true_lr_x)
 		yB = min(pred_lr_y, true_lr_y)
 
-		intersection = (xB - xA) * (yB - yA)
+		xIntersect = (true_ul_x - pred_lr_x) * (pred_ul_x - true_lr_x)
+		xIntersect = np.clip( xIntersect * 10e9, 0, 1 )
+
+		yIntersect = (true_ul_y - pred_lr_y) * (pred_ul_y - true_lr_y)
+		yIntersect = np.clip( yIntersect * 10e9, 0, 1 )
+
+		intersection = (xB - xA) * (yB - yA) * (xIntersect * yIntersect)
 		boxAArea = (pred_lr_x - pred_ul_x) * (pred_lr_y - pred_ul_y)
 		boxBArea = (true_lr_x - true_ul_x) * (true_lr_y - true_ul_y)
 		loss = intersection / (boxAArea + boxBArea - intersection)
@@ -119,7 +125,7 @@ def train_regression():
 
 	model.fit(imgs_train, imgs_bbox_train, batch_size=20, epochs=1000, verbose=1, shuffle=True, validation_split=0.11, 
 				callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1), 
-						   # TestCallback()
+						   TestCallback()
 						   ])
 
 if __name__ == '__main__':
