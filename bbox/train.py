@@ -13,6 +13,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Process video with ANN')
 parser.add_argument('-w', '--weights', action='store', help='Path to weights file')
+parser.add_argument('-t', '--test', action='store_true', help='Test model for loss')
 
 args = parser.parse_args()
 
@@ -47,8 +48,8 @@ class TestCallback(Callback):
 
 	def on_epoch_end(self, epoch, logs={}):
 		total = imgs_train.shape[0]
-		i_image = int(random.random() * total)
-		img = imgs_train[i_image]
+		i_image = 200 #int(random.random() * total)
+		img = np.copy(imgs_train[i_image])
 		true_bbox = imgs_bbox_train[i_image]
 		print(true_bbox)
 		bbox = self.model.predict(np.reshape(img, (1, nn_img_side, nn_img_side, 3)), verbose=0)
@@ -100,7 +101,7 @@ class TestCallback(Callback):
 		lr_y = int((true_bbox[1]+true_bbox[3]) * nn_img_side)
 		cv2.rectangle(img, (ul_x, ul_y), (lr_x, lr_y), thickness=2, color=(0, 0, 255) )
 		cv2.imshow('1', img)
-		if cv2.waitKey(1) == 27:
+		if cv2.waitKey(100) == 27:
 			exit(1)
 
 		if loss < 0:
@@ -123,13 +124,24 @@ def train_regression():
 	print('Fitting model...')
 	print('-'*30)
 
-	remote = RemoteMonitor(root='http://localhost:9000')
+	# remote = RemoteMonitor(root='http://localhost:9000')
 
-	model.fit(imgs_train, imgs_bbox_train, batch_size=10, epochs=3000, verbose=1, shuffle=True, validation_split=0.11, 
-				callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1), 
-						   # remote,
-						   TestCallback()
-						   ])
+	if args.test:
+		i_image = 200 #int(random.random() * total)
+		img = np.copy(imgs_train[i_image])
+		true_bbox = imgs_bbox_train[i_image]
+		print(true_bbox)
+		bbox = model.predict(np.reshape(img, (1, nn_img_side, nn_img_side, 3)), verbose=0)
+		print(bbox[0])
+		eval_loss = model.evaluate(np.reshape(img, (1, nn_img_side, nn_img_side, 3)), 
+								   np.reshape(true_bbox, (1, 4)), batch_size=1, verbose=0)
+		print('Eval loss:\t{}\n'.format(eval_loss))
+	else:
+		model.fit(imgs_train, imgs_bbox_train, batch_size=10, epochs=3000, verbose=1, shuffle=True, validation_split=0,
+					callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1), 
+							   # remote,
+							   # TestCallback()
+							   ])
 
 if __name__ == '__main__':
 	train_regression()

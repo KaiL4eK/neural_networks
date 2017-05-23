@@ -49,7 +49,6 @@ def intersect_over_union_bbox(y_true, y_pred):
 	pred_lr_x = K.clip(pred_lr_x, 0, 1)
 	pred_lr_y = K.clip(pred_lr_y, 0, 1)
 
-
 	xA = K.maximum(true_ul_x, pred_ul_x)	# Left
 	yA = K.maximum(true_ul_y, pred_ul_y)	# Up
 	xB = K.minimum(true_lr_x, pred_lr_x)	# Right
@@ -58,31 +57,29 @@ def intersect_over_union_bbox(y_true, y_pred):
 	boxAArea = pred_width * pred_height
 	boxBArea = true_width * true_height
 
-	xNotIntersect = tf.logical_or(K.greater(true_ul_x, pred_lr_x), 
-							   K.greater(pred_ul_x, true_lr_x))
-
-	yNotIntersect = tf.logical_or(K.greater(true_ul_y, pred_lr_y), 
-							   K.greater(pred_ul_y, true_lr_y))
-
-	notIntersect = tf.logical_or(xNotIntersect, yNotIntersect)
-
-	isNegativeSample = K.equal(boxBArea, 0)
-
-
+	xNotIntersect = tf.logical_or(K.greater_equal(true_ul_x, pred_lr_x), K.greater_equal(pred_ul_x, true_lr_x))
+	yNotIntersect = tf.logical_or(K.greater_equal(true_ul_y, pred_lr_y), K.greater_equal(pred_ul_y, true_lr_y))
+	notIntersect  = tf.logical_or(xNotIntersect, yNotIntersect)
 
 	intersection = tf.multiply((xB - xA), (yB - yA))
-	res = tf.where(notIntersect, (K.abs(intersection) * -1) / (boxAArea + boxBArea),
-								 intersection / (boxAArea + boxBArea - intersection));
 
-	negativeSamplesRate = 2
+	fault_ul_square = K.abs(tf.multiply((true_ul_x - pred_ul_x), (true_ul_y - pred_ul_y)))
+	fault_lr_square = K.abs(tf.multiply((true_lr_x - pred_lr_x), (true_lr_y - pred_lr_y)))
 
-	res = tf.where(isNegativeSample, K.clip(K.maximum(pred_lr_x, pred_lr_y) * negativeSamplesRate, 0, 1), 
-									 res)
+	squares_dist = K.clip(fault_ul_square + fault_lr_square, 0, 1)
 
-	return res
+#	res = tf.where(notIntersect, (K.abs(intersection) * -1) / (boxAArea + boxBArea), intersection / (boxAArea + boxBArea - intersection));
+	res = tf.where(notIntersect, 1-squares_dist, intersection / (boxAArea + boxBArea - intersection))
+
+#	isNegativeSample = K.equal(true_ul_x, true_ul_y)
+#	negativeSamplesRate = 5
+#	res = tf.where(isNegativeSample, K.ones_like(res) - K.clip(K.maximum(pred_lr_x, pred_lr_y) * negativeSamplesRate, 0, 1), res)
+	
+	return K.mean(res)
 
 def iou_loss(y_true, y_pred):
 	return (1-intersect_over_union_bbox(y_true, y_pred)) * 100
+	# return intersect_over_union_bbox(y_true, y_pred)
 
 def check_shape_metrics(y_true, y_pred):
 	return K.shape(y_true)[0]
