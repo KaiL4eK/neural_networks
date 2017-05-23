@@ -5,6 +5,7 @@
 **negative
 *.log
 *.tar.gz
+*.tar.xz
 *old.h5
 *.avi
 *.webm

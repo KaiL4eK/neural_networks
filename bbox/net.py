@@ -66,7 +66,7 @@ def intersect_over_union_bbox(y_true, y_pred):
 	fault_ul_square = K.abs(tf.multiply((true_ul_x - pred_ul_x), (true_ul_y - pred_ul_y)))
 	fault_lr_square = K.abs(tf.multiply((true_lr_x - pred_lr_x), (true_lr_y - pred_lr_y)))
 
-	squares_dist = K.clip(fault_ul_square + fault_lr_square, 0, 1)
+	squares_dist = K.clip((fault_ul_square + fault_lr_square + boxAArea + boxBArea) * 3, 0, 1)
 
 #	res = tf.where(notIntersect, (K.abs(intersection) * -1) / (boxAArea + boxBArea), intersection / (boxAArea + boxBArea - intersection));
 	res = tf.where(notIntersect, 1-squares_dist, intersection / (boxAArea + boxBArea - intersection))
