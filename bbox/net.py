@@ -9,6 +9,8 @@ from keras.utils.vis_utils import plot_model
 import numpy as np
 import cv2
 
+import tensorflow as tf
+
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
 nn_img_side = 144
@@ -38,6 +40,12 @@ def intersect_over_union_bbox(y_true, y_pred):
 	true_lr_x = y_true_f[:, 0] + y_true_f[:, 2]
 	true_lr_y = y_true_f[:, 1] + y_true_f[:, 3]
 
+	true_width  = y_true_f[:, 2]
+	true_height = y_true_f[:, 3]
+
+	pred_width  = y_pred_f[:, 2]
+	pred_height = y_pred_f[:, 3]
+
 	pred_lr_x = K.clip(pred_lr_x, 0, 1)
 	pred_lr_y = K.clip(pred_lr_y, 0, 1)
 
@@ -47,29 +55,54 @@ def intersect_over_union_bbox(y_true, y_pred):
 	# if sess.run(pred1) or sess.run(pred2):
 		# return K.variable(0);
 
-	xA = K.maximum(true_ul_x, pred_ul_x)	# Right
-	yA = K.maximum(true_ul_y, pred_ul_y)	# Down
-	xB = K.minimum(true_lr_x, pred_lr_x)	# Left
-	yB = K.minimum(true_lr_y, pred_lr_y)	# Up
+	xA = K.maximum(true_ul_x, pred_ul_x)	# Left
+	yA = K.maximum(true_ul_y, pred_ul_y)	# Up
+	xB = K.minimum(true_lr_x, pred_lr_x)	# Right
+	yB = K.minimum(true_lr_y, pred_lr_y)	# Down
 
-	xIntersect = (true_ul_x - pred_lr_x) * (pred_ul_x - true_lr_x)
-	xIntersect = K.clip( xIntersect * 10e9, 0, 1 )
+	boxAArea = pred_width * pred_height
+	boxBArea = true_width * true_height
 
-	yIntersect = (true_ul_y - pred_lr_y) * (pred_ul_y - true_lr_y)
-	yIntersect = K.clip( yIntersect * 10e9, 0, 1 )
+	xNotIntersect = tf.logical_or(K.greater(true_ul_x, pred_lr_x), 
+							   K.greater(pred_ul_x, true_lr_x))
 
-	intersection = ((xB - xA) * (yB - yA)) * (xIntersect * yIntersect)
-	boxAArea = (pred_lr_x - pred_ul_x) * (pred_lr_y - pred_ul_y)
-	boxBArea = (true_lr_x - true_ul_x) * (true_lr_y - true_ul_y)
+	yNotIntersect = tf.logical_or(K.greater(true_ul_y, pred_lr_y), 
+							   K.greater(pred_ul_y, true_lr_y))
 
-	# intersection = K.switch( pred1, intersection, intersection )
-	# intersection = K.switch( pred2, K.variable(0), intersection )
+	notIntersect = tf.logical_or(xNotIntersect, yNotIntersect)
 
-	res = intersection / (boxAArea + boxBArea - intersection)
-	return K.clip(K.abs(res), 0, 1)
+	# x_inter_1 = true_ul_x - pred_lr_x
+	# x_inter_1_sign = K.sign(x_inter_1)
+	# # x_inter_1_val = K.clip(K.abs(true_ul_x - pred_lr_x), 10e-9, 1)
+
+	# x_inter_2 = pred_ul_x - true_lr_x
+	# x_inter_2_sign = K.sign(x_inter_2)
+	# # x_inter_2_val = K.clip(K.abs(pred_ul_x - true_lr_x), 10e-9, 1)
+
+	# xIntersect =  x_inter_1 * x_inter_2
+	# # xIntersect = K.clip( xIntersect * 10e9, 0, 1 )
+
+	# y_inter_1 = true_ul_y - pred_lr_y
+	# y_inter_1_sign = K.sign(y_inter_1)
+	# # y_inter_1_val = K.clip(K.abs(true_ul_y - pred_lr_y), 10e-9, 1)
+
+	# y_inter_2 = pred_ul_y - true_lr_y
+	# y_inter_2_sign = K.sign(y_inter_2)
+	# # y_inter_2_val = K.clip(K.abs(pred_ul_y - true_lr_y), 10e-9, 1)
+
+	# yIntersect = y_inter_1 * y_inter_2
+	# # yIntersect = K.clip( yIntersect * 10e9, 0, 1 )
+
+	# yIntersect = K.switch(K.greater_equal(yIntersect, 0), 1, 0)
+	# xIntersect = K.switch(K.greater_equal(xIntersect, 0), 1, 0)
+
+	intersection = tf.multiply((xB - xA), (yB - yA))
+	res = tf.where(notIntersect, (K.abs(intersection) * -1) / (boxAArea + boxBArea),
+								 intersection / (boxAArea + boxBArea - intersection));
+	return res
 
 def iou_loss(y_true, y_pred):
-	return 1-intersect_over_union_bbox(y_true, y_pred)
+	return (1-intersect_over_union_bbox(y_true, y_pred)) * 100
 
 def check_shape_metrics(y_true, y_pred):
 	return K.shape(y_true)[0]
@@ -86,21 +119,21 @@ def regression_model():
 	model.add(MaxPooling2D(pool_size=(2, 2)))
 	model.add(Dropout(0.25))
 
-	model.add(Conv2D(64,(3,3),activation='relu',padding='same'))
-	model.add(Conv2D(128,(3,3),activation='relu',padding='same'))
+	# model.add(Conv2D(64,(3,3),activation='relu',padding='same'))
+	# model.add(Conv2D(128,(3,3),activation='relu',padding='same'))
 	model.add(Conv2D(128,(3,3),activation='relu',padding='same'))
 	model.add(MaxPooling2D(pool_size=(2, 2)))
 	model.add(Dropout(0.25))
 
-	model.add(Conv2D(256,(3,3),activation='relu',padding='same'))
-	model.add(Conv2D(256,(3,3),activation='relu',padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Dropout(0.25))
+	# model.add(Conv2D(256,(3,3),activation='relu',padding='same'))
+	# model.add(Conv2D(256,(3,3),activation='relu',padding='same'))
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(Dropout(0.25))
 
-	model.add(Conv2D(256,(3,3),activation='relu',padding='same'))
-	model.add(Conv2D(256,(3,3),activation='relu',padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Dropout(0.25))
+	# model.add(Conv2D(256,(3,3),activation='relu',padding='same'))
+	# model.add(Conv2D(256,(3,3),activation='relu',padding='same'))
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(Dropout(0.25))
 
 	model.add(Conv2D(256,(3,3),activation='relu',padding='same'))
 	model.add(Conv2D(512,(3,3),activation='relu',padding='same'))
@@ -108,11 +141,13 @@ def regression_model():
 	model.add(Dropout(0.25))
 
 	model.add(Flatten())
-	model.add(Dense(512,activation='sigmoid'))
-	model.add(Dropout(0.25))
+	# model.add(Dense(512,activation='relu'))
+	# model.add(Dropout(0.5))
+	model.add(Dense(512,activation='relu'))
+	model.add(Dropout(0.5))
 	model.add(Dense(4,activation='sigmoid'))
 
 	print_summary(model)
-	model.compile(optimizer=Adam(lr=1e-5), loss=iou_loss, metrics=[])
+	model.compile(optimizer=Adam(lr=1e-4), loss=iou_loss, metrics=[])
 
 	return model

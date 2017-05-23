@@ -4,7 +4,7 @@ import os
 import cv2
 import numpy as np
 from keras.models import Model
-from keras.callbacks import ModelCheckpoint, Callback
+from keras.callbacks import ModelCheckpoint, Callback, RemoteMonitor
 import random
 
 from data import *
@@ -83,11 +83,11 @@ class TestCallback(Callback):
 		boxAArea = (pred_lr_x - pred_ul_x) * (pred_lr_y - pred_ul_y)
 		boxBArea = (true_lr_x - true_ul_x) * (true_lr_y - true_ul_y)
 		loss = intersection / (boxAArea + boxBArea - intersection)
-		print('\nTesting loss: {}'.format(1 - loss))
+		print('\nTesting loss:\t{}'.format(1 - loss))
 
 		eval_loss = self.model.evaluate(np.reshape(img, (1, nn_img_side, nn_img_side, 3)), 
 										np.reshape(true_bbox, (1, 4)), batch_size=1, verbose=0)
-		print('Eval loss: {}\n'.format(eval_loss))
+		print('Eval loss:\t{}\n'.format(eval_loss))
 
 		ul_x = int(pred_ul_x * nn_img_side)
 		ul_y = int(pred_ul_y * nn_img_side)
@@ -123,9 +123,12 @@ def train_regression():
 	print('Fitting model...')
 	print('-'*30)
 
-	model.fit(imgs_train, imgs_bbox_train, batch_size=20, epochs=1000, verbose=1, shuffle=True, validation_split=0.11, 
+	remote = RemoteMonitor(root='http://localhost:9000')
+
+	model.fit(imgs_train, imgs_bbox_train, batch_size=10, epochs=3000, verbose=1, shuffle=True, validation_split=0.11, 
 				callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1), 
-						   TestCallback()
+						   # remote,
+						   # TestCallback()
 						   ])
 
 if __name__ == '__main__':

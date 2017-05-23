@@ -103,10 +103,9 @@ def execute_model():
 					exit(1)
 
 				bbox = get_bbox(frame, model)
-
-				if bbox:
-					print(bbox)
-					R.draw_rects(frame, [bbox])
+						
+				print(bbox)
+				R.draw_rects(frame, [bbox])
 				
 				cv2.imshow('frame',frame)
 				if cv2.waitKey(1) & 0xFF == ord('q'):
