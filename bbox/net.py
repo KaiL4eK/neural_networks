@@ -49,11 +49,6 @@ def intersect_over_union_bbox(y_true, y_pred):
 	pred_lr_x = K.clip(pred_lr_x, 0, 1)
 	pred_lr_y = K.clip(pred_lr_y, 0, 1)
 
-	# pred1 = K.less_equal( pred_lr_x, pred_ul_x )
-	# pred2 = K.less_equal( pred_lr_y, pred_ul_y )
-	# sess = K.get_session()
-	# if sess.run(pred1) or sess.run(pred2):
-		# return K.variable(0);
 
 	xA = K.maximum(true_ul_x, pred_ul_x)	# Left
 	yA = K.maximum(true_ul_y, pred_ul_y)	# Up
@@ -71,34 +66,19 @@ def intersect_over_union_bbox(y_true, y_pred):
 
 	notIntersect = tf.logical_or(xNotIntersect, yNotIntersect)
 
-	# x_inter_1 = true_ul_x - pred_lr_x
-	# x_inter_1_sign = K.sign(x_inter_1)
-	# # x_inter_1_val = K.clip(K.abs(true_ul_x - pred_lr_x), 10e-9, 1)
+	isNegativeSample = K.equal(boxBArea, 0)
 
-	# x_inter_2 = pred_ul_x - true_lr_x
-	# x_inter_2_sign = K.sign(x_inter_2)
-	# # x_inter_2_val = K.clip(K.abs(pred_ul_x - true_lr_x), 10e-9, 1)
 
-	# xIntersect =  x_inter_1 * x_inter_2
-	# # xIntersect = K.clip( xIntersect * 10e9, 0, 1 )
-
-	# y_inter_1 = true_ul_y - pred_lr_y
-	# y_inter_1_sign = K.sign(y_inter_1)
-	# # y_inter_1_val = K.clip(K.abs(true_ul_y - pred_lr_y), 10e-9, 1)
-
-	# y_inter_2 = pred_ul_y - true_lr_y
-	# y_inter_2_sign = K.sign(y_inter_2)
-	# # y_inter_2_val = K.clip(K.abs(pred_ul_y - true_lr_y), 10e-9, 1)
-
-	# yIntersect = y_inter_1 * y_inter_2
-	# # yIntersect = K.clip( yIntersect * 10e9, 0, 1 )
-
-	# yIntersect = K.switch(K.greater_equal(yIntersect, 0), 1, 0)
-	# xIntersect = K.switch(K.greater_equal(xIntersect, 0), 1, 0)
 
 	intersection = tf.multiply((xB - xA), (yB - yA))
 	res = tf.where(notIntersect, (K.abs(intersection) * -1) / (boxAArea + boxBArea),
 								 intersection / (boxAArea + boxBArea - intersection));
+
+	negativeSamplesRate = 2
+
+	res = tf.where(isNegativeSample, K.clip(K.maximum(pred_lr_x, pred_lr_y) * negativeSamplesRate, 0, 1), 
+									 res)
+
 	return res
 
 def iou_loss(y_true, y_pred):

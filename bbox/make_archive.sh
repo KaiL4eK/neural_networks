@@ -1,3 +1,3 @@
 #!/bin/bash
 
-tar czvf keras_deconv_data.tar.gz train.py data.py net.py *.npy
+tar cJvf keras_deconv_data.tar.xz train.py data.py net.py *.npy

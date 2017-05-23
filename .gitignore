@@ -2,6 +2,7 @@
 *.npy
 *.csv
 **raw
+**negative
 *.log
 *.tar.gz
 *old.h5
