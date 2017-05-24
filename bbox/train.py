@@ -1,5 +1,8 @@
 from __future__ import print_function
 
+import sys
+sys.path.append('../')
+
 import os
 import cv2
 import numpy as np
@@ -48,7 +51,10 @@ def preprocess_regress(imgs, bboxes, classes):
 print('-'*30)
 print('Loading and preprocessing train data...')
 print('-'*30)
-imgs_train, imgs_bbox_train, imgs_class_train = load_train_data()
+
+imgs_train 			= npy_data_load_images()
+imgs_bbox_train 	= npy_data_load_bboxes()
+imgs_class_train 	= npy_data_load_classes()
 imgs_train, imgs_bbox_train, imgs_class_train = preprocess_regress(imgs_train, imgs_bbox_train, imgs_class_train)
 
 

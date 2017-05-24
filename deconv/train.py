@@ -1,5 +1,8 @@
 from __future__ import print_function
 
+import sys
+sys.path.append('../')
+
 import os
 import cv2
 import numpy as np
@@ -35,7 +38,9 @@ def train_and_predict():
 	print('-'*30)
 	print('Loading and preprocessing train data...')
 	print('-'*30)
-	imgs_train, imgs_mask_train = load_train_data()
+
+	imgs_train 			= npy_data_load_images()
+	imgs_mask_train 	= npy_data_load_masks()
 	imgs_train, imgs_mask_train = preprocess_arrays(imgs_train, imgs_mask_train)
 
 	print('-'*30)
