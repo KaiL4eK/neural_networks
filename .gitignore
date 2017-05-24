@@ -2,6 +2,7 @@
 *.npy
 *.csv
 **raw
+**positive
 **negative
 *.log
 *.tar.gz

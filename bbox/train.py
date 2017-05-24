@@ -4,6 +4,7 @@ import os
 import cv2
 import numpy as np
 from keras.models import Model
+from keras.utils import np_utils, generic_utils
 from keras.callbacks import ModelCheckpoint, Callback, RemoteMonitor
 import random
 
@@ -17,9 +18,10 @@ parser.add_argument('-t', '--test', action='store_true', help='Test model for lo
 
 args = parser.parse_args()
 
-def preprocess_regress(imgs, bboxes):
+def preprocess_regress(imgs, bboxes, classes):
 	imgs_p   = np.ndarray((imgs.shape[0],  nn_img_side, nn_img_side, 3), dtype=np.float32)
 	bboxes_p = np.ndarray((bboxes.shape[0], 4), 						 dtype=np.float32)
+	class_p  = np.ndarray((classes.shape[0], num_classes), 			     dtype=np.float32)
 
 	# scale_x = float(nn_img_side)/npy_img_width
 	# scale_y = float(nn_img_side)/npy_img_height
@@ -31,15 +33,23 @@ def preprocess_regress(imgs, bboxes):
 	for i in range(imgs.shape[0]):
 		imgs_p[i]   = preprocess_img(imgs[i])
 		bboxes_p[i] = np.multiply(bboxes[i], [scale_x, scale_y, scale_x, scale_y])
+		
+		class_name  = classes[i]
+		if class_name in class_list:
+			class_label = np_utils.to_categorical(class_list.index(class_name), num_classes)
+		else:
+			class_label = [0] * num_classes
+		class_p[i] = class_label	
+		# print(class_p[i], class_p[i].shape)
 
-	return imgs_p, bboxes_p
+	return imgs_p, bboxes_p, class_p
 
 
 print('-'*30)
 print('Loading and preprocessing train data...')
 print('-'*30)
-imgs_train, imgs_bbox_train = load_train_data()
-imgs_train, imgs_bbox_train = preprocess_regress(imgs_train, imgs_bbox_train)
+imgs_train, imgs_bbox_train, imgs_class_train = load_train_data()
+imgs_train, imgs_bbox_train, imgs_class_train = preprocess_regress(imgs_train, imgs_bbox_train, imgs_class_train)
 
 
 class TestCallback(Callback):
@@ -113,9 +123,7 @@ def train_regression():
 	print('Creating and compiling model...')
 	print('-'*30)
 
-	model = regression_model()
-	print_summary(model)
-	# plot_model(model, show_shapes=True)
+	model = get_network_model()
 
 	if args.weights:
 		model.load_weights(args.weights)
@@ -137,11 +145,13 @@ def train_regression():
 								   np.reshape(true_bbox, (1, 4)), batch_size=1, verbose=0)
 		print('Eval loss:\t{}\n'.format(eval_loss))
 	else:
-		model.fit(imgs_train, imgs_bbox_train, batch_size=10, epochs=3000, verbose=1, shuffle=True, validation_split=0,
-					callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1), 
-							   # remote,
-							   # TestCallback()
-							   ])
+		input_data  = imgs_train
+
+		# output_data = imgs_bbox_train
+		output_data = [imgs_bbox_train, imgs_class_train]
+
+		model.fit(input_data, output_data, batch_size=10, epochs=3000, verbose=1, shuffle=True, validation_split=0,
+					callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1)])
 
 if __name__ == '__main__':
 	train_regression()

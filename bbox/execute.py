@@ -36,8 +36,7 @@ def get_bbox(frame, model):
 
 def execute_model():
 
-	model = regression_model()
-
+	model = get_network_model()
 	if args.pic:
 		
 		frame = cv2.imread(args.filepath)
@@ -45,7 +44,6 @@ def execute_model():
 			print('Failed to open file')
 			exit(1)
 		
-		print_summary(model)
 		model.load_weights(args.weights)
 
 		bbox = get_bbox(frame, model)
@@ -68,7 +66,6 @@ def execute_model():
 			print('Failed to read frame')
 			exit(1)
 
-		print_summary(model)
 		model.load_weights(args.weights)
 
 		if args.fps:
