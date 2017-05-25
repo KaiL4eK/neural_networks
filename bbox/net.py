@@ -71,13 +71,14 @@ def intersect_over_union_bbox(y_true, y_pred):
 
 	squares_dist = K.clip((fault_ul_square + fault_lr_square + boxAArea + boxBArea) * 3, 0, 1)
 
-#	res = tf.where(notIntersect, (K.abs(intersection) * -1) / (boxAArea + boxBArea), intersection / (boxAArea + boxBArea - intersection));
-	res = tf.where(notIntersect, 1-squares_dist, intersection / (boxAArea + boxBArea - intersection))
+	notIntersectRate = 5
+	res = tf.where(notIntersect, ((K.abs(intersection) * -1) / (boxAArea + boxBArea)) * notIntersectRate, intersection / (boxAArea + boxBArea - intersection));
+#	res = tf.where(notIntersect, 1-squares_dist, intersection / (boxAArea + boxBArea - intersection))
 
-#	isNegativeSample = K.equal(true_ul_x, true_ul_y)
-#	negativeSamplesRate = 5
-#	res = tf.where(isNegativeSample, K.ones_like(res) - K.clip(K.maximum(pred_lr_x, pred_lr_y) * negativeSamplesRate, 0, 1), res)
-	
+	isNegativeSample = K.equal(boxBArea, 0)
+	negativeSamplesRate = 0
+	res = tf.where(isNegativeSample, 1 - K.clip(K.maximum(pred_lr_x, pred_lr_y) * negativeSamplesRate, 0, 1), res)
+
 	return K.mean(res)
 
 def iou_loss(y_true, y_pred):
@@ -122,9 +123,9 @@ def two_output_model():
 	fc_cls      = Dense(1024, activation='relu')(flat)
 	drop_fc_cls = Dropout(0.5)(fc_cls)
 	out_cls     = Dense(num_classes, activation='softmax', name='out_cls')(drop_fc_cls)
-	
+
 	model = Model(input, [out_bb, out_cls])
-	model.compile(optimizer=Adam(lr=1e-5), loss={'out_bb': iou_loss, 'out_cls': 'categorical_crossentropy'}, metrics=[])
+	model.compile(optimizer=Adam(lr=1e-5), loss={'out_bb': iou_loss, 'out_cls': 'categorical_crossentropy'}, metrics=[], loss_weights=[1, 2])
 
 	return model
 
