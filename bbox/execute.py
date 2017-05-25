@@ -1,12 +1,14 @@
 from __future__ import print_function
 
+import sys
+sys.path.append('../')
+
 import os
 import cv2
 import numpy as np
 import time
 from keras.models import Model, load_model, save_model
 
-from data import load_train_data
 import rects as R
 from net import *
 import argparse
@@ -18,6 +20,7 @@ parser.add_argument('filepath', action='store', help='Path to video file to proc
 parser.add_argument('weights', action='store', help='Path to weights file')
 parser.add_argument('-f', '--fps', action='store_true', help='Check fps')
 parser.add_argument('-p', '--pic', action='store_true', help='Process picture')
+parser.add_argument('-n', '--negative', action='store_true', help='Negative creation')
 
 args = parser.parse_args()
 
@@ -28,15 +31,38 @@ try:
 except NameError:
     xrange = range
 
-def get_bbox(frame, model):
-	imgs_mask = model.predict(np.array([preprocess_img(frame)]))
+def process_naming(frame, model):
+	img_bbox, img_class = model.predict(np.array([preprocess_img(frame)]))
+
+	img_class = img_class[0]
+	class_index = np.argmax(img_class)
+	class_value = img_class[class_index]
+
 	f_height, f_width, f_cahnnels = frame.shape
-	result = imgs_mask[0] * [f_width, f_height, f_width, f_height]
-	return result.astype(int)
+	bbox = img_bbox[0] * [f_width, f_height, f_width, f_height]
+	bbox = bbox.astype(int)
+
+	if class_value > 0.9:
+		R.draw_rects(frame, [bbox])
+
+		font = cv2.FONT_HERSHEY_SIMPLEX
+		cv2.putText(frame, class_list[class_index], (10,30), font, 1, (255,255,255), 2)
+
+def get_next_negative_id():
+	maximum_id = 0
+
+	data_path = '../negative'
+	images = os.listdir(data_path)
+
+	for imagefile in images:
+		info   = imagefile.split(';')
+		maximum_id = max(maximum_id, int(info[0]))
+
+	return maximum_id+1
 
 def execute_model():
-
 	model = get_network_model()
+
 	if args.pic:
 		
 		frame = cv2.imread(args.filepath)
@@ -46,11 +72,8 @@ def execute_model():
 		
 		model.load_weights(args.weights)
 
-		bbox = get_bbox(frame, model)
+		process_naming(frame, model)
 
-		print(bbox)
-		R.draw_rects(frame, [bbox])
-		
 		cv2.imshow('frame',frame)
 		cv2.waitKey(0)
 		exit(1)
@@ -78,11 +101,8 @@ def execute_model():
 					exit(1)
 
 				start_bbox = time.time()
-				bbox = get_bbox(frame, model)
-				bbox_obtain_time += (time.time() - start_bbox)
 
-				print(bbox)
-				R.draw_rects(frame, [bbox])
+				process_naming(frame, model)
 				
 				cv2.imshow('frame',frame)
 				if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -93,16 +113,35 @@ def execute_model():
 			print('Estimated frames per second : {0}'.format(num_frames / seconds))
 			print('Bbox obtain mean time : {0} ms'.format(bbox_obtain_time / num_frames * 1000))
 
-		else:	
+		elif args.negative:	
+			negative_id = get_next_negative_id()
 			while(cap.isOpened()):
 				ret, frame = cap.read()
 				if frame is None:
 					exit(1)
 
-				bbox = get_bbox(frame, model)
-						
-				print(bbox)
-				R.draw_rects(frame, [bbox])
+				frame_draw = np.copy(frame)
+				process_naming(frame_draw, model)
+				
+				cv2.imshow('frame',frame_draw)
+
+				wait_res = cv2.waitKey(0)
+				if wait_res & 0xFF == ord(' '):
+					filename = '../negative/{};0;0;0;0;neg.png'.format(negative_id)
+					print('Saving to file: {}'.format(filename))
+					negative_id += 1
+
+					cv2.imwrite(filename, frame)
+
+				if wait_res & 0xFF == ord('q'):
+					break
+		else:
+			while(cap.isOpened()):
+				ret, frame = cap.read()
+				if frame is None:
+					exit(1)
+
+				process_naming(frame, model)
 				
 				cv2.imshow('frame',frame)
 				if cv2.waitKey(1) & 0xFF == ord('q'):

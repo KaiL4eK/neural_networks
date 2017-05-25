@@ -22,9 +22,9 @@ num_classes = len(class_list)
 def preprocess_img(img):
 	img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_LINEAR)
 	img = img.astype('float32', copy=False)
-	img[:,:,0] -= 103.939
-	img[:,:,1] -= 116.779
-	img[:,:,2] -= 123.68
+	# img[:,:,0] -= 103.939
+	# img[:,:,1] -= 116.779
+	# img[:,:,2] -= 123.68
 	img /= 255.
 	return img
 

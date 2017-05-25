@@ -156,7 +156,7 @@ def train_regression():
 		# output_data = imgs_bbox_train
 		output_data = [imgs_bbox_train, imgs_class_train]
 
-		model.fit(input_data, output_data, batch_size=10, epochs=3000, verbose=1, shuffle=True, validation_split=0,
+		model.fit(input_data, output_data, batch_size=10, epochs=7000, verbose=1, shuffle=True, validation_split=0,
 					callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1)])
 
 if __name__ == '__main__':

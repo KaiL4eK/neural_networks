@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 
 raw_path  = ['../positive', '../negative']
-data_path = '../npy_data'
+data_path = '.'
 
 npy_img_height = 240
 npy_img_width = 320
@@ -63,6 +63,8 @@ def create_train_data():
                     print('Warning1 {}, {}!'.format(img_width, lr_x))
                 if lr_y >= img_height:
                     print('Warning2 {}, {}!'.format(img_height, lr_y))
+
+            img = cv2.resize(img, (npy_img_width, npy_img_height), interpolation = cv2.INTER_LINEAR)
 
             # cv2.rectangle(img, (ul_x, ul_y), (lr_x, lr_y), thickness=3, color=(255, 0, 0) )
             # cv2.imshow('1', img)
