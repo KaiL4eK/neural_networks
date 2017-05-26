@@ -1,5 +1,8 @@
 from __future__ import print_function
 
+import matplotlib.pyplot as plt 
+import matplotlib.animation as animation
+
 import os
 import cv2
 import numpy as np
@@ -9,6 +12,7 @@ from keras.models import Model, load_model, save_model
 import rects as R
 from net import *
 import argparse
+import moviepy.editor as mpy
 
 # from skvideo.io import VideoCapture
 
@@ -18,29 +22,51 @@ parser.add_argument('filepath', action='store', help='Path to video file to proc
 parser.add_argument('-f', '--fps', action='store_true', help='Check fps')
 parser.add_argument('-p', '--pic', action='store_true', help='Process picture')
 parser.add_argument('-n', '--negative', action='store_true', help='Negative creation')
+parser.add_argument('-g', '--gif', action='store_true', help='Create gif')
 
 args = parser.parse_args()
 
 data_path = 'raw/'
 
 try:
-    xrange
+	xrange
 except NameError:
-    xrange = range
+	xrange = range
+
+def build_gif(imgs, show_gif=True, save_gif=True, title=''):
+	print('Creating GIF file')
+
+	clip = mpy.ImageSequenceClip(imgs, fps=20)
+	clip.write_gif('anim.gif', fps=20)
+
+	# fig = plt.figure()
+	# ax = fig.add_subplot(111)
+	# ax.set_axis_off()
+ 
+	# ims = map(lambda x: (ax.imshow(x), ax.set_title(title)), imgs)
+ 
+	# im_ani = animation.ArtistAnimation(fig, ims, interval=800, repeat_delay=0, blit=False)
+ 
+	# if save_gif:
+	# 	im_ani.save('animation.gif', writer='imagemagick')
+ 
+	# if show_gif:
+	# 	plt.show()
+ 
 
 def process_naming(frame, model):
-	img_bbox, img_class = model.predict(np.array([preprocess_img(frame)]))
+	img_class = model.predict(np.array([preprocess_img(frame)]))
 
 	img_class = img_class[0]
-	print(img_class)
+	# print(img_class)
 
 	class_index = np.argmax(img_class)
 	class_value = img_class[class_index]
 
 	if class_value > 0.95 and class_index != 0:
-		print(class_value)
+		# print(class_value)
 		font = cv2.FONT_HERSHEY_SIMPLEX
-		cv2.putText(frame, class_list[class_index], (10,30), font, 1, (255,255,255), 2)
+		cv2.putText(frame, class_list[class_index], (10,70), font, 2, (255,0,0), 3)
 
 def get_next_negative_id():
 	maximum_id = 0
@@ -56,6 +82,7 @@ def get_next_negative_id():
 
 def execute_model():
 	model = get_network_model()
+	gif_imgs = []
 
 	if args.pic:
 		
@@ -141,8 +168,16 @@ def execute_model():
 				if cv2.waitKey(1) & 0xFF == ord('q'):
 					break
 
-		cap.release()
-		cv2.destroyAllWindows()
+				frame = cv2.resize(frame, (80, 80), interpolation = cv2.INTER_LINEAR)
+
+				if args.gif:
+					gif_imgs.append(frame)
+
+	cap.release()
+	cv2.destroyAllWindows()
+
+	if args.gif:
+		build_gif(gif_imgs)
 
 if __name__ == '__main__':
 	execute_model()
