@@ -16,8 +16,8 @@ import argparse
 # from skvideo.io import VideoCapture
 
 parser = argparse.ArgumentParser(description='Process video with ANN')
-parser.add_argument('filepath', action='store', help='Path to video file to process')
 parser.add_argument('weights', action='store', help='Path to weights file')
+parser.add_argument('filepath', action='store', help='Path to video file to process')
 parser.add_argument('-f', '--fps', action='store_true', help='Check fps')
 parser.add_argument('-p', '--pic', action='store_true', help='Process picture')
 parser.add_argument('-n', '--negative', action='store_true', help='Negative creation')
@@ -35,6 +35,8 @@ def process_naming(frame, model):
 	img_bbox, img_class = model.predict(np.array([preprocess_img(frame)]))
 
 	img_class = img_class[0]
+	print(img_class)
+
 	class_index = np.argmax(img_class)
 	class_value = img_class[class_index]
 
@@ -42,9 +44,9 @@ def process_naming(frame, model):
 	bbox = img_bbox[0] * [f_width, f_height, f_width, f_height]
 	bbox = bbox.astype(int)
 
-	if class_value > 0.9:
+	if class_value > 0.9 and class_index != 0:
 		R.draw_rects(frame, [bbox])
-
+		print(class_value)
 		font = cv2.FONT_HERSHEY_SIMPLEX
 		cv2.putText(frame, class_list[class_index], (10,30), font, 1, (255,255,255), 2)
 

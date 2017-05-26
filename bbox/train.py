@@ -41,7 +41,7 @@ def preprocess_regress(imgs, bboxes, classes):
 		if class_name in class_list:
 			class_label = np_utils.to_categorical(class_list.index(class_name), num_classes)
 		else:
-			class_label = [0] * num_classes
+			class_label = np_utils.to_categorical(class_list.index(class_list[0]), num_classes)
 		class_p[i] = class_label	
 		# print(class_p[i], class_p[i].shape)
 
@@ -134,26 +134,34 @@ def train_regression():
 	if args.weights:
 		model.load_weights(args.weights)
 
-	print('-'*30)
-	print('Fitting model...')
-	print('-'*30)
-
 	# remote = RemoteMonitor(root='http://localhost:9000')
 
 	if args.test:
-		i_image = 200 #int(random.random() * total)
-		img = np.copy(imgs_train[i_image])
-		true_bbox = imgs_bbox_train[i_image]
-		print(true_bbox)
-		bbox = model.predict(np.reshape(img, (1, nn_img_side, nn_img_side, 3)), verbose=0)
-		print(bbox[0])
-		eval_loss = model.evaluate(np.reshape(img, (1, nn_img_side, nn_img_side, 3)), 
-								   np.reshape(true_bbox, (1, 4)), batch_size=1, verbose=0)
-		print('Eval loss:\t{}\n'.format(eval_loss))
-	else:
-		input_data  = imgs_train
+		i_image = 1 #int(random.random() * total)
+		img 			= np.reshape(imgs_train[i_image], (1, nn_img_side, nn_img_side, 3))
+		true_bbox 		= np.reshape(imgs_bbox_train[i_image], (1, 4))
+		true_class 		= np.reshape(imgs_class_train[i_image], (1, num_classes))
+		
+		input_data  = img
+		output_data = [true_bbox, true_class]
 
-		# output_data = imgs_bbox_train
+		bbox, class_rates = model.predict(input_data, verbose=0)
+		print(true_bbox)
+		print(bbox)
+		print(class_rates)
+		print(output_data)
+		
+		eval_loss = model.evaluate(input_data, output_data)
+		print('Eval loss:\t{}\n'.format(eval_loss))
+
+		cv2.imshow('frame', imgs_train[i_image])
+		cv2.waitKey(0)
+	else:
+		print('-'*30)
+		print('Fitting model...')
+		print('-'*30)
+
+		input_data  = imgs_train
 		output_data = [imgs_bbox_train, imgs_class_train]
 
 		model.fit(input_data, output_data, batch_size=10, epochs=7000, verbose=1, shuffle=True, validation_split=0,
