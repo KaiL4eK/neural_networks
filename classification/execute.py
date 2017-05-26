@@ -40,12 +40,7 @@ def process_naming(frame, model):
 	class_index = np.argmax(img_class)
 	class_value = img_class[class_index]
 
-	f_height, f_width, f_cahnnels = frame.shape
-	bbox = img_bbox[0] * [f_width, f_height, f_width, f_height]
-	bbox = bbox.astype(int)
-
 	if class_value > 0.95 and class_index != 0:
-		R.draw_rects(frame, [bbox])
 		print(class_value)
 		font = cv2.FONT_HERSHEY_SIMPLEX
 		cv2.putText(frame, class_list[class_index], (10,30), font, 1, (255,255,255), 2)

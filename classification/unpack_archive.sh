@@ -1,3 +1,3 @@
 #!/bin/bash
 
-tar xJvf keras_deconv_data.tar.xz
+tar xJvf keras_NN_classification_data.tar.xz
