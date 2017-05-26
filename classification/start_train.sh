@@ -1,1 +1,1 @@
-../start_train.sh
+../common_scripts/start_train.sh
