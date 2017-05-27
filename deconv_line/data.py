@@ -54,6 +54,7 @@ def create_train_data():
             ret,tref = cv2.threshold(ref,127,255,cv2.THRESH_BINARY)
             ref = tref
 
+            
             # cv2.imshow('1', img)
             # cv2.imshow('2', ref)
             # cv2.imshow('3', tref)

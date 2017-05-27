@@ -35,6 +35,11 @@ def iou_loss(y_true, y_pred):
 # Output is resized, BGR, mean subtracted, [0, 1.] scaled by values
 def preprocess_img(img):
 	img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_CUBIC)
+
+	img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+	img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
+	img = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+
 	img = img.astype('float32', copy=False)
 	# img[:,:,0] -= 103.939
 	# img[:,:,1] -= 116.779
@@ -90,12 +95,12 @@ def get_unet():
 	model.add(Dropout(0.5))
 
 	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+	model.add(Conv2D(16, (3, 3), activation='tanh', padding='same'))
 	model.add(Dropout(0.5))
 
 	model.add(Conv2D(1, (1, 1), activation='hard_sigmoid'))
 
-	model.compile(optimizer=Adam(lr=1e-5), loss=iou_loss, metrics=[binary_crossentropy])
+	model.compile(optimizer=Adam(lr=1e-4), loss=iou_loss, metrics=[binary_crossentropy])
 	
 	print_summary(model)
 	plot_model(model, show_shapes=True)
