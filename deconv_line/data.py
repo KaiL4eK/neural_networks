@@ -45,7 +45,6 @@ def create_train_data():
             if image_name.split('.')[1] == 'ref':
                 continue
 
-            # Save image
             img = cv2.imread(os.path.join(raw_path_active, image_name))
             img = cv2.resize(img, (npy_img_width, npy_img_height), interpolation = cv2.INTER_CUBIC)
 
@@ -72,11 +71,10 @@ def create_train_data():
         images = os.listdir(neg_path)
 
         for image_name in images:
-            # Save image
             img = cv2.imread(os.path.join(neg_path, image_name))
-            img = cv2.resize(img, (npy_img_width, npy_img_height), interpolation = cv2.INTER_LINEAR)
+            img = cv2.resize(img, (npy_img_width, npy_img_height), interpolation = cv2.INTER_CUBIC)
 
-            imgs[i]         = np.array([img])
+            imgs[i]         = img
             imgs_mask[i]    = np.zeros((npy_img_height, npy_img_width), dtype=np.uint8)
 
             print_process(i, total)
