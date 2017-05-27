@@ -9,7 +9,6 @@ import numpy as np
 import time
 from keras.models import Model, load_model, save_model
 
-import rects as R
 from net import *
 import argparse
 import moviepy.editor as mpy

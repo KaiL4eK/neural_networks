@@ -7,7 +7,7 @@ from keras.models import Model
 from keras.callbacks import ModelCheckpoint, Callback
 import random
 
-from data import load_train_data, data_path
+from data import *
 from net import *
 import argparse
 
@@ -19,6 +19,7 @@ args = parser.parse_args()
 def preprocess_arrays(imgs, masks):
 	imgs_p  = np.ndarray((imgs.shape[0],  nn_img_side, nn_img_side, 3), dtype=np.float32)
 	masks_p = np.ndarray((masks.shape[0], nn_out_size, nn_out_size),    dtype=np.float32)
+
 	for i in range(imgs.shape[0]):
 		imgs_p[i]  = preprocess_img(imgs[i])
 		masks_p[i] = preprocess_mask(masks[i])
@@ -29,6 +30,7 @@ def preprocess_arrays(imgs, masks):
 		# 	exit(1)
 
 	return imgs_p, masks_p[..., np.newaxis]
+	# return imgs_p, masks_p
 
 
 def train_and_predict():
@@ -45,8 +47,6 @@ def train_and_predict():
 	print('-'*30)
 
 	model = get_unet()
-	print_summary(model)
-	# plot_model(model, show_shapes=True)
 
 	if args.weights:
 		model.load_weights(args.weights)
@@ -55,7 +55,7 @@ def train_and_predict():
 	print('Fitting model...')
 	print('-'*30)
 
-	model.fit(imgs_train, imgs_mask_train, batch_size=32, epochs=7000, verbose=1, shuffle=True, validation_split=0.11, 
+	model.fit(imgs_train, imgs_mask_train, batch_size=10, epochs=7000, verbose=1, shuffle=True, validation_split=0.05, 
 				callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1)])
 
 if __name__ == '__main__':
