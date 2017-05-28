@@ -6,16 +6,15 @@ import numpy as np
 import time
 from keras.models import Model, load_model, save_model
 
-from data import load_train_data
-import rects as R
+from data import *
 from net import *
 import argparse
 
 # from skvideo.io import VideoCapture
 
 parser = argparse.ArgumentParser(description='Process video with ANN')
-parser.add_argument('filepath', action='store', help='Path to video file to process')
 parser.add_argument('weights', action='store', help='Path to weights file')
+parser.add_argument('filepath', action='store', help='Path to video file to process')
 parser.add_argument('-f', '--fps', action='store_true', help='Check fps')
 parser.add_argument('-p', '--pic', action='store_true', help='Process picture')
 
@@ -28,20 +27,16 @@ try:
 except NameError:
     xrange = range
 
-def get_bbox(frame, model):
-	imgs_mask = model.predict(np.array([preprocess_img(frame)]))
-	mask = (imgs_mask[0] * 255).astype('uint8', copy=False)
+def get_mask(frame, model):
+	img_mask = model.predict(np.array([preprocess_img(frame)]))
+	mask = (img_mask[0] * 255).astype('uint8', copy=False)
+	mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
 
-	rects = R.get_rects(mask, 100)
-	if rects:
-		return rects[0]
-	else:
-		return None
+	return mask
 
 def execute_model():
 
 	if args.pic:
-		
 		frame = cv2.imread(args.filepath)
 		if frame is None:
 			print('Failed to open file')
@@ -52,22 +47,23 @@ def execute_model():
 		scale_y = float(f_height)/nn_out_size
 
 		model = get_unet()
-		print_summary(model)
 		model.load_weights(args.weights)
 
-		bbox = get_bbox(frame, model)
+		mask = get_mask(frame, model)
 
-		if bbox:
-			# print(bbox)
-			bbox = [int(i) for i in np.multiply(bbox, [scale_x, scale_y, scale_x, scale_y])]
-			# print(bbox)
-			R.draw_rects(frame, [bbox])
-		
+		frame = cv2.resize(frame, (320, 240), interpolation = cv2.INTER_CUBIC)
+		mask  = cv2.resize(mask, (320, 240), interpolation = cv2.INTER_NEAREST)
+
+		frame[np.where((mask!=[0,0,0]).all(axis=2))] = (0,255,0)
+
+		frame = np.hstack((mask,frame))
+
 		cv2.imshow('frame',frame)
+		# cv2.imshow('mask',mask)
 		cv2.waitKey(0)
 		exit(1)
-	else:
 
+	else:
 		cap = cv2.VideoCapture(args.filepath)
 		if cap is None or not cap.isOpened():
 			print('Failed to open file')
@@ -78,17 +74,11 @@ def execute_model():
 			print('Failed to read frame')
 			exit(1)
 
-		f_height, f_width, f_cahnnels = frame.shape
-		scale_x = float(f_width)/nn_out_size
-		scale_y = float(f_height)/nn_out_size
-
-		# model = load_model('test_model.h5', custom_objects={'iou_loss':iou_loss})
 		model = get_unet()
-		print_summary(model)
 		model.load_weights(args.weights)
 
 		if args.fps:
-			bbox_obtain_time = 0
+			mask_obtain_time = 0
 			num_frames = 120
 			start = time.time()
 			for i in xrange(0, num_frames) :
@@ -96,24 +86,19 @@ def execute_model():
 				if frame is None:
 					exit(1)
 
-				start_bbox = time.time()
-				bbox = get_bbox(frame, model)
-				bbox_obtain_time += (time.time() - start_bbox)
-
-				if bbox:
-					# print(bbox)
-					bbox = [int(i) for i in np.multiply(bbox, [scale_x, scale_y, scale_x, scale_y])]
-					# print(bbox)
-					R.draw_rects(frame, [bbox])
+				start_mask = time.time()
+				mask = get_mask(frame, model)
+				mask_obtain_time += (time.time() - start_mask)
 				
 				cv2.imshow('frame',frame)
+				cv2.imshow('mask',mask)
 				if cv2.waitKey(1) & 0xFF == ord('q'):
 					break
 
 			seconds = time.time() - start
 			print('Mean time per frame : {0} ms'.format(seconds / num_frames * 1000))
 			print('Estimated frames per second : {0}'.format(num_frames / seconds))
-			print('Bbox obtain mean time : {0} ms'.format(bbox_obtain_time / num_frames * 1000))
+			print('Bbox obtain mean time : {0} ms'.format(mask_obtain_time / num_frames * 1000))
 
 		else:	
 			while(cap.isOpened()):
@@ -121,16 +106,10 @@ def execute_model():
 				if frame is None:
 					exit(1)
 
-				# frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-				bbox = get_bbox(frame, model)
-
-				if bbox:
-					# print(bbox)
-					bbox = [int(i) for i in np.multiply(bbox, [scale_x, scale_y, scale_x, scale_y])]
-					# print(bbox)
-					R.draw_rects(frame, [bbox])
+				mask = get_mask(frame, model)
 				
 				cv2.imshow('frame',frame)
+				cv2.imshow('mask',mask)
 				if cv2.waitKey(1) & 0xFF == ord('q'):
 					break
 

@@ -172,8 +172,8 @@ def execute_model():
 				if args.gif:
 					gif_imgs.append(frame)
 
-	cap.release()
-	cv2.destroyAllWindows()
+		cap.release()
+		cv2.destroyAllWindows()
 
 	if args.gif:
 		build_gif(gif_imgs)

@@ -9,6 +9,8 @@ data_path = '.'
 raw_path  = ['../raw_data/line_imgs_masks' ]
 negative_path = [ '../raw_data/negative' ]
 
+negatives_append = False
+
 npy_img_height = 240
 npy_img_width = 320
 
@@ -28,9 +30,10 @@ def create_train_data():
         img_list = os.listdir(raw_path_active)
         total += len(img_list)/2
 
-    for neg_path in negative_path:
-        img_list = os.listdir(neg_path)
-        total += len(img_list)
+    if negatives_append:
+        for neg_path in negative_path:
+            img_list = os.listdir(neg_path)
+            total += len(img_list)
 
     imgs        = np.ndarray((total, npy_img_height, npy_img_width, 3), dtype=np.uint8)
     imgs_mask   = np.ndarray((total, npy_img_height, npy_img_width), dtype=np.uint8)
@@ -66,20 +69,20 @@ def create_train_data():
 
             print_process(i, total)
             i += 1
+    if negatives_append:
+        for neg_path in negative_path:
+            print('Processing negatives path: {}'.format(neg_path))
+            images = os.listdir(neg_path)
 
-    for neg_path in negative_path:
-        print('Processing negatives path: {}'.format(neg_path))
-        images = os.listdir(neg_path)
+            for image_name in images:
+                img = cv2.imread(os.path.join(neg_path, image_name))
+                img = cv2.resize(img, (npy_img_width, npy_img_height), interpolation = cv2.INTER_CUBIC)
 
-        for image_name in images:
-            img = cv2.imread(os.path.join(neg_path, image_name))
-            img = cv2.resize(img, (npy_img_width, npy_img_height), interpolation = cv2.INTER_CUBIC)
+                imgs[i]         = img
+                imgs_mask[i]    = np.zeros((npy_img_height, npy_img_width), dtype=np.uint8)
 
-            imgs[i]         = img
-            imgs_mask[i]    = np.zeros((npy_img_height, npy_img_width), dtype=np.uint8)
-
-            print_process(i, total)
-            i += 1
+                print_process(i, total)
+                i += 1
 
     np.save(data_path + '/imgs_train.npy', imgs)
     np.save(data_path + '/imgs_mask_train.npy', imgs_mask)
