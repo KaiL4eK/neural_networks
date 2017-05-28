@@ -36,6 +36,8 @@ def get_mask(frame, model):
 
 def execute_model():
 
+	new_shape = (320, 240)
+
 	if args.pic:
 		frame = cv2.imread(args.filepath)
 		if frame is None:
@@ -51,15 +53,13 @@ def execute_model():
 
 		mask = get_mask(frame, model)
 
-		frame = cv2.resize(frame, (320, 240), interpolation = cv2.INTER_CUBIC)
-		mask  = cv2.resize(mask, (320, 240), interpolation = cv2.INTER_NEAREST)
+		frame = cv2.resize(frame, new_shape, interpolation = cv2.INTER_CUBIC)
+		mask  = cv2.resize(mask, new_shape, interpolation = cv2.INTER_NEAREST)
 
 		frame[np.where((mask!=[0,0,0]).all(axis=2))] = (0,255,0)
-
 		frame = np.hstack((mask,frame))
 
 		cv2.imshow('frame',frame)
-		# cv2.imshow('mask',mask)
 		cv2.waitKey(0)
 		exit(1)
 
@@ -88,10 +88,15 @@ def execute_model():
 
 				start_mask = time.time()
 				mask = get_mask(frame, model)
+
+				frame = cv2.resize(frame, new_shape, interpolation = cv2.INTER_CUBIC)
+				mask  = cv2.resize(mask, new_shape, interpolation = cv2.INTER_NEAREST)
+				frame[np.where((mask!=[0,0,0]).all(axis=2))] = (0,255,0)
+				frame = np.hstack((mask,frame))
+
 				mask_obtain_time += (time.time() - start_mask)
 				
 				cv2.imshow('frame',frame)
-				cv2.imshow('mask',mask)
 				if cv2.waitKey(1) & 0xFF == ord('q'):
 					break
 
@@ -107,9 +112,13 @@ def execute_model():
 					exit(1)
 
 				mask = get_mask(frame, model)
+
+				frame = cv2.resize(frame, new_shape, interpolation = cv2.INTER_CUBIC)
+				mask  = cv2.resize(mask, new_shape, interpolation = cv2.INTER_NEAREST)
+				frame[np.where((mask!=[0,0,0]).all(axis=2))] = (0,255,0)
+				frame = np.hstack((mask,frame))
 				
 				cv2.imshow('frame',frame)
-				cv2.imshow('mask',mask)
 				if cv2.waitKey(1) & 0xFF == ord('q'):
 					break
 

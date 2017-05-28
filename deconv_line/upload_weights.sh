@@ -1,0 +1,1 @@
+../common_scripts/upload_weights.sh

@@ -11,8 +11,8 @@ import cv2
 
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
-nn_img_side = 144
-nn_out_size = 144
+nn_img_side = 240
+nn_out_size = 240
 
 ### Rates ###
 # 27.5 ms - processing time gpu
@@ -62,7 +62,7 @@ def get_unet():
 
 	model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(nn_img_side, nn_img_side, 3)))
 	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(MaxPooling2D(pool_size=(3, 3)))
 	model.add(Dropout(0.25))
 
 	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
@@ -70,24 +70,24 @@ def get_unet():
 	model.add(MaxPooling2D(pool_size=(2, 2)))
 	model.add(Dropout(0.25))
 
+	# model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
 	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(MaxPooling2D(pool_size=(4, 4)))
 	model.add(Dropout(0.25))
+
+	# model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(Dropout(0.25))
 
 	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
 	model.add(Dropout(0.25))
 
-	model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
-	model.add(Dropout(0.25))
-
-	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-	model.add(Dropout(0.25))
-
-	model.add(UpSampling2D(size=(2, 2)))
+	model.add(UpSampling2D(size=(3, 3)))
 	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	model.add(Dropout(0.25))
+
+	model.add(UpSampling2D(size=(2, 2)))
+	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
 	model.add(Dropout(0.25))
 
 	model.add(UpSampling2D(size=(2, 2)))
@@ -100,7 +100,7 @@ def get_unet():
 
 	model.add(Conv2D(1, (1, 1), activation='hard_sigmoid'))
 
-	model.compile(optimizer=Adam(lr=1e-4), loss=iou_loss, metrics=[binary_crossentropy])
+	model.compile(optimizer=Adam(lr=1e-5), loss=iou_loss, metrics=[binary_crossentropy])
 	
 	print_summary(model)
 	plot_model(model, show_shapes=True)
