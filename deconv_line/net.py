@@ -36,9 +36,9 @@ def iou_loss(y_true, y_pred):
 def preprocess_img(img):
 	img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_CUBIC)
 
-	img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
-	img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
-	img = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+	# img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+	# img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
+	# img = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
 
 	img = img.astype('float32', copy=False)
 	# img[:,:,0] -= 103.939
@@ -76,13 +76,13 @@ def get_unet():
 	model.add(Dropout(0.25))
 
 	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Dropout(0.25))
+	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(Dropout(0.25))
 
-	model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
-	model.add(Dropout(0.25))
+	# model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
 
-	model.add(UpSampling2D(size=(2, 2)))
+	# model.add(UpSampling2D(size=(2, 2)))
 	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
 	model.add(Dropout(0.25))
 
@@ -95,7 +95,7 @@ def get_unet():
 	model.add(Dropout(0.25))
 
 	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+	model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
 	model.add(Dropout(0.25))
 
 	model.add(Conv2D(1, (1, 1), activation='hard_sigmoid'))

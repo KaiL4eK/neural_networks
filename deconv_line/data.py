@@ -9,7 +9,7 @@ data_path = '.'
 raw_path  = ['../raw_data/line_imgs_masks' ]
 negative_path = [ '../raw_data/negative' ]
 
-negatives_append = False
+negatives_append = True
 
 npy_img_height = 240
 npy_img_width = 320
