@@ -36,7 +36,7 @@ def get_mask(frame, model):
 
 def execute_model():
 
-	new_shape = (320, 240)
+	new_shape = (240, 240)
 
 	if args.pic:
 		frame = cv2.imread(args.filepath)
