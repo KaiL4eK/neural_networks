@@ -11,8 +11,8 @@ negative_path = [ '../raw_data/negative' ]
 
 negatives_append = True
 
-npy_img_height = 240
-npy_img_width = 320
+npy_img_height = 480
+npy_img_width = 640
 
 def print_process(index, total):
     if index % 100 == 0:

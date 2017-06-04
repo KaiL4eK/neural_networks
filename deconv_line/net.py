@@ -11,8 +11,8 @@ import cv2
 
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
-nn_img_side = 144
-nn_out_size = 288
+nn_img_side = 240
+nn_out_size = 120
 
 ### Rates ###
 # 27.5 ms - processing time gpu
@@ -83,16 +83,16 @@ def get_unet():
 	# model.add(Conv2D(512, (3, 3), activation='relu', padding='same'))
 
 	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Conv2D(16, (2, 2), activation='relu', padding='same'))
-	model.add(Dropout(0.25))
-
-	model.add(UpSampling2D(size=(4, 4)))
-	model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+	model.add(Conv2D(32, (2, 2), activation='relu', padding='same'))
 	model.add(Dropout(0.25))
 
 	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
 	model.add(Dropout(0.25))
+
+	# model.add(UpSampling2D(size=(2, 2)))
+	# model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
+	# model.add(Dropout(0.25))
 
 	# model.add(UpSampling2D(size=(2, 2)))
 	# model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
