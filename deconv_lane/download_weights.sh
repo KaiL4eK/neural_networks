@@ -1,0 +1,1 @@
+../common_scripts/download_weights.sh
