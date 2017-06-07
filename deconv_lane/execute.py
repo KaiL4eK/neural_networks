@@ -91,6 +91,7 @@ def execute_model():
 
 				frame = cv2.resize(frame, new_shape, interpolation = cv2.INTER_CUBIC)
 				mask  = cv2.resize(mask, new_shape, interpolation = cv2.INTER_NEAREST)
+				
 				frame[np.where((mask!=[0,0,0]).all(axis=2))] = (0,255,0)
 				frame = np.hstack((mask,frame))
 

@@ -56,9 +56,7 @@ def preprocess_mask(img):
 def get_unet():
 	model = Sequential()
 
-	model.add(BatchNormalization(input_shape=(nn_img_side, nn_img_side, 3)))
-
-	model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+	model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(nn_img_side, nn_img_side, 3)))
 	# model.add(Conv2D(16, (3, 3), activation='relu', padding='same'))
 	model.add(MaxPooling2D(pool_size=(2, 2)))
 	model.add(Dropout(0.25))
@@ -97,7 +95,7 @@ def get_unet():
 
 	model.add(Deconv2D(1, (1, 1), activation='hard_sigmoid'))
 
-	model.compile(optimizer=Adam(lr=1e-5), loss=iou_loss, metrics=[binary_crossentropy])
+	model.compile(optimizer=Adam(lr=1e-3), loss=iou_loss, metrics=[binary_crossentropy])
 	
 	print_summary(model)
 	plot_model(model, show_shapes=True)
