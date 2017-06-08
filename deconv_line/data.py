@@ -54,9 +54,8 @@ def create_train_data():
             ref_name = base_name + '.ref'
             ref = cv2.imread(os.path.join(raw_path_active, ref_name), cv2.IMREAD_GRAYSCALE)
             ref = cv2.resize(ref, (npy_img_width, npy_img_height), interpolation = cv2.INTER_NEAREST)
-            ret,tref = cv2.threshold(ref,127,255,cv2.THRESH_BINARY)
+            ret,tref = cv2.threshold(ref,200,255,cv2.THRESH_BINARY)
             ref = tref
-
             
             # cv2.imshow('1', img)
             # cv2.imshow('2', ref)
