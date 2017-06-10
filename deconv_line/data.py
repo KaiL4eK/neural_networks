@@ -9,7 +9,7 @@ data_path = '.'
 raw_path  = ['../raw_data/line_imgs_masks' ]
 negative_path = [ '../raw_data/negative' ]
 
-negatives_append = True
+negatives_append = False
 
 npy_img_height = 480
 npy_img_width = 640
@@ -57,11 +57,11 @@ def create_train_data():
             ret,tref = cv2.threshold(ref,200,255,cv2.THRESH_BINARY)
             ref = tref
             
-            # cv2.imshow('1', img)
-            # cv2.imshow('2', ref)
-            # cv2.imshow('3', tref)
-            # if cv2.waitKey(0) == ord('q'):
-            #     exit(0)
+            cv2.imshow('1', img)
+            cv2.imshow('2', ref)
+            cv2.imshow('3', tref)
+            if cv2.waitKey(0) == ord('q'):
+                exit(0)
 
             imgs[i]         = img
             imgs_mask[i]    = ref

@@ -21,6 +21,7 @@ parser.add_argument('-p', '--pic', action='store_true', help='Process picture')
 args = parser.parse_args()
 
 data_path = 'raw/'
+new_shape = (240, 240)
 
 try:
     xrange
@@ -34,9 +35,18 @@ def get_mask(frame, model):
 
 	return mask
 
-def execute_model():
+def mark_image(frame, model):
+	mask = get_mask(frame, model)
 
-	new_shape = (240, 240)
+	frame = cv2.resize(frame, new_shape, interpolation = cv2.INTER_CUBIC)
+	mask  = cv2.resize(mask, new_shape, interpolation = cv2.INTER_NEAREST)
+
+	frame[np.where((mask!=[0,0,0]).all(axis=2))] = (0,0,255)
+	
+	return mask, frame
+
+
+def execute_model():
 
 	if args.pic:
 		frame = cv2.imread(args.filepath)
@@ -51,12 +61,7 @@ def execute_model():
 		model = get_unet()
 		model.load_weights(args.weights)
 
-		mask = get_mask(frame, model)
-
-		frame = cv2.resize(frame, new_shape, interpolation = cv2.INTER_CUBIC)
-		mask  = cv2.resize(mask, new_shape, interpolation = cv2.INTER_NEAREST)
-
-		frame[np.where((mask!=[0,0,0]).all(axis=2))] = (0,255,0)
+		mask, frame = mark_image(frame, model)
 		frame = np.hstack((mask,frame))
 
 		cv2.imshow('frame',frame)
@@ -87,11 +92,8 @@ def execute_model():
 					exit(1)
 
 				start_mask = time.time()
-				mask = get_mask(frame, model)
 
-				frame = cv2.resize(frame, new_shape, interpolation = cv2.INTER_CUBIC)
-				mask  = cv2.resize(mask, new_shape, interpolation = cv2.INTER_NEAREST)
-				frame[np.where((mask!=[0,0,0]).all(axis=2))] = (0,255,0)
+				mask, frame = mark_image(frame, model)
 				frame = np.hstack((mask,frame))
 
 				mask_obtain_time += (time.time() - start_mask)
@@ -111,11 +113,7 @@ def execute_model():
 				if frame is None:
 					exit(1)
 
-				mask = get_mask(frame, model)
-
-				frame = cv2.resize(frame, new_shape, interpolation = cv2.INTER_CUBIC)
-				mask  = cv2.resize(mask, new_shape, interpolation = cv2.INTER_NEAREST)
-				frame[np.where((mask!=[0,0,0]).all(axis=2))] = (0,255,0)
+				mask, frame = mark_image(frame, model)
 				frame = np.hstack((mask,frame))
 				
 				cv2.imshow('frame',frame)
