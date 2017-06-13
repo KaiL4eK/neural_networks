@@ -39,7 +39,8 @@ def mark_image(frame, model):
 	mask = get_mask(frame, model)
 
 	frame = cv2.resize(frame, new_shape, interpolation = cv2.INTER_CUBIC)
-	mask  = cv2.resize(mask, new_shape, interpolation = cv2.INTER_NEAREST)
+	mask  = cv2.resize(mask, new_shape, interpolation = cv2.INTER_LINEAR)
+	# mask  = cv2.resize(mask, new_shape, interpolation = cv2.INTER_NEAREST)
 
 	frame[np.where((mask!=[0,0,0]).all(axis=2))] = (0,0,255)
 	

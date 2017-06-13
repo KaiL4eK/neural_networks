@@ -57,7 +57,7 @@ def preprocess_mask(img):
 
 ### Net structure ###
 
-def get_unet():
+def get_unet(lr=1e-3):
 	model = Sequential()
 
 
@@ -116,7 +116,7 @@ def get_unet():
 
 
 	# model.compile(optimizer='adadelta', loss=iou_loss, metrics=[binary_crossentropy])
-	model.compile(optimizer=Adam(lr=1e-3), loss=iou_loss, metrics=[binary_crossentropy])
+	model.compile(optimizer=Adam(lr=lr), loss=iou_loss, metrics=[binary_crossentropy])
 	
 
 	print_summary(model)

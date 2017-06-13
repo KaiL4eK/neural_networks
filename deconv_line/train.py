@@ -7,6 +7,7 @@ from keras.models import Model
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ModelCheckpoint, Callback
 import random
+import itertools
 
 from data import *
 from net import *
@@ -48,7 +49,7 @@ def train_and_predict():
 	print('Creating and compiling model...')
 	print('-'*30)
 
-	model = get_unet()
+	model = get_unet(lr=1e-4)
 	batch_size = 20
 
 	if args.weights:
@@ -62,6 +63,7 @@ def train_and_predict():
 		data_gen_args = dict( rotation_range=20,
 							  width_shift_range=0.2,
 							  height_shift_range=0.2,
+							  zoom_range=0.2,
 							  horizontal_flip=True,
 							  fill_mode='constant',
 							  cval=0 )
@@ -83,20 +85,25 @@ def train_and_predict():
 		image_generator = image_datagen.flow(imgs_train, batch_size=batch_size, seed=seed)
 		mask_generator  = mask_datagen.flow(imgs_mask_train, batch_size=batch_size, seed=seed)
 
-		train_generator = zip(image_generator, mask_generator)
+		print('-'*30)
+		print('Zipping generators...')
+		print('-'*30)
+
+		train_generator = itertools.izip(image_generator, mask_generator)
 
 		print('-'*30)
 		print('Fitting model...')
 		print('-'*30)
 
-		model.fit_generator( train_generator, steps_per_epoch=1, epochs=50, verbose=1)
+		model.fit_generator( train_generator, steps_per_epoch=10, epochs=7000, verbose=2,
+			callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1)])
 	else:
 		print('-'*30)
 		print('Fitting model...')
 		print('-'*30)
 
 		model.fit(imgs_train, imgs_mask_train, batch_size=batch_size, epochs=7000, verbose=1, shuffle=True, validation_split=0, 
-					callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1)])
+			callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1)])
 
 if __name__ == '__main__':
 	train_and_predict()
