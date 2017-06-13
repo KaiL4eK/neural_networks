@@ -14,9 +14,6 @@ data_path = '.'
 npy_img_height = 240
 npy_img_width = 320
 
-# Bbox is compiled as [ul_x, ul_y, w, h]
-check_data = False
-
 def print_process(index, total):
     if index % 100 == 0:
         print('Done: {0}/{1} images'.format(index, total))

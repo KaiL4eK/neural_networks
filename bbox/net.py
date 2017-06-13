@@ -1,6 +1,6 @@
 from keras.models import Sequential, Model
 from keras.losses import binary_crossentropy, mean_squared_error, hinge
-from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, UpSampling2D, ZeroPadding2D, Dropout, Deconv2D, Flatten, Dense
+from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, UpSampling2D, ZeroPadding2D, Dropout, Deconv2D, Flatten, Dense, BatchNormalization
 from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint
 from keras import backend as K
@@ -20,7 +20,7 @@ num_classes = len(class_list)
 
 # Output is resized, BGR, mean subtracted, [0, 1.] scaled by values
 def preprocess_img(img):
-	img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_CUBIC)
+	img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_LINEAR)
 	img = img.astype('float32', copy=False)
 	# img[:,:,0] -= 103.939
 	# img[:,:,1] -= 116.779
@@ -93,22 +93,30 @@ def two_output_model():
 	pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 	drop1 = Dropout(0.25)(pool1)
 
-	conv2 = Conv2D(64,(3,3),activation='relu',padding='same')(drop1)
+	norm1 = BatchNormalization()(drop1)
+
+	conv2 = Conv2D(64,(3,3),activation='relu',padding='same')(norm1)
 	conv2 = Conv2D(64,(3,3),activation='relu',padding='same')(conv2)
 	pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
 	drop2 = Dropout(0.25)(pool2)
 
-	conv3 = Conv2D(128,(3,3),activation='relu',padding='same')(drop2)
+	norm2 = BatchNormalization()(drop2)
+
+	conv3 = Conv2D(128,(3,3),activation='relu',padding='same')(norm2)
 	conv3 = Conv2D(128,(3,3),activation='relu',padding='same')(conv3)
 	pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
 	drop3 = Dropout(0.25)(pool3)
 
-	conv4 = Conv2D(256,(3,3),activation='relu',padding='same')(drop3)
+	norm3 = BatchNormalization()(drop3)
+
+	conv4 = Conv2D(256,(3,3),activation='relu',padding='same')(norm3)
 	conv4 = Conv2D(256,(3,3),activation='relu',padding='same')(conv4)
 	pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
 	drop4 = Dropout(0.25)(pool4)
 
-	conv5 = Conv2D(512,(3,3),activation='relu',padding='same')(drop4)
+	norm4 = BatchNormalization()(drop4)
+
+	conv5 = Conv2D(512,(3,3),activation='relu',padding='same')(norm4)
 	pool5 = MaxPooling2D(pool_size=(2, 2))(conv5)
 	drop5 = Dropout(0.25)(pool5)
 	flat  = Flatten()(drop5)
@@ -122,7 +130,7 @@ def two_output_model():
 	out_cls     = Dense(num_classes, activation='softmax', name='out_cls')(drop_fc_cls)
 
 	model = Model(input, [out_bb, out_cls])
-	model.compile(optimizer=Adam(lr=1e-5), loss={'out_bb': iou_loss, 'out_cls': 'categorical_crossentropy'}, metrics=[])
+	model.compile(optimizer=Adam(lr=5e-5), loss={'out_bb': iou_loss, 'out_cls': 'categorical_crossentropy'}, metrics=[])
 
 	return model
 
