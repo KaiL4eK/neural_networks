@@ -33,21 +33,19 @@ def intersect_over_union_bbox(y_true, y_pred):
 	y_true_f = y_true
 	y_pred_f = y_pred
 
+	pred_width  = y_pred_f[:, 2]
+	pred_height = y_pred_f[:, 3]
 	pred_ul_x = y_pred_f[:, 0]
 	pred_ul_y = y_pred_f[:, 1]
-	pred_lr_x = y_pred_f[:, 0] + y_pred_f[:, 2]
-	pred_lr_y = y_pred_f[:, 1] + y_pred_f[:, 3]
-
-	true_ul_x = y_true_f[:, 0]
-	true_ul_y = y_true_f[:, 1]
-	true_lr_x = y_true_f[:, 0] + y_true_f[:, 2]
-	true_lr_y = y_true_f[:, 1] + y_true_f[:, 3]
+	pred_lr_x = pred_ul_x + pred_width
+	pred_lr_y = pred_ul_y + pred_height
 
 	true_width  = y_true_f[:, 2]
 	true_height = y_true_f[:, 3]
-
-	pred_width  = y_pred_f[:, 2]
-	pred_height = y_pred_f[:, 3]
+	true_ul_x = y_true_f[:, 0]
+	true_ul_y = y_true_f[:, 1]
+	true_lr_x = true_ul_x + true_width
+	true_lr_y = true_ul_y + true_height
 
 	pred_lr_x = K.clip(pred_lr_x, 0, 1)
 	pred_lr_y = K.clip(pred_lr_y, 0, 1)

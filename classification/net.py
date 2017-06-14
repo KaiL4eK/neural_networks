@@ -20,11 +20,8 @@ num_classes = len(class_list)
 
 # Output is resized, BGR, mean subtracted, [0, 1.] scaled by values
 def preprocess_img(img):
-	img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_CUBIC)
+	img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_LINEAR)
 	img = img.astype('float32', copy=False)
-	# img[:,:,0] -= 103.939
-	# img[:,:,1] -= 116.779
-	# img[:,:,2] -= 123.68
 	img /= 255.
 	return img
 
@@ -64,7 +61,7 @@ def classification_model():
 	out_cls     = Dense(num_classes, activation='softmax', name='out_cls')(drop_fc_cls)
 
 	model = Model(input, out_cls)
-	model.compile(optimizer=Adam(lr=1e-4), loss='categorical_crossentropy', metrics=[])
+	model.compile(optimizer=Adam(lr=1e-3), loss='categorical_crossentropy', metrics=[])
 
 	return model
 
