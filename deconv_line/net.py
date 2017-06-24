@@ -57,68 +57,81 @@ def preprocess_mask(img):
 
 ### Net structure ###
 
+	# model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(nn_img_side, nn_img_side, 3)))
+	# # model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(BatchNormalization())
+	# model.add(Dropout(0.25))
+
+	# model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	# # model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(BatchNormalization())
+	# model.add(Dropout(0.25))
+	
+	# model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	# # model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(BatchNormalization())
+	# model.add(Dropout(0.25))
+
+	# model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+	# model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(BatchNormalization())
+	# model.add(Dropout(0.25))
+
+	# model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+	# model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+	# model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+	# model.add(BatchNormalization())
+	# # model.add(MaxPooling2D(pool_size=(2, 2)))
+
+	# # model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
+
+	# # model.add(UpSampling2D(size=(2, 2)))
+	# # model.add(Deconv2D(64, (2, 2), activation='relu', padding='same'))
+	# # model.add(Dropout(0.25))
+
+	# model.add(UpSampling2D(size=(2, 2)))
+	# model.add(Deconv2D(64, (3, 3), activation='relu', padding='same'))
+	# # model.add(BatchNormalization())
+	# model.add(Dropout(0.25))
+
+	# model.add(UpSampling2D(size=(2, 2)))
+	# model.add(Deconv2D(32, (3, 3), activation='relu', padding='same'))
+	# model.add(BatchNormalization())
+	# model.add(Dropout(0.25))
+
+	# model.add(UpSampling2D(size=(2, 2)))
+	# model.add(Deconv2D(32, (3, 3), activation='relu', padding='same'))
+	# model.add(BatchNormalization())
+	# model.add(Dropout(0.25))
+
+	# model.add(Deconv2D(1, (1, 1), activation='hard_sigmoid'))
+
+
 def get_unet(lr=1e-3):
 	model = Sequential()
 
-
-	model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(nn_img_side, nn_img_side, 3)))
+	model.add(Conv2D(32, (3, 3), activation='elu', padding='same', input_shape=(nn_img_side, nn_img_side, 3)))
+	# model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	# model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
 	# model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(BatchNormalization())
-	model.add(Dropout(0.25))
-
-	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
 	# model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(BatchNormalization())
-	model.add(Dropout(0.25))
-	
-	model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	# model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+
 	model.add(MaxPooling2D(pool_size=(2, 2)))
 	model.add(BatchNormalization())
 	model.add(Dropout(0.25))
 
-	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(BatchNormalization())
-	model.add(Dropout(0.25))
-
-	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	model.add(BatchNormalization())
-	# model.add(MaxPooling2D(pool_size=(2, 2)))
-
-	# model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-
-	# model.add(UpSampling2D(size=(2, 2)))
-	# model.add(Deconv2D(64, (2, 2), activation='relu', padding='same'))
-	# model.add(Dropout(0.25))
-
-	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Deconv2D(64, (3, 3), activation='relu', padding='same'))
-	# model.add(BatchNormalization())
-	model.add(Dropout(0.25))
-
-	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Deconv2D(32, (3, 3), activation='relu', padding='same'))
-	model.add(BatchNormalization())
-	model.add(Dropout(0.25))
-
-	model.add(UpSampling2D(size=(2, 2)))
-	model.add(Deconv2D(32, (3, 3), activation='relu', padding='same'))
-	model.add(BatchNormalization())
-	model.add(Dropout(0.25))
-
-	model.add(Deconv2D(1, (1, 1), activation='hard_sigmoid'))
-
+	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	model.add(Conv2D(1, (3, 3), activation='hard_sigmoid', padding='same'))
 
 	# model.compile(optimizer='adadelta', loss=iou_loss, metrics=[binary_crossentropy])
 	model.compile(optimizer=Adam(lr=lr), loss=iou_loss, metrics=[binary_crossentropy])
 	
-
 	print_summary(model)
 	plot_model(model, show_shapes=True)
 

@@ -49,8 +49,8 @@ def train_and_predict():
 	print('Creating and compiling model...')
 	print('-'*30)
 
-	model = get_unet(lr=1e-4)
-	batch_size = 20
+	model = get_unet(lr=1e-5)
+	batch_size = 10
 
 	if args.weights:
 		model.load_weights(args.weights)
