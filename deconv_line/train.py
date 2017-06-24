@@ -60,7 +60,7 @@ def train_and_predict():
 		print('Setup data generator...')
 		print('-'*30)
 
-		data_gen_args = dict( rotation_range=20,
+		data_gen_args = dict( #rotation_range=20,
 							  width_shift_range=0.2,
 							  height_shift_range=0.2,
 							  zoom_range=0.2,
