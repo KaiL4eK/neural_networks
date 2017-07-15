@@ -35,13 +35,13 @@ def process_naming(frame, model):
 
 	img_class = model.predict(np.array([preprocess_img(frame)]))[0]
 	
-	class_index = np.argmax(img_class)
-	class_value = img_class[class_index]
+	thresshold = .8
+	class_active = [ class_list[index] for index, value in enumerate(img_class) if value > thresshold ]
 
-	if class_value > 0.95 and class_index != 0:
-		print(img_class)
+	for i, class_ in enumerate(class_active):
+		# print(class_)
 		font = cv2.FONT_HERSHEY_SIMPLEX
-		cv2.putText(frame, class_list[class_index], (10,70), font, 2, (255,0,0), 3)
+		cv2.putText(frame, class_, (10, (i+1)*50), font, 1.5, (255, 0, 0), 3)
 
 	return frame
 
