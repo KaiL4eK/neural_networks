@@ -24,7 +24,10 @@ def preprocess_regress(imgs, classes):
 
 	for i in range(imgs.shape[0]):
 		imgs_p[i]   = preprocess_img(imgs[i])
-		class_p[i]  = np_utils.to_categorical(class_list.index(classes[i]), num_classes)	
+		if classes[i] in class_list:
+			class_p[i]  = np_utils.to_categorical(class_list.index(classes[i]), num_classes)	
+		else:
+			class_p[i]  = [0] * len(class_list)
 		# print(class_p[i], class_p[i].shape)
 
 	return imgs_p, class_p
