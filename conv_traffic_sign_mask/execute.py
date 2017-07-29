@@ -21,7 +21,7 @@ parser.add_argument('-p', '--pic', action='store_true', help='Process picture')
 args = parser.parse_args()
 
 data_path = 'raw/'
-new_shape = (240, 240)
+new_shape = (600, 600)
 
 try:
     xrange

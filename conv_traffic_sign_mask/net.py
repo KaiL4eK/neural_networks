@@ -11,8 +11,8 @@ import cv2
 
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
-nn_img_side = 240
-nn_out_size = 120
+nn_img_side = 400
+nn_out_size = 200
 
 ### Rates ###
 # 27.5 ms - processing time gpu
@@ -30,11 +30,30 @@ def intersect_over_union(y_true, y_pred):
 def iou_loss(y_true, y_pred):
 	return 1 - intersect_over_union(y_true, y_pred)
 
+def binary_crossentropy_empower(y_true, y_pred):
+	y_true_f = K.flatten(y_true)
+	y_pred_f = K.flatten(y_pred)
+	# return K.mean(-(y_true * K.log(y_pred)) - ((1. - y_true) * K.log(1. - y_pred)))
+	# return K.mean(-K.round(y_true_f) * K.log(y_pred_f) - (1-K.round(y_true_f)) * K.log(1 - y_pred_f))
+	
+	x = K.clip(y_pred_f, 1e-9, 1)
+	z = K.round(y_true_f)
+
+	# result = K.max(x, 0) - x * z + K.log(1 + K.exp(-K.abs(x)))
+	# result = z * -K.log(x) + (1 - z) * -K.log(1 - x)
+
+	result = K.mean(z * -K.log(x) * 100)
+
+	return result
+
+def full_loss(y_true, y_pred):
+	return binary_crossentropy(y_true, y_pred) + binary_crossentropy_empower(y_true, y_pred) + iou_loss(y_true, y_pred)
+
 ### Image preprocessing ###
 
 # Output is resized, BGR, mean subtracted, [0, 1.] scaled by values
 def preprocess_img(img):
-	img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_CUBIC)
+	img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_LINEAR)
 
 	# img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
 	# img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
@@ -55,62 +74,6 @@ def preprocess_mask(img):
 
 	return img
 
-### Net structure ###
-
-	# model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(nn_img_side, nn_img_side, 3)))
-	# # model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	# model.add(MaxPooling2D(pool_size=(2, 2)))
-	# model.add(BatchNormalization())
-	# model.add(Dropout(0.25))
-
-	# model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	# # model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	# model.add(MaxPooling2D(pool_size=(2, 2)))
-	# model.add(BatchNormalization())
-	# model.add(Dropout(0.25))
-	
-	# model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	# # model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	# model.add(MaxPooling2D(pool_size=(2, 2)))
-	# model.add(BatchNormalization())
-	# model.add(Dropout(0.25))
-
-	# model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-	# model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-	# model.add(MaxPooling2D(pool_size=(2, 2)))
-	# model.add(BatchNormalization())
-	# model.add(Dropout(0.25))
-
-	# model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	# model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	# model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-	# model.add(BatchNormalization())
-	# # model.add(MaxPooling2D(pool_size=(2, 2)))
-
-	# # model.add(Conv2D(256, (3, 3), activation='relu', padding='same'))
-
-	# # model.add(UpSampling2D(size=(2, 2)))
-	# # model.add(Deconv2D(64, (2, 2), activation='relu', padding='same'))
-	# # model.add(Dropout(0.25))
-
-	# model.add(UpSampling2D(size=(2, 2)))
-	# model.add(Deconv2D(64, (3, 3), activation='relu', padding='same'))
-	# # model.add(BatchNormalization())
-	# model.add(Dropout(0.25))
-
-	# model.add(UpSampling2D(size=(2, 2)))
-	# model.add(Deconv2D(32, (3, 3), activation='relu', padding='same'))
-	# model.add(BatchNormalization())
-	# model.add(Dropout(0.25))
-
-	# model.add(UpSampling2D(size=(2, 2)))
-	# model.add(Deconv2D(32, (3, 3), activation='relu', padding='same'))
-	# model.add(BatchNormalization())
-	# model.add(Dropout(0.25))
-
-	# model.add(Deconv2D(1, (1, 1), activation='hard_sigmoid'))
-
-
 def get_unet(lr=1e-3):
 	model = Sequential()
 
@@ -121,7 +84,6 @@ def get_unet(lr=1e-3):
 	# model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
 
 	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(BatchNormalization())
 	model.add(Dropout(0.25))
 
 	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
@@ -129,10 +91,12 @@ def get_unet(lr=1e-3):
 	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
 	model.add(Conv2D(1, (3, 3), activation='hard_sigmoid', padding='same'))
 
+	model.add(Dropout(0.25))
+
 	# model.compile(optimizer='adadelta', loss=iou_loss, metrics=[binary_crossentropy])
-	model.compile(optimizer=Adam(lr=lr), loss=iou_loss, metrics=[binary_crossentropy])
+	model.compile(optimizer=Adam(lr=lr), loss=full_loss, metrics=[binary_crossentropy, binary_crossentropy_empower, iou_loss])
 	
 	print_summary(model)
-	plot_model(model, show_shapes=True)
+	# plot_model(model, show_shapes=True)
 
 	return model

@@ -6,17 +6,20 @@ import cv2
 
 data_path = '.'
 
-raw_path  = ['../raw_data/line_imgs_masks' ]
+raw_path  = ['../raw_data/car_register_video_annotated1' ]
 negative_path = [ '../raw_data/negative' ]
 
-negatives_append = True
+negatives_append = False
 
 npy_img_height = 480
 npy_img_width = 640
 
-def print_process(index, total):
-    if index % 100 == 0:
-        print('Done: {0}/{1} images'.format(index, total))
+def print_process(index, total = 0):
+    if index % 50 == 0:
+        if total != 0:
+            print('Done: {}/{} images'.format(index, total))
+        else:
+            print('Done: {} images'.format(index))
 
 def create_train_data():
     total = 0
@@ -26,62 +29,72 @@ def create_train_data():
     print('Creating training images...')
     print('-'*30)
 
-    for raw_path_active in raw_path:
-        img_list = os.listdir(raw_path_active)
-        total += len(img_list)/2
+    total = 0
 
-    if negatives_append:
-        for neg_path in negative_path:
-            img_list = os.listdir(neg_path)
-            total += len(img_list)
+    for raw_path_active in raw_path:
+        dir_list = os.listdir(raw_path_active)
+        for i in dir_list:
+            i_path = os.path.join(raw_path_active, i)
+            if os.path.isdir(i_path):
+                # print(i_path)
+                image_dir_list = os.listdir(i_path)
+                for image_name in image_dir_list:
+                    if len(image_name.split('.')) == 2:
+                        frame_name = image_name.split('.')[0]
+                        frame_path = os.path.join(i_path, frame_name)
+                        mask_path = frame_path + '.mask.0.png'
+
+                        if os.path.exists(mask_path):
+                            total += 1
+
+
+    print('Counted %d masks' % (total))
+
+    image_idx = 0 
 
     imgs        = np.ndarray((total, npy_img_height, npy_img_width, 3), dtype=np.uint8)
     imgs_mask   = np.ndarray((total, npy_img_height, npy_img_width), dtype=np.uint8)
 
     for raw_path_active in raw_path:
-        print('Processing path: {}'.format(raw_path_active))
-        images = os.listdir(raw_path_active)
+        dir_list = os.listdir(raw_path_active)
+        for i in dir_list:
+            i_path = os.path.join(raw_path_active, i)
+            if os.path.isdir(i_path):
+                # print(i_path)
+                image_dir_list = os.listdir(i_path)
+                for image_name in image_dir_list:
+                    if len(image_name.split('.')) == 2:
+                        frame_name = image_name.split('.')[0]
+                        frame_path = os.path.join(i_path, frame_name)
+                        mask_path = frame_path + '.mask.0.png'
+                        frame_path = frame_path + '.png'
 
-        for image_name in images:
-            base_name = image_name.split('.')[0]
+                        if os.path.exists(mask_path):
+                            # print(mask_path)
 
-            if image_name.split('.')[1] == 'ref':
-                continue
+                            frame = cv2.imread(frame_path)
+                            frame = cv2.resize(frame, (npy_img_width, npy_img_height), interpolation = cv2.INTER_LINEAR)
 
-            img = cv2.imread(os.path.join(raw_path_active, image_name))
-            img = cv2.resize(img, (npy_img_width, npy_img_height), interpolation = cv2.INTER_CUBIC)
+                            mask  = cv2.imread(mask_path)
+                            mask  = cv2.resize(mask, (npy_img_width, npy_img_height), interpolation = cv2.INTER_NEAREST)
 
-            ref_name = base_name + '.ref'
-            ref = cv2.imread(os.path.join(raw_path_active, ref_name), cv2.IMREAD_GRAYSCALE)
-            ref = cv2.resize(ref, (npy_img_width, npy_img_height), interpolation = cv2.INTER_NEAREST)
-            ret,tref = cv2.threshold(ref,200,255,cv2.THRESH_BINARY)
-            ref = tref
-            
-            # cv2.imshow('1', img)
-            # cv2.imshow('2', ref)
-            # cv2.imshow('3', tref)
-            # if cv2.waitKey(0) == ord('q'):
-            #     exit(0)
+                            mask = cv2.inRange(mask, (0, 0, 127), (255, 255, 255)) 
 
-            imgs[i]         = img
-            imgs_mask[i]    = ref
+                            # frame_2_show = np.copy(frame)
+                            # frame_2_show[np.where((mask != 0))] = (0,255,0)
+                            # frame_2_show = np.hstack(( cv2.resize(frame_2_show, (640, 480)), cv2.resize(cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR), (640, 480)) ))
 
-            print_process(i, total)
-            i += 1
-    if negatives_append:
-        for neg_path in negative_path:
-            print('Processing negatives path: {}'.format(neg_path))
-            images = os.listdir(neg_path)
+                            # cv2.imshow('1', mask);
+                            # if cv2.waitKey(1) == ord('q'):
+                                # exit(1)
 
-            for image_name in images:
-                img = cv2.imread(os.path.join(neg_path, image_name))
-                img = cv2.resize(img, (npy_img_width, npy_img_height), interpolation = cv2.INTER_CUBIC)
+                            # print(np.unique(mask))
 
-                imgs[i]         = img
-                imgs_mask[i]    = np.zeros((npy_img_height, npy_img_width), dtype=np.uint8)
+                            imgs[image_idx]         = frame
+                            imgs_mask[image_idx]    = mask
 
-                print_process(i, total)
-                i += 1
+                            image_idx += 1
+                            print_process(image_idx, total)
 
     np.save(data_path + '/imgs_train.npy', imgs)
     np.save(data_path + '/imgs_mask_train.npy', imgs_mask)

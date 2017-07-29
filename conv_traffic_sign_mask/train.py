@@ -45,12 +45,16 @@ def train_and_predict():
 	imgs_mask_train 	= npy_data_load_masks()
 	imgs_train, imgs_mask_train = preprocess_arrays(imgs_train, imgs_mask_train)
 
+	if len( np.unique(imgs_mask_train) ) > 2:
+		print('Preprocessing created mask with more than two binary values')
+		exit(1)
+
 	print('-'*30)
 	print('Creating and compiling model...')
 	print('-'*30)
 
-	model = get_unet(lr=1e-5)
-	batch_size = 10
+	model = get_unet(lr=5e-5)
+	batch_size = 1
 
 	if args.weights:
 		model.load_weights(args.weights)
@@ -102,7 +106,7 @@ def train_and_predict():
 		print('Fitting model...')
 		print('-'*30)
 
-		model.fit(imgs_train, imgs_mask_train, batch_size=batch_size, epochs=7000, verbose=1, shuffle=True, validation_split=0, 
+		model.fit(imgs_train, imgs_mask_train, batch_size=batch_size, epochs=7000, verbose=1, shuffle=True, validation_split=0.2, 
 			callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1)])
 
 if __name__ == '__main__':
