@@ -7,7 +7,6 @@ import cv2
 data_path = '.'
 
 raw_path  = ['../raw_data/car_register_video_annotated1' ]
-negative_path = [ '../raw_data/negative' ]
 
 negatives_append = False
 

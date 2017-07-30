@@ -9,10 +9,12 @@ from keras.utils.vis_utils import plot_model
 import numpy as np
 import cv2
 
+import tensorflow as tf
+
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
 nn_img_side = 400
-nn_out_size = 200
+nn_out_size = 100
 
 ### Rates ###
 # 27.5 ms - processing time gpu
@@ -33,18 +35,17 @@ def iou_loss(y_true, y_pred):
 def binary_crossentropy_empower(y_true, y_pred):
 	y_true_f = K.flatten(y_true)
 	y_pred_f = K.flatten(y_pred)
-	# return K.mean(-(y_true * K.log(y_pred)) - ((1. - y_true) * K.log(1. - y_pred)))
-	# return K.mean(-K.round(y_true_f) * K.log(y_pred_f) - (1-K.round(y_true_f)) * K.log(1 - y_pred_f))
-	
-	x = K.clip(y_pred_f, 1e-9, 1)
+
+	eps = 1e-9
+
+	# x = y_pred_f
+	x = K.clip(y_pred_f, eps, 1 - eps)
 	z = K.round(y_true_f)
 
-	# result = K.max(x, 0) - x * z + K.log(1 + K.exp(-K.abs(x)))
-	# result = z * -K.log(x) + (1 - z) * -K.log(1 - x)
+	result_true  = tf.multiply(z, K.log(x))
+	result_false = tf.multiply((1 - z), K.log(1 - x))
 
-	result = K.mean(z * -K.log(x) * 100)
-
-	return result
+	return (-K.mean(result_true * 10 + result_false)) * 3 + iou_loss(y_true, y_pred)
 
 def full_loss(y_true, y_pred):
 	return binary_crossentropy(y_true, y_pred) + binary_crossentropy_empower(y_true, y_pred) + iou_loss(y_true, y_pred)
@@ -87,14 +88,24 @@ def get_unet(lr=1e-3):
 	model.add(Dropout(0.25))
 
 	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	model.add(Dropout(0.25))
+	# model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	# model.add(Dropout(0.25))
 	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	model.add(Conv2D(1, (3, 3), activation='hard_sigmoid', padding='same'))
 
+	model.add(MaxPooling2D(pool_size=(2, 2)))
 	model.add(Dropout(0.25))
 
+	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	model.add(Dropout(0.25))
+	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	model.add(Dropout(0.25))
+	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	model.add(Dropout(0.25))
+	model.add(Conv2D(1, (3, 3), activation='hard_sigmoid', padding='same'))
+
 	# model.compile(optimizer='adadelta', loss=iou_loss, metrics=[binary_crossentropy])
-	model.compile(optimizer=Adam(lr=lr), loss=full_loss, metrics=[binary_crossentropy, binary_crossentropy_empower, iou_loss])
+	model.compile(optimizer=Adam(lr=lr), loss=binary_crossentropy_empower, metrics=[binary_crossentropy, binary_crossentropy_empower, iou_loss])
 	
 	print_summary(model)
 	# plot_model(model, show_shapes=True)

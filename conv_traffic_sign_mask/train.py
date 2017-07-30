@@ -15,6 +15,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Process video with ANN')
 parser.add_argument('-w', '--weights', action='store', help='Path to weights file')
+parser.add_argument('-b', '--batch_size', default=1, action='store', help='Size of batch to learn')
 parser.add_argument('-a', '--augmentation', action='store_true', help='Path to weights file')
 
 args = parser.parse_args()
@@ -32,8 +33,13 @@ def preprocess_arrays(imgs, masks):
 		# if cv2.waitKey(0) == 27:
 		# 	exit(1)
 
+	# fl = masks_p.flatten()
+	# lg = np.log(np.clip(fl, 1e-9, 1))
+	# print(np.mean(np.multiply(lg, fl)))
+	# cv2.imshow('1', masks[0])
+	# cv2.waitKey(3000)
+
 	return imgs_p, masks_p[..., np.newaxis]
-	# return imgs_p, masks_p
 
 
 def train_and_predict():
@@ -54,7 +60,9 @@ def train_and_predict():
 	print('-'*30)
 
 	model = get_unet(lr=5e-5)
-	batch_size = 1
+	batch_size = int(args.batch_size)
+
+	print('Batch size is set to %d' % batch_size)
 
 	if args.weights:
 		model.load_weights(args.weights)

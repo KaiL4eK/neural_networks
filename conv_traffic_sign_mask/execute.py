@@ -38,11 +38,11 @@ def get_mask(frame, model):
 def mark_image(frame, model):
 	mask = get_mask(frame, model)
 
-	frame = cv2.resize(frame, new_shape, interpolation = cv2.INTER_CUBIC)
+	frame = cv2.resize(frame, new_shape, interpolation = cv2.INTER_LINEAR)
 	mask  = cv2.resize(mask, new_shape, interpolation = cv2.INTER_LINEAR)
 	# mask  = cv2.resize(mask, new_shape, interpolation = cv2.INTER_NEAREST)
 
-	frame[np.where((mask!=[0,0,0]).all(axis=2))] = (0,0,255)
+	frame[np.where((mask!=(0,0,0)).all(axis=2))] = (0,0,255)
 	
 	return mask, frame
 
@@ -55,9 +55,9 @@ def execute_model():
 			print('Failed to open file')
 			exit(1)
 
-		f_height, f_width, f_cahnnels = frame.shape
-		scale_x = float(f_width)/nn_out_size
-		scale_y = float(f_height)/nn_out_size
+		# f_height, f_width, f_cahnnels = frame.shape
+		# scale_x = float(f_width)/nn_out_size
+		# scale_y = float(f_height)/nn_out_size
 
 		model = get_unet()
 		model.load_weights(args.weights)
