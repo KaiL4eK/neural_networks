@@ -44,7 +44,7 @@ def train_classification():
 	print('Creating and compiling model...')
 	print('-'*30)
 
-	model = net.get_network_model()
+	model = net.get_network_model(1e-4)
 
 	if args.weights:
 		model.load_weights(args.weights)

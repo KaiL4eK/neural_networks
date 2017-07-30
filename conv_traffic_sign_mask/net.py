@@ -45,7 +45,7 @@ def binary_crossentropy_empower(y_true, y_pred):
 	result_true  = tf.multiply(z, K.log(x))
 	result_false = tf.multiply((1 - z), K.log(1 - x))
 
-	return (-K.mean(result_true * 10 + result_false)) * 3 + iou_loss(y_true, y_pred)
+	return -K.mean(result_true * 1e2) + binary_crossentropy(y_true, y_pred)# + iou_loss(y_true, y_pred)
 
 def full_loss(y_true, y_pred):
 	return binary_crossentropy(y_true, y_pred) + binary_crossentropy_empower(y_true, y_pred) + iou_loss(y_true, y_pred)
@@ -105,7 +105,7 @@ def get_unet(lr=1e-3):
 	model.add(Conv2D(1, (3, 3), activation='hard_sigmoid', padding='same'))
 
 	# model.compile(optimizer='adadelta', loss=iou_loss, metrics=[binary_crossentropy])
-	model.compile(optimizer=Adam(lr=lr), loss=binary_crossentropy_empower, metrics=[binary_crossentropy, binary_crossentropy_empower, iou_loss])
+	model.compile(optimizer=Adam(lr=lr), loss=iou_loss, metrics=[binary_crossentropy, binary_crossentropy_empower, iou_loss])
 	
 	print_summary(model)
 	# plot_model(model, show_shapes=True)
