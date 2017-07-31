@@ -14,7 +14,7 @@ import tensorflow as tf
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
 nn_img_side = 400
-nn_out_size = 100
+nn_out_size = 50
 
 ### Rates ###
 # 27.5 ms - processing time gpu
@@ -49,7 +49,7 @@ def loss_empower(y_true, y_pred):
 
 	# return K.sum(-result_true) * 1e-3 + iou_loss(y_true, y_pred)
 
-	return K.sum(score_false_negative) * 1e-2 + iou_loss(y_true, y_pred)
+	return K.sum(score_false_negative) * 2e-2 + iou_loss(y_true, y_pred)
 
 
 def full_loss(y_true, y_pred):
@@ -83,34 +83,23 @@ def preprocess_mask(img):
 def get_unet(lr=1e-3):
 	model = Sequential()
 
-	model.add(Conv2D(32, (3, 3), activation='elu', padding='same', input_shape=(nn_img_side, nn_img_side, 3)))
-	# model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	# model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	# model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-	# model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+	model.add(Conv2D(32, (5, 5), activation='elu', padding='same', input_shape=(nn_img_side, nn_img_side, 3)))
+	model.add(Dropout(0.25))
+
+	model.add(MaxPooling2D(pool_size=(4, 4)))
+
+	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	model.add(Dropout(0.25))
 
 	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Dropout(0.25))
 
-	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	model.add(Dropout(0.25))
-	# model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	# model.add(Dropout(0.25))
-	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	model.add(Conv2D(128, (3, 3), activation='elu', padding='same'))
+	model.add(Dropout(0.5))
 
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Dropout(0.25))
-
-	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	model.add(Dropout(0.25))
-	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	model.add(Dropout(0.25))
-	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	model.add(Dropout(0.25))
 	model.add(Conv2D(1, (3, 3), activation='hard_sigmoid', padding='same'))
 
 	# model.compile(optimizer='adadelta', loss=iou_loss, metrics=[binary_crossentropy])
-	model.compile(optimizer=Adam(lr=lr), loss=loss_empower, metrics=[binary_crossentropy, loss_empower, iou_loss])
+	model.compile(optimizer=Adam(lr=lr), loss=loss_empower, metrics=[iou_loss])
 	
 	print_summary(model)
 	# plot_model(model, show_shapes=True)
