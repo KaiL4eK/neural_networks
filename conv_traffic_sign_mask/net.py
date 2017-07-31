@@ -27,25 +27,30 @@ def intersect_over_union(y_true, y_pred):
 	intersection = K.sum(y_true_f * y_pred_f)
 	union = K.sum(y_true_f) + K.sum(y_pred_f) - intersection
 	# return K.switch( K.equal(union, 0), K.variable(1), intersection / union) 
-	return intersection / union 
+	return K.mean(intersection / union) 
 
 def iou_loss(y_true, y_pred):
 	return 1 - intersect_over_union(y_true, y_pred)
 
-def binary_crossentropy_empower(y_true, y_pred):
+def loss_empower(y_true, y_pred):
 	y_true_f = K.flatten(y_true)
 	y_pred_f = K.flatten(y_pred)
 
-	eps = 1e-9
+	eps = 1e-10
 
-	# x = y_pred_f
-	x = K.clip(y_pred_f, eps, 1 - eps)
+	x = y_pred_f
+	# x = K.clip(y_pred_f, eps, 1)
 	z = K.round(y_true_f)
 
 	result_true  = tf.multiply(z, K.log(x))
 	result_false = tf.multiply((1 - z), K.log(1 - x))
 
-	return -K.mean(result_true * 1e2) + binary_crossentropy(y_true, y_pred)# + iou_loss(y_true, y_pred)
+	score_false_negative = tf.where(K.equal(x, 0), z, K.zeros_like(z))
+
+	# return K.sum(-result_true) * 1e-3 + iou_loss(y_true, y_pred)
+
+	return K.sum(score_false_negative) * 1e-2 + iou_loss(y_true, y_pred)
+
 
 def full_loss(y_true, y_pred):
 	return binary_crossentropy(y_true, y_pred) + binary_crossentropy_empower(y_true, y_pred) + iou_loss(y_true, y_pred)
@@ -105,7 +110,7 @@ def get_unet(lr=1e-3):
 	model.add(Conv2D(1, (3, 3), activation='hard_sigmoid', padding='same'))
 
 	# model.compile(optimizer='adadelta', loss=iou_loss, metrics=[binary_crossentropy])
-	model.compile(optimizer=Adam(lr=lr), loss=iou_loss, metrics=[binary_crossentropy, binary_crossentropy_empower, iou_loss])
+	model.compile(optimizer=Adam(lr=lr), loss=loss_empower, metrics=[binary_crossentropy, loss_empower, iou_loss])
 	
 	print_summary(model)
 	# plot_model(model, show_shapes=True)

@@ -28,12 +28,12 @@ def get_network_model(lr):
 
 	input = Input(shape=(nn_img_side, nn_img_side, 3))
 
-	conv1 = Conv2D(32,(3,3),activation='elu',padding='same')(input)
+	conv1 = Conv2D(16,(3,3),activation='elu',padding='same')(input)
 	# conv1 = Conv2D(32,(3,3),activation='relu',padding='same')(conv1)
 	pool1 = MaxPooling2D(pool_size=(3, 3))(conv1)
 	drop1 = Dropout(0.25)(pool1)
 
-	conv2 = Conv2D(64,(3,3),activation='elu',padding='same')(drop1)
+	conv2 = Conv2D(32,(3,3),activation='elu',padding='same')(drop1)
 	# conv2 = Conv2D(64,(3,3),activation='elu',padding='same')(conv2)
 	pool2 = MaxPooling2D(pool_size=(3, 3))(conv2)
 	drop2 = Dropout(0.25)(pool2)
@@ -46,16 +46,16 @@ def get_network_model(lr):
 	conv4 = Conv2D(64,(3,3),activation='elu',padding='same')(drop3)
 	# conv4 = Conv2D(256,(3,3),activation='relu',padding='same')(conv4)
 	# pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
-	# drop4 = Dropout(0.25)(pool4)
+	drop4 = Dropout(0.25)(conv4)
 
 	# conv5 = Conv2D(512,(3,3),activation='relu',padding='same')(drop4)
 	# conv5 = Conv2D(512,(3,3),activation='relu',padding='same')(conv5)
 	# pool5 = MaxPooling2D(pool_size=(2, 2))(conv5)
 	# drop5 = Dropout(0.25)(pool5)
 
-	flat  = Flatten()(conv4)
+	flat  = Flatten()(drop4)
 
-	fc_cls      = Dense(1024, activation='tanh')(flat)
+	fc_cls      = Dense(128, activation='tanh')(flat)
 	drop_fc_cls = Dropout(0.5)(fc_cls)
 	out_cls     = Dense(len(glob_label_list), activation='sigmoid', name='out_cls')(drop_fc_cls)
 

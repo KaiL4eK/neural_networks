@@ -59,7 +59,7 @@ def train_and_predict():
 	print('Creating and compiling model...')
 	print('-'*30)
 
-	model = get_unet(lr=1e-4)
+	model = get_unet(lr=1e-5)
 	batch_size = int(args.batch_size)
 
 	print('Batch size is set to %d' % batch_size)
