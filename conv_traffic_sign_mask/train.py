@@ -21,8 +21,8 @@ parser.add_argument('-a', '--augmentation', action='store_true', help='Path to w
 args = parser.parse_args()
 
 def preprocess_arrays(imgs, masks):
-	imgs_p  = np.ndarray((imgs.shape[0],  nn_img_side, nn_img_side, 3), dtype=np.float32)
-	masks_p = np.ndarray((masks.shape[0], nn_out_size, nn_out_size),    dtype=np.float32)
+	imgs_p  = np.ndarray((imgs.shape[0],  nn_img_h, nn_img_w, 3), dtype=np.float32)
+	masks_p = np.ndarray((masks.shape[0], nn_out_h, nn_out_w),    dtype=np.float32)
 
 	for i in range(imgs.shape[0]):
 		imgs_p[i]  = preprocess_img(imgs[i])

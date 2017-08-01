@@ -10,8 +10,8 @@ raw_path  = ['../raw_data/car_register_video_annotated1' ]
 
 negatives_append = False
 
-npy_img_height = 480
-npy_img_width = 640
+npy_img_height = 768
+npy_img_width = 1024
 
 def print_process(index, total = 0):
     if index % 50 == 0:

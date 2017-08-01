@@ -13,8 +13,12 @@ import tensorflow as tf
 
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
-nn_img_side = 400
-nn_out_size = 50
+nn_img_h = 300
+nn_img_w = 600
+
+
+nn_out_h = 75
+nn_out_w = 150
 
 ### Rates ###
 # 27.5 ms - processing time gpu
@@ -45,11 +49,11 @@ def loss_empower(y_true, y_pred):
 	result_true  = tf.multiply(z, K.log(x))
 	result_false = tf.multiply((1 - z), K.log(1 - x))
 
-	score_false_negative = tf.where(K.equal(x, 0), z, K.zeros_like(z))
+	score_false_negative = tf.where(K.less(x, 2/255.), z, K.zeros_like(z))
 
 	# return K.sum(-result_true) * 1e-3 + iou_loss(y_true, y_pred)
 
-	return K.sum(score_false_negative) * 2e-2 + iou_loss(y_true, y_pred)
+	return (K.sum(score_false_negative) / K.sum(z)) * 2 + iou_loss(y_true, y_pred)
 
 
 def full_loss(y_true, y_pred):
@@ -59,7 +63,7 @@ def full_loss(y_true, y_pred):
 
 # Output is resized, BGR, mean subtracted, [0, 1.] scaled by values
 def preprocess_img(img):
-	img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_LINEAR)
+	img = cv2.resize(img, (nn_img_w, nn_img_h), interpolation = cv2.INTER_LINEAR)
 
 	# img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
 	# img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
@@ -74,7 +78,7 @@ def preprocess_img(img):
 	return img
 
 def preprocess_mask(img):
-	img = cv2.resize(img, (nn_out_size, nn_out_size), interpolation = cv2.INTER_NEAREST)
+	img = cv2.resize(img, (nn_out_w, nn_out_h), interpolation = cv2.INTER_NEAREST)
 	img = img.astype('float32', copy=False)
 	img /= 255.
 
@@ -83,20 +87,21 @@ def preprocess_mask(img):
 def get_unet(lr=1e-3):
 	model = Sequential()
 
-	model.add(Conv2D(32, (5, 5), activation='elu', padding='same', input_shape=(nn_img_side, nn_img_side, 3)))
+	model.add(Conv2D(32, (5, 5), activation='elu', padding='same', input_shape=(nn_img_h, nn_img_w, 3)))
 	model.add(Dropout(0.25))
 
-	model.add(MaxPooling2D(pool_size=(4, 4)))
+	model.add(MaxPooling2D(pool_size=(2, 2)))
 
 	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
 	model.add(Dropout(0.25))
 
 	model.add(MaxPooling2D(pool_size=(2, 2)))
 
-	model.add(Conv2D(128, (3, 3), activation='elu', padding='same'))
-	model.add(Dropout(0.5))
+	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	model.add(Dropout(0.25))
 
-	model.add(Conv2D(1, (3, 3), activation='hard_sigmoid', padding='same'))
+	model.add(Conv2D(1, (3, 3), activation='sigmoid', padding='same'))
 
 	# model.compile(optimizer='adadelta', loss=iou_loss, metrics=[binary_crossentropy])
 	model.compile(optimizer=Adam(lr=lr), loss=loss_empower, metrics=[iou_loss])
