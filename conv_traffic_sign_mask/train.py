@@ -21,23 +21,50 @@ parser.add_argument('-a', '--augmentation', action='store_true', help='Path to w
 args = parser.parse_args()
 
 def preprocess_arrays(imgs, masks):
-	imgs_p  = np.ndarray((imgs.shape[0],  nn_img_h, nn_img_w, 3), dtype=np.float32)
-	masks_p = np.ndarray((masks.shape[0], nn_out_h, nn_out_w),    dtype=np.float32)
+	imgs_p  	 = np.ndarray((imgs.shape[0],  nn_img_h, nn_img_w, 3), 			  dtype=np.float32)
+	# masks_p 	 = np.ndarray((masks.shape[0], nn_out_h, nn_out_w),    			  dtype=np.float32)
+	grid_masks_p = np.ndarray((masks.shape[0], nn_grid_y_count, nn_grid_x_count), dtype=np.float32)
+
+	for i in range(imgs.shape[0]):
+		for y in range(nn_grid_y_count):
+			for x in range(nn_grid_x_count):
+				x_px, y_px = (x*nn_next_size, y*nn_next_size)
+				# print('Cell %d to %d' % (x_px, x_px + nn_next_size))
+				img_part = masks[i][y_px : y_px + nn_next_size, x_px : x_px + nn_next_size]
+
+				if np.sum(img_part) > 0:
+					grid_masks_p[i][y, x] = 1.
+				else:
+					grid_masks_p[i][y, x] = 0
+
+		# show_mask_g = cv2.resize(grid_masks_p[i], (600, 300), interpolation = cv2.INTER_NEAREST)
+		# show_mask_r = cv2.resize(masks[i], 	   (600, 300), interpolation = cv2.INTER_NEAREST)
+
+		# show_mask_g = cv2.cvtColor(show_mask_g, cv2.COLOR_GRAY2BGR)
+		# show_mask_g[np.where((show_mask_g == (0, 0, 0)).all(axis=2))] = (0,0,255)
+		# show_mask_g[np.where((show_mask_r != 0))] = (255,0,0)
+
+		# cv2.imshow('1', show_mask_g)
+		# # cv2.imshow('2', imgs[i])
+		# if cv2.waitKey(0) == 27:
+		# 	exit(1)
 
 	for i in range(imgs.shape[0]):
 		imgs_p[i]  = preprocess_img(imgs[i])
-		masks_p[i] = preprocess_mask(masks[i])
+		# masks_p[i] = preprocess_mask(masks[i])
 
 	p = np.random.permutation(len(imgs_p))
-	imgs_p  = imgs_p[p]
-	masks_p = masks_p[p]
+	imgs_p  		= imgs_p[p]
+	# masks_p 		= masks_p[p]
+	grid_masks_p	= grid_masks_p[p]
 
-	if 1:
-		for i in range(imgs.shape[0]):
-			cv2.imshow('1', imgs_p[i])
-			cv2.imshow('2', masks_p[i])
-			if cv2.waitKey(0) == 27:
-				exit(1)
+
+	# if 1:
+	# 	for i in range(imgs.shape[0]):
+	# 		cv2.imshow('1', imgs_p[i])
+	# 		cv2.imshow('2', masks_p[i])
+	# 		if cv2.waitKey(0) == 27:
+	# 			exit(1)
 
 	# fl = masks_p.flatten()
 	# lg = np.log(np.clip(fl, 1e-9, 1))
@@ -45,7 +72,7 @@ def preprocess_arrays(imgs, masks):
 	# cv2.imshow('1', masks[0])
 	# cv2.waitKey(3000)
 
-	return imgs_p, masks_p[..., np.newaxis]
+	return imgs_p, grid_masks_p[..., np.newaxis]
 
 
 def train_and_predict():

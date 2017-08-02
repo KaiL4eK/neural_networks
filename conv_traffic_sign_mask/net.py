@@ -1,6 +1,6 @@
 from keras.models import Sequential
 from keras.losses import binary_crossentropy, mean_squared_error
-from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, UpSampling2D, ZeroPadding2D, Dropout, Deconv2D, Flatten, Dense, BatchNormalization
+from keras.layers import Input, concatenate, Cropping2D, Conv2D, MaxPooling2D, UpSampling2D, ZeroPadding2D, Dropout, Deconv2D, Flatten, Dense, BatchNormalization
 from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint
 from keras import backend as K
@@ -13,8 +13,13 @@ import tensorflow as tf
 
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
-nn_img_h = 400
-nn_img_w = 800
+nn_img_h = 800
+nn_img_w = 1600
+
+nn_next_size = 100
+
+nn_grid_x_count = nn_img_w / nn_next_size
+nn_grid_y_count = nn_img_h / nn_next_size
 
 nn_out_h = 100
 nn_out_w = 200
@@ -91,33 +96,40 @@ def preprocess_mask(img):
 def get_unet(lr=1e-3):
 	model = Sequential()
 
-	model.add(Conv2D(16, (3, 3), activation='elu', padding='same', input_shape=(nn_img_h, nn_img_w, 3)))
+	model.add(Conv2D(8, (5, 5), activation='elu', padding='same', input_shape=(nn_img_h, nn_img_w, 3)))
+	model.add(Dropout(0.25))
+
+	model.add(MaxPooling2D(pool_size=(2, 2)))
+
+	model.add(Conv2D(16, (3, 3), activation='elu', padding='same'))
 	model.add(Dropout(0.25))
 
 	model.add(MaxPooling2D(pool_size=(2, 2)))
 
 	model.add(Conv2D(32, (3, 3), activation='elu', padding='same'))
 	model.add(Dropout(0.25))
-	# model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	# model.add(Dropout(0.25))
+
+	model.add(MaxPooling2D(pool_size=(2, 2)))
+
+	model.add(Conv2D(32, (3, 3), activation='elu', padding='same'))
+	model.add(Dropout(0.25))
 
 	model.add(MaxPooling2D(pool_size=(2, 2)))
 
 	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
 	model.add(Dropout(0.25))
-	# model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	# model.add(Dropout(0.5))
-	# model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	# model.add(Dropout(0.5))
 
-	# model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(MaxPooling2D(pool_size=(2, 2)))
 
 	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
 	model.add(Dropout(0.25))
-	# model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	# model.add(Dropout(0.5))
-	# model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	# model.add(Dropout(0.5))
+
+	model.add(MaxPooling2D(pool_size=(2, 2)))
+
+	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	model.add(Dropout(0.25))
+
+	model.add(Cropping2D(cropping=(nn_grid_y_count, nn_grid_x_count)))
 
 	model.add(Conv2D(1, (3, 3), activation='sigmoid', padding='same'))
 
