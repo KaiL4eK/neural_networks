@@ -27,11 +27,17 @@ def preprocess_arrays(imgs, masks):
 	for i in range(imgs.shape[0]):
 		imgs_p[i]  = preprocess_img(imgs[i])
 		masks_p[i] = preprocess_mask(masks[i])
-		
-		# cv2.imshow('1', imgs_p[i])
-		# cv2.imshow('2', masks_p[i])
-		# if cv2.waitKey(0) == 27:
-		# 	exit(1)
+
+	p = np.random.permutation(len(imgs_p))
+	imgs_p  = imgs_p[p]
+	masks_p = masks_p[p]
+
+	if 1:
+		for i in range(imgs.shape[0]):
+			cv2.imshow('1', imgs_p[i])
+			cv2.imshow('2', masks_p[i])
+			if cv2.waitKey(0) == 27:
+				exit(1)
 
 	# fl = masks_p.flatten()
 	# lg = np.log(np.clip(fl, 1e-9, 1))
