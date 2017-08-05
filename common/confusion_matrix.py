@@ -23,3 +23,22 @@ class ConfusionMatrix:
 
 	def reset_metrics(self):
 		self.matrix.fill(0)
+
+	def get_metrics(self):
+		TP = float(matrix[1, 1])
+		FN = float(matrix[1, 0])
+		FP = float(matrix[0, 1])
+
+		recall 		= TP / (TP + FN)
+		precision 	= TP / (TP + FP)
+
+		return recall, precision
+
+
+def test():
+	cmatrix = ConfusionMatrix()
+
+
+
+if __name__ == '__main__':
+    test()
