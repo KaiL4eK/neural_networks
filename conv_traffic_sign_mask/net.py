@@ -13,20 +13,18 @@ import tensorflow as tf
 
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
-nn_img_h = 800
-nn_img_w = 1600
+nn_img_h = 600
+nn_img_w = 1200
 
-nn_next_size = 100
+nn_grid_cell_size = 50
 
-nn_grid_x_count = nn_img_w / nn_next_size
-nn_grid_y_count = nn_img_h / nn_next_size
+nn_grid_x_count = nn_img_w / nn_grid_cell_size
+nn_grid_y_count = nn_img_h / nn_grid_cell_size
 
 nn_out_h = 100
 nn_out_w = 200
 
-### Rates ###
-# 27.5 ms - processing time gpu
-# 
+
 
 def intersect_over_union(y_true, y_pred):
 	y_true_f = K.flatten(y_true)
@@ -69,8 +67,6 @@ def full_loss(y_true, y_pred):
 def preprocess_img(img):
 	img = cv2.resize(img, (nn_img_w, nn_img_h), interpolation = cv2.INTER_LINEAR)
 
-
-
 	clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
 	img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
 	# img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
@@ -96,45 +92,46 @@ def preprocess_mask(img):
 def get_unet(lr=1e-3):
 	model = Sequential()
 
-	model.add(Conv2D(8, (5, 5), activation='elu', padding='same', input_shape=(nn_img_h, nn_img_w, 3)))
-	model.add(Dropout(0.25))
+	model.add(Conv2D(8, (11, 11), strides=3, activation='elu', padding='same', input_shape=(nn_img_h, nn_img_w, 3)))
+	# model.add(Dropout(0.25))
 
 	model.add(MaxPooling2D(pool_size=(2, 2)))
 
-	model.add(Conv2D(16, (3, 3), activation='elu', padding='same'))
-	model.add(Dropout(0.25))
+	model.add(Conv2D(32, (5, 5), activation='elu', padding='same'))
+	# model.add(Dropout(0.25))
 
-	model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+
+	# model.add(Conv2D(128, (3, 3), activation='elu', padding='same'))
+	# model.add(Conv2D(128, (3, 3), activation='elu', padding='same'))
+	# model.add(Dropout(0.25))
+
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+
+	# model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	# model.add(Conv2D(128, (3, 3), activation='elu', padding='same'))
+	# model.add(Conv2D(384, (3, 3), activation='elu', padding='same'))
+	# model.add(Dropout(0.25))
+
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+
+	# model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(Conv2D(384, (3, 3), activation='elu', padding='same'))
+	# model.add(Conv2D(384, (3, 3), activation='elu', padding='same'))
+	# model.add(Dropout(0.25))
+
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
 
 	model.add(Conv2D(32, (3, 3), activation='elu', padding='same'))
-	model.add(Dropout(0.25))
+	model.add(Dropout(0.5))
 
-	model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(Cropping2D(cropping=(0, 1)))
 
-	model.add(Conv2D(32, (3, 3), activation='elu', padding='same'))
-	model.add(Dropout(0.25))
-
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-
-	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	model.add(Dropout(0.25))
-
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-
-	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	model.add(Dropout(0.25))
-
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-
-	model.add(Conv2D(64, (3, 3), activation='elu', padding='same'))
-	model.add(Dropout(0.25))
-
-	model.add(Cropping2D(cropping=(nn_grid_y_count, nn_grid_x_count)))
-
-	model.add(Conv2D(1, (3, 3), activation='sigmoid', padding='same'))
+	model.add(Conv2D(1, (3, 3), activation='hard_sigmoid', padding='same'))
 
 	# model.compile(optimizer='adadelta', loss=iou_loss, metrics=[binary_crossentropy])
-	model.compile(optimizer=Adam(lr=lr), loss=loss_empower, metrics=[iou_loss])
+	model.compile(optimizer=Adam(lr=lr), loss=iou_loss, metrics=[])
 	
 	print_summary(model)
 	# plot_model(model, show_shapes=True)
