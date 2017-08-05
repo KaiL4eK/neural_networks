@@ -97,7 +97,7 @@ def get_unet(lr=1e-3):
 
 	model.add(MaxPooling2D(pool_size=(2, 2)))
 
-	model.add(Conv2D(32, (5, 5), activation='elu', padding='same'))
+	model.add(Conv2D(16, (5, 5), activation='elu', padding='same'))
 	# model.add(Dropout(0.25))
 
 	# model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -123,7 +123,7 @@ def get_unet(lr=1e-3):
 
 	# model.add(MaxPooling2D(pool_size=(2, 2)))
 
-	model.add(Conv2D(32, (3, 3), activation='elu', padding='same'))
+	model.add(Conv2D(16, (3, 3), activation='elu', padding='same'))
 	model.add(Dropout(0.5))
 
 	# model.add(Cropping2D(cropping=(0, 1)))
