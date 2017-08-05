@@ -96,10 +96,10 @@ def execute_model():
 				start_mask = time.time()
 
 				mask, frame = mark_image(frame, model)
-				frame = np.hstack((mask,frame))
 
 				mask_obtain_time += (time.time() - start_mask)
 				
+				frame = np.hstack((mask,frame))
 				cv2.imshow('frame',frame)
 				if cv2.waitKey(1) & 0xFF == ord('q'):
 					break
