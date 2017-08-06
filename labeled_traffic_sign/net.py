@@ -41,23 +41,23 @@ def get_network_model(lr):
 	pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 	drop1 = Dropout(0.25)(pool1)
 
-	conv2 = Conv2D(16,(3,3),activation='elu',padding='same')(drop1)
+	conv2 = Conv2D(32,(3,3),activation='elu',padding='same')(drop1)
 	pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
 	drop2 = Dropout(0.25)(pool2)
 
-	conv3 = Conv2D(32,(3,3),activation='elu',padding='same')(drop2)
-	pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
-	drop3 = Dropout(0.25)(pool3)
+	# conv3 = Conv2D(64,(3,3),activation='elu',padding='same')(drop2)
+	# pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+	# drop3 = Dropout(0.25)(pool3)
 
-	conv4 = Conv2D(64,(3,3),activation='elu',padding='same')(drop3)
-	drop4 = Dropout(0.25)(conv4)
+	# conv4 = Conv2D(128,(3,3),activation='elu',padding='same')(drop3)
+	# drop4 = Dropout(0.25)(conv4)
 
-	flat1  = Flatten()(drop3)
-	flat2  = Flatten()(drop4)
+	flat1  = Flatten()(drop2)
+	# flat2  = Flatten()(drop4)
 
-	flat   = concatenate([flat1, flat2])
+	# flat   = concatenate([flat1, flat2])
 
-	fc_cls      = Dense(64, activation='tanh')(flat)
+	fc_cls      = Dense(64, activation='tanh')(flat1)
 	drop_fc_cls = Dropout(0.5)(fc_cls)
 	out_cls     = Dense(len(glob_label_list), activation='sigmoid', name='out_cls')(drop_fc_cls)
 

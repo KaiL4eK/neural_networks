@@ -6,6 +6,7 @@ import numpy as np
 from keras.models import Model
 from keras.utils import np_utils, generic_utils
 from keras.callbacks import ModelCheckpoint, Callback, RemoteMonitor
+from keras.preprocessing.image import ImageDataGenerator
 import random
 
 from data import *
@@ -13,9 +14,10 @@ import net
 import argparse
 
 parser = argparse.ArgumentParser(description='Process video with ANN')
-parser.add_argument('-b', '--batch_size', default=1, action='store', help='Size of batch to learn')
-parser.add_argument('-w', '--weights', action='store',      help='Path to weights file')
-# parser.add_argument('-t', '--test',    action='store_true', help='Test model for loss')
+parser.add_argument('-b', '--batch_size', 	 default=1, 	action='store', 	 help='Size of batch to learn')
+parser.add_argument('-w', '--weights', 						action='store', 	 help='Path to weights file')
+parser.add_argument('-l', '--learning_rate', default=1e-4,	action='store', 	 help='Learning rate value')
+parser.add_argument('-a', '--augmentation', 				action='store_true', help='Use augmentation')
 
 args = parser.parse_args()
 
@@ -45,21 +47,44 @@ def train_classification():
 	print('Creating and compiling model...')
 	print('-'*30)
 
-	model = net.get_network_model(1e-3)
+	print('Learning rate: {} / Batch size: {}'.format(float(args.learning_rate), int(args.batch_size)))
+
+	model = net.get_network_model(float(args.learning_rate))
 
 	if args.weights:
 		model.load_weights(args.weights)
 
-
-	print('-'*30)
-	print('Fitting model...')
-	print('-'*30)
-
 	input_data  = imgs_train
 	output_data = imgs_class_train
 
-	model.fit(input_data, output_data, batch_size=int(args.batch_size), epochs=70000, verbose=1, shuffle=True, validation_split=0.2,
-				callbacks=[ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1)])
+	save_callback = ModelCheckpoint('weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=True, verbose=1)
+	epochs = 7000
+
+	if args.augmentation:
+		print('-'*30)
+		print('Fitting model...')
+		print('-'*30)
+
+		datagen = ImageDataGenerator(
+		    rotation_range=5,
+		    width_shift_range=0.05,
+		    height_shift_range=0.05,
+		    horizontal_flip=True)
+
+		data_generator = datagen.flow(input_data, output_data, batch_size = int(args.batch_size))
+
+		# fits the model on batches with real-time data augmentation:
+		model.fit_generator(data_generator, steps_per_epoch=len(input_data) / int(args.batch_size), epochs=epochs, 
+							validation_data=(input_data, output_data),
+							callbacks=[save_callback])
+	else:
+		print('-'*30)
+		print('Fitting model...')
+		print('-'*30)
+
+		model.fit(  input_data, output_data, batch_size=int(args.batch_size), epochs=epochs, 
+					verbose=1, shuffle=True, validation_split=0.2,
+					callbacks=[save_callback])
 
 if __name__ == '__main__':
 	train_classification()
