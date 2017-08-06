@@ -19,15 +19,15 @@ class ConfusionMatrix:
 		if truth not in [0, 1] or predicted not in [0, 1]:
 			raise ValueError('Ground thruth or predicted values must be 0 or 1')
 
-		matrix[truth, predicted] += 1
+		self.matrix[truth, predicted] += 1
 
 	def reset_metrics(self):
 		self.matrix.fill(0)
 
 	def get_metrics(self):
-		TP = float(matrix[1, 1])
-		FN = float(matrix[1, 0])
-		FP = float(matrix[0, 1])
+		TP = float(self.matrix[1, 1])
+		FN = float(self.matrix[1, 0])
+		FP = float(self.matrix[0, 1])
 
 		recall 		= TP / (TP + FN)
 		precision 	= TP / (TP + FP)
@@ -38,7 +38,27 @@ class ConfusionMatrix:
 def test():
 	cmatrix = ConfusionMatrix()
 
+	truth_samples 		= [ 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1 ]
+	predicted_samples 	= [ 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0 ]
 
+	for sample in zip(truth_samples, predicted_samples):
+		cmatrix.append_sample(truth=sample[0], predicted=sample[1])
+		print('Appending {}'.format(sample))
+
+		if sample[1] == 1:
+			if sample[0] == 1:
+				print('Result: TP')
+			else:
+				print('Result: FP')
+		else:
+			if sample[0] == 0:
+				print('Result: TN')
+			else:
+				print('Result: FN')
+
+
+	recall, precision = cmatrix.get_metrics()
+	print('Recall: {} / Precision: {}'.format(recall, precision))
 
 if __name__ == '__main__':
     test()
