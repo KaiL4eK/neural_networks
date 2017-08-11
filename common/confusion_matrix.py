@@ -16,6 +16,9 @@ class ConfusionMatrix:
 		self.reset_metrics();
 
 	def append_sample (self, truth, predicted):
+		truth 		= int(truth)
+		predicted 	= int(predicted)
+
 		if truth not in [0, 1] or predicted not in [0, 1]:
 			raise ValueError('Ground thruth or predicted values must be 0 or 1')
 
@@ -33,6 +36,11 @@ class ConfusionMatrix:
 		precision 	= TP / (TP + FP)
 
 		return recall, precision
+
+	def get_f1_metric(self):
+		recall, precision = self.get_metrics()
+
+		return 2 * (precision * recall / (precision + recall))
 
 
 def test():
