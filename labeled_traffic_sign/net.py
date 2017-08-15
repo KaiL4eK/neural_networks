@@ -65,6 +65,6 @@ def get_network_model(lr):
 	model.compile(optimizer=Adam(lr=lr), loss='binary_crossentropy', metrics=[])
 
 	print_summary(model)
-	# plot_model(model, show_shapes=True)
+	plot_model(model, show_shapes=True)
 
 	return model	

@@ -134,6 +134,6 @@ def get_unet(lr=1e-3):
 	model.compile(optimizer=Adam(lr=lr), loss=iou_loss, metrics=[])
 	
 	print_summary(model)
-	# plot_model(model, show_shapes=True)
+	plot_model(model, show_shapes=True)
 
 	return model
