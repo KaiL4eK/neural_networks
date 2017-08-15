@@ -8,6 +8,19 @@ try:
 except NameError:
     xrange = range
 
+# stop
+# (0.8, 0.8888888888888888)
+# 0.842105263158
+# pedestrian
+# (1.0, 0.9090909090909091)
+# 0.952380952381
+# main_road
+# (0.8, 0.8888888888888888)
+# 0.842105263158
+# bus_stop
+# (0.8666666666666667, 1.0)
+# 0.928571428571
+
 import os
 import cv2
 import numpy as np
