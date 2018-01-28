@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 
 project(inference_samples)
 
-find_package(OpenCV 3.4.7 REQUIRED)
+find_package(OpenCV 3.3.0 REQUIRED)
 find_package(Boost 1.6.5 REQUIRED COMPONENTS program_options filesystem)
 
 set (CMAKE_CXX_STANDARD 14)
