@@ -2,8 +2,7 @@ import os
 import numpy as np
 import cv2
 
-data_root  = 'data/Final_Training/Images'
-import readTrafficSigns as ts
+data_root  = '../data/Final_Training/Images'
 
 save_data_path = '.'
 
@@ -17,6 +16,8 @@ sum_0 = 0
 sum_1 = 0
 
 def create_train_data():
+	import readTrafficSigns as ts
+
 	images, labels = ts.readTrafficSigns(data_root)
 
 	total = len(images)

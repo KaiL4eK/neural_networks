@@ -9,6 +9,8 @@ from keras.callbacks import ModelCheckpoint, Callback
 import random
 import itertools
 
+from sklearn.model_selection import train_test_split
+
 from data import *
 from net import *
 import argparse
