@@ -119,7 +119,8 @@ def _main_(args):
         print("Loading pre-trained weights in", config['train']['pretrained_weights'])
         try:
             yolo.load_weights(config['train']['pretrained_weights'])
-        except:
+        except Exception as e:
+            print(e)
             print("Failed to load pretrained weights")
             print("Continue from scratch!")
 

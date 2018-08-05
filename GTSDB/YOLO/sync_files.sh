@@ -20,7 +20,8 @@ esac
 done
 
 rsync -avzcLP -e "ssh -p 9992" \
-mobilenet_backend.h5 *.json ext_repos *.py *.sh \
---exclude=.git --exclude=test_fld --exclude=__pycache__ \
+ \
+*.json ext_repos *.py *.sh \
+--exclude=.git --exclude=.gitignore --exclude=*.jpg --exclude=test_fld --exclude=__pycache__ \
 userquadro@uniq:~/yolo/
 
