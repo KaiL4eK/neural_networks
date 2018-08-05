@@ -1,3 +1,3 @@
 [submodule "GTSDB/YOLO/ext_repos/keras-yolo2"]
 	path = GTSDB/YOLO/ext_repos/keras-yolo2
-	url = https://github.com/rodrigo2019/keras-yolo2.git
+	url = https://github.com/KaiL4eK/keras-yolo2.git
