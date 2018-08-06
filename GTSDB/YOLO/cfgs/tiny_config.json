@@ -4,9 +4,9 @@
         "input_size_w":         416,
         "input_size_h":         416,
         "gray_mode":            false,
-        "anchors":              [2.45678,3.22796, 5.45832,6.88510, 9.93034,10.21281],
+        "anchors":              [1.03071,0.91737, 2.28872,2.11841, 4.50595,3.94489, 9.21968,5.60002, 10.94335,9.68130],
         "max_box_per_image":    10,        
-        "labels":               ["dog"]
+        "labels":               ["car"]
     },
 
     "parser_annotation_type":    "xml",
@@ -20,12 +20,12 @@
         "train_times":          8,
         "pretrained_weights":   "chk/tiny_yolov2_bestMap.h5",
         "batch_size":           4,
-        "learning_rate":        1e-4,
+        "learning_rate":        1e-3,
         "nb_epochs":            1000,
-        "warmup_epochs":        0,
+        "warmup_epochs":        3,
 
         "workers":              7,
-        "max_queue_size":       1,
+        "max_queue_size":       20,
         "early_stop":           false,
         "tensorboard_log_dir":  "./logs/tiny",
 
