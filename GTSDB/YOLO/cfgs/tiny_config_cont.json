@@ -20,7 +20,7 @@
         "train_times":          8,
         "pretrained_weights":   "chk/tiny_yolov2_bestMap.h5",
         "batch_size":           4,
-        "learning_rate":        1e-3,
+        "learning_rate":        1e-4,
         "nb_epochs":            1000,
         "warmup_epochs":        0,
 
