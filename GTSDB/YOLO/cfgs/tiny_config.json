@@ -18,23 +18,23 @@
         "train_annot_folder":   "VOCdevkit/VOC2007/Annotations/",        
           
         "train_times":          8,
-        "pretrained_weights":   "tiny_yolov2.h5",
+        "pretrained_weights":   "chk/tiny_yolov2_bestMap.h5",
         "batch_size":           4,
         "learning_rate":        1e-4,
-        "nb_epochs":            150,
-        "warmup_epochs":        3,
+        "nb_epochs":            1000,
+        "warmup_epochs":        0,
 
         "workers":              7,
         "max_queue_size":       1,
         "early_stop":           false,
         "tensorboard_log_dir":  "./logs/tiny",
 
-        "object_scale":         1.0,
+        "object_scale":         5.0,
         "no_object_scale":      1.0,
         "coord_scale":          1.0,
         "class_scale":          1.0,
 
-        "saved_weights_name":   "tiny_yolov2.h5",
+        "saved_weights_name":   "chk/tiny_yolov2.h5",
         "debug":                false
     },
 
