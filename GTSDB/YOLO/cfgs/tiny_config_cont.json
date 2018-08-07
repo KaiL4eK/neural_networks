@@ -18,10 +18,10 @@
         "train_annot_folder":   "VOCdevkit/VOC2007/Annotations/",        
           
         "train_times":          8,
-        "pretrained_weights":   "chk/tiny_yolov2_bestMap.h5",
+        "pretrained_weights":   "chk/tiny_yolov2_vloss.h5",
         "batch_size":           4,
         "learning_rate":        1e-4,
-        "nb_epochs":            1000,
+        "nb_epochs":            200,
         "warmup_epochs":        0,
 
         "workers":              7,
