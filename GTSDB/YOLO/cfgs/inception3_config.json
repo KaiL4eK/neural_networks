@@ -1,0 +1,57 @@
+{
+    "model" : {
+        "backend":              "Inception3",
+        "input_size_w":         416,
+        "input_size_h":         416,
+        "gray_mode":            false,
+        "anchors":              [1.81701,2.42074, 3.90559,4.30000, 4.89052,7.89026, 7.62407,5.62686, 8.91478,9.46735],
+        "max_box_per_image":    10,        
+        "labels":               ["cat", "dog"]
+    },
+
+    "parser_annotation_type":    "xml",
+
+    "train": {
+        "train_csv_file":       "",
+        "train_csv_base_path":  "",
+        "train_image_folder":   "VOCdevkit/VOC2007/JPEGImages/", 
+        "train_annot_folder":   "VOCdevkit/VOC2007/Annotations/",        
+          
+        "train_times":          8,
+        "pretrained_weights":   "chk/inception3_yolov2_vloss.h5",
+        "batch_size":           4,
+        "learning_rate":        1e-4,
+        "nb_epochs":            200,
+        "warmup_epochs":        3,
+
+        "workers":              7,
+        "max_queue_size":       20,
+        "early_stop":           false,
+        "tensorboard_log_dir":  "./logs/inception3",
+
+        "object_scale":         5.0,
+        "no_object_scale":      1.0,
+        "coord_scale":          1.0,
+        "class_scale":          1.0,
+
+        "saved_weights_name":   "chk/inception3_yolov2.h5",
+        "debug":                false
+    },
+
+    "valid": {
+        "valid_csv_file":       "",
+        "valid_csv_base_path":  "",
+        "valid_image_folder":   "",
+        "valid_annot_folder":   "",
+
+        "valid_times":          1
+    },
+
+    "backup":{
+        "create_backup":        true,
+        "redirect_model":       true,
+        "backup_path":          "../backup",
+        "backup_prefix":        "full_yolo_COCO",
+        "readme_message":       "put your comment here"
+    }
+}

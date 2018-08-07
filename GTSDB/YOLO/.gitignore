@@ -2,3 +2,5 @@
 *.h5
 *.npz
 *events.out.tfevents.*
+*.jpg
+*.png
