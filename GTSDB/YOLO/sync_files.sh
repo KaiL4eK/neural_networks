@@ -14,6 +14,12 @@ case $i in
 		rsync -avzcLP -e "ssh -p 9992" userquadro@uniq:~/yolo/chk .
 		exit
     ;;
+    -u|--upload-weights)
+		echo "Upload weights"
+		# Just to sync DB
+		rsync -avzcLP -e "ssh -p 9992" chk/ userquadro@uniq:~/yolo/chk/
+		exit
+    ;;
     *)
           # unknown option
     ;;

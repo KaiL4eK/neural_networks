@@ -30,7 +30,7 @@
         "tensorboard_log_dir":  "./logs/tiny",
 
         "object_scale":         5.0,
-        "no_object_scale":      1.0,
+        "no_object_scale":      10.0,
         "coord_scale":          1.0,
         "class_scale":          1.0,
 
