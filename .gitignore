@@ -12,3 +12,5 @@
 *.avi
 *.webm
 videos
+
+**/.idea

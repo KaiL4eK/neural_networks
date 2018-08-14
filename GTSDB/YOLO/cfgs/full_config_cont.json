@@ -18,7 +18,7 @@
         "train_annot_folder":   "VOCdevkit/VOC2007/Annotations/",
           
         "train_times":          8,
-        "pretrained_weights":   "chk/full_vloss.h5",
+        "pretrained_weights":   "chk/full_bestMap.h5",
         "batch_size":           4,
         "learning_rate":        1e-4,
         "nb_epochs":            200,
@@ -29,8 +29,8 @@
         "early_stop":           false,
         "tensorboard_log_dir":  "./logs/full",
 
-        "object_scale":         5.0,
-        "no_object_scale":      5.0,
+        "object_scale":         10.0,
+        "no_object_scale":      1.0,
         "coord_scale":          1.0,
         "class_scale":          1.0,
 

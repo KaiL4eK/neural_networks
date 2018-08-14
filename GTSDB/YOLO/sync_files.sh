@@ -11,13 +11,13 @@ case $i in
     -d|--download-weights)
 		echo "Download weights"
 		# Just to sync DB
-		rsync -avzcLP -e "ssh -p 9992" userquadro@uniq:~/yolo/chk .
+		rsync -avzcLP -e "ssh -p 9992" --include="*_bestMap.h5" --exclude="*" userquadro@uniq:~/yolo/chk/ chk/
 		exit
     ;;
     -u|--upload-weights)
 		echo "Upload weights"
 		# Just to sync DB
-		rsync -avzcLP -e "ssh -p 9992" chk/ userquadro@uniq:~/yolo/chk/
+		rsync -avzcLP -e "ssh -p 9992" chk/  userquadro@uniq:~/yolo/chk/
 		exit
     ;;
     *)
