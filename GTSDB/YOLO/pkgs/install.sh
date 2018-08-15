@@ -1,4 +1,4 @@
 #!/bin/bash
 
-conda install --file conda_packages.txt && \
-pip install -r pip_packages.txt
+conda install --file $(dirname $0)/conda_packages.txt && \
+pip install -r $(dirname $0)/pip_packages.txt

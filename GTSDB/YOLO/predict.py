@@ -5,7 +5,6 @@ import os
 import cv2
 import numpy as np
 from tqdm import tqdm
-from preprocessing import parse_annotation
 from utils import draw_boxes
 from frontend import YOLO
 from utils import list_images
@@ -39,7 +38,6 @@ def _main_(args):
     config_path  = args.conf
     weights_path = args.weights
     image_path   = args.input
-
 
     with open(config_path) as config_buffer:    
         config = json.load(config_buffer)

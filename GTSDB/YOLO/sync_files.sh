@@ -27,8 +27,7 @@ esac
 done
 
 rsync -avzcLP -e "ssh -p 9992" \
- \
-ext_repos *.py cfgs \
+ext_repos *.py cfgs pkgs tiny_2_uff.sh \
 --exclude=.git --exclude=.gitignore --exclude=*.jpg --exclude=test_fld --exclude=__pycache__ \
 userquadro@uniq:~/yolo/
 

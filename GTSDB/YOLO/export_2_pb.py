@@ -9,10 +9,16 @@ import argparse
 import os
 from frontend import YOLO
 import json
-
+import uff
 
 argparser = argparse.ArgumentParser(
     description='Convert Keras model to UFF format')
+
+argparser.add_argument(
+    '-o',
+    '--output',
+    default='unknown_model',
+    help='output filename')
 
 argparser.add_argument(
     '-c',
@@ -30,6 +36,7 @@ argparser.add_argument(
 def _main_(args):
     config_path  = args.conf
     weights_path = args.weights
+    output_fname = args.output
 
     with open(config_path) as config_buffer:    
         config = json.load(config_buffer)
@@ -52,60 +59,51 @@ def _main_(args):
     #   Load trained weights
     ###############################    
 
-    yolo.load_weights(weights_path)
+    # yolo.load_weights(weights_path)
 
     model = yolo.model
 
-    # model_input1 = model.input[0].name.strip(':0')
-    # model_input2 = model.input[1].name.strip(':0')
-    # model_output = model.output.name.strip(':0')
-    # print(model_input1, model_input2, model_output)
-    #
-    # print('Now TensorRT time!')
+    result_dir = 'output'
+    if not os.path.exists(result_dir):
+        os.makedirs(result_dir)
+
+    model_output = model.output.name.strip(':0')
+    model_output = 'YOLO_output/Reshape'
+
     #
     # graph = tf.get_default_graph().as_graph_def()
     #
-    # print('Got graph')
-    #
     # # Get session
     # sess = tf.keras.backend.get_session()
-    #
-    # print('Got session')
-    #
     # sess.run(tf.global_variables_initializer())
-    #
-    # print('Got initialized')
     #
     # # freeze graph and remove nodes used for training
     # frozen_graph = tf.graph_util.convert_variables_to_constants(sess, graph, [model_output])
-    #
-    # print('Constants done')
-    #
     # frozen_graph = tf.graph_util.remove_training_nodes(frozen_graph)
-    #
-    # print('Got frozen graph')
     #
     # # Create UFF model and dump it on disk
     # uff_model = uff.from_tensorflow(frozen_graph, [model_output])
-    # dump = open('output/tiny_yolo.uff', 'wb')
+    # dump = open(result_dir + '/' + output_fname + '.uff', 'wb')
     # dump.write(uff_model)
     # dump.close()
+    #
+    # return
 
     K.set_learning_phase(0)
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         saver = saver_lib.Saver(write_version=saver_pb2.SaverDef.V2)
-        checkpoint_path = saver.save(sess, 'output/saved_ckpt', global_step=0, latest_filename='checkpoint_state')
-        graph_io.write_graph(sess.graph, 'output', 'tmp.pb')
+        checkpoint_path = saver.save(sess, result_dir + '/saved_ckpt', global_step=0, latest_filename='checkpoint_state')
+        graph_io.write_graph(sess.graph, result_dir, 'tmp.pb')
 
         print('Graph saved')
 
-        freeze_graph.freeze_graph('output/tmp.pb', '',
-                                  False, checkpoint_path, model.output.name.strip(':0'),
+        freeze_graph.freeze_graph(result_dir + '/tmp.pb', '',
+                                  False, checkpoint_path, model_output,
                                   "save/restore_all", "save/Const:0",
-                                  'output/model.pb', False, "")
+                                  result_dir + '/' + output_fname + '.pb', False, "")
 
-        os.unlink('output/tmp.pb')
+        os.unlink(result_dir + '/tmp.pb')
 
 
 if __name__ == '__main__':
