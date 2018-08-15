@@ -4,9 +4,9 @@
         "input_size_w":         416,
         "input_size_h":         416,
         "gray_mode":            false,
-        "anchors":              [1.03071,0.91737, 2.28872,2.11841, 4.50595,3.94489, 9.21968,5.60002, 10.94335,9.68130],
+        "anchors":              [1.29193,1.16371, 3.15368,3.27146, 5.49571,8.50518, 7.28826,4.74635, 10.67951,9.92618],
         "max_box_per_image":    10,        
-        "labels":               ["car"]
+        "labels":               ["car", "cat", "dog"]
     },
 
     "parser_annotation_type":    "xml",

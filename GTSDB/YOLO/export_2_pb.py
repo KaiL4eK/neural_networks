@@ -69,6 +69,7 @@ def _main_(args):
 
     model_output = model.output.name.strip(':0')
     model_output = 'YOLO_output/Reshape'
+    model_output = 'DetectionLayer/BiasAdd'
 
     #
     # graph = tf.get_default_graph().as_graph_def()
