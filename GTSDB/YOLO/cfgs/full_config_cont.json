@@ -4,6 +4,7 @@
         "input_size_w":         416,
         "input_size_h":         416,
         "gray_mode":            false,
+        "trainable":            true,
         "anchors":              [2.18214,2.77171, 4.43713,5.17706, 5.82639,9.36910, 8.83553,6.52148, 10.53166,11.17995],
         "max_box_per_image":    10,
         "labels":               ["dog", "cat"]

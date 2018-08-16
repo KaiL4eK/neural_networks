@@ -109,6 +109,7 @@ def _main_(args):
                 labels              = config['model']['labels'], 
                 max_box_per_image   = config['model']['max_box_per_image'],
                 anchors             = config['model']['anchors'],
+                trainable           = config['model']['trainable'],
                 gray_mode           = config['model']['gray_mode'])
 
     ###############################
@@ -130,6 +131,7 @@ def _main_(args):
 
     tensorboard_log_dir_prefix = config['train']['tensorboard_log_dir']
     tensorboard_log_dir_idx = 0
+
     while True:
 
         tensorboard_log_dir = tensorboard_log_dir_prefix + '-{}'.format(tensorboard_log_dir_idx)
