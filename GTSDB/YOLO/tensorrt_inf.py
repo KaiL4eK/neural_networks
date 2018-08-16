@@ -37,11 +37,15 @@ def _main_(args):
     model_output = 'YOLO_output/Reshape'
     model_output = 'DetectionLayer/BiasAdd'
 
-    yolo2_engine = tensorrt.lite.Engine(framework="tf",
-                                        path=pb_path,
-                                        max_batch_size=1,
-                                        input_nodes={'input_1': (3, config['model']['input_size_w'], config['model']['input_size_h'])},
-                                        output_nodes=[model_output])  # Output layers
+    try:
+        yolo2_engine = tensorrt.lite.Engine(framework="tf",
+                                            path=pb_path,
+                                            max_batch_size=1,
+                                            input_nodes={'input_1': (3, config['model']['input_size_w'], config['model']['input_size_h'])},
+                                            output_nodes=[model_output])  # Output layers
+    except:
+        print('Failed to create engine')
+        exit(1)
 
     image = cv2.imread(image_path)
     image = cv2.resize(image, (config['model']['input_size_w'], config['model']['input_size_h']))
