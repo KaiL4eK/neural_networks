@@ -1,13 +1,13 @@
 {
     "model" : {
-        "backend":              "Tiny Yolo TRT",
-        "input_size_w":         416,
-        "input_size_h":         416,
+        "backend":              "Tiny Yolo",
+        "input_size_w":         214,
+        "input_size_h":         214,
         "trainable":            true,
         "gray_mode":            false,
-        "anchors":              [1.29193,1.16371, 3.15368,3.27146, 5.49571,8.50518, 7.28826,4.74635, 10.67951,9.92618],
+        "anchors":              [0.91157,1.32239, 1.91426,2.28144, 2.55356,4.13878, 3.85240,2.57458, 4.75093,4.95676],
         "max_box_per_image":    10,        
-        "labels":               ["car", "cat", "dog"]
+        "labels":               ["dog"]
     },
 
     "parser_annotation_type":    "xml",
@@ -19,10 +19,10 @@
         "train_annot_folder":   "VOCdevkit/VOC2007/Annotations/",        
           
         "train_times":          8,
-        "pretrained_weights":   "chk/tiny_yolov2_vloss.h5",
+        "pretrained_weights":   "chk/tiny_yolov2_bestMap.h5",
         "batch_size":           4,
         "learning_rate":        1e-4,
-        "nb_epochs":            200,
+        "nb_epochs":            2000,
         "warmup_epochs":        0,
 
         "workers":              7,
