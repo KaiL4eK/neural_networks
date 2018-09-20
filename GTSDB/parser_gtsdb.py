@@ -60,18 +60,18 @@ for file in tqdm.tqdm(glob.glob(imgs_path + '/*.ppm')):
             xmin, ymin, xmax, ymax, classId = info
 
             xml_object = ET.SubElement(xml_root, "object")
-            xml_name = ET.SubElement(xml_root, "name")
+            xml_name = ET.SubElement(xml_object, "name")
             xml_name.text = str(classId)
 
-            xml_bndbox = ET.SubElement(xml_root, "bndbox")
+            xml_bndbox = ET.SubElement(xml_object, "bndbox")
 
-            xml_xmin = ET.SubElement(xml_root, "xmin")
+            xml_xmin = ET.SubElement(xml_bndbox, "xmin")
             xml_xmin.text = str(xmin)
-            xml_ymin = ET.SubElement(xml_root, "ymin")
+            xml_ymin = ET.SubElement(xml_bndbox, "ymin")
             xml_ymin.text = str(ymin)
-            xml_xmax = ET.SubElement(xml_root, "xmax")
+            xml_xmax = ET.SubElement(xml_bndbox, "xmax")
             xml_xmax.text = str(xmax)
-            xml_ymax = ET.SubElement(xml_root, "ymax")
+            xml_ymax = ET.SubElement(xml_bndbox, "ymax")
             xml_ymax.text = str(ymax)
 
 
