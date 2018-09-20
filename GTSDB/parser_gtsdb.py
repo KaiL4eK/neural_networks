@@ -5,11 +5,24 @@ import tqdm
 import glob
 
 from lxml import etree as ET
+from shutil import copyfile
 
-data_root_path = 'data/FullIJCNN2013'
+data_root_path = '../data_root/GTSDB_orig/FullIJCNN2013'
+
+
 imgs_path = data_root_path
 annots_fpath = data_root_path + '/gt.txt'
-result_fldr = './annot'
+
+dst_data_dir = 'GTSDB_voc'
+annotation_fldr = dst_data_dir + '/Annotations'
+images_fldr = dst_data_dir + '/Images'
+
+
+if not os.path.exists(annotation_fldr):
+    os.makedirs(annotation_fldr)
+
+if not os.path.exists(images_fldr):
+    os.makedirs(images_fldr)
 
 checked_files = {}
 
@@ -32,9 +45,9 @@ with open(annots_fpath) as fp:
 # print(checked_files)
 
 
-for file in tqdm.tqdm(glob.glob(imgs_path + '/*.ppm')):
+for fpath in tqdm.tqdm(glob.glob(imgs_path + '/*.ppm')):
     
-    file = os.path.basename(file)
+    file = os.path.basename(fpath)
 
 # for file, infos in tqdm.tqdm(checked_files.items()):
 
@@ -83,4 +96,6 @@ for file in tqdm.tqdm(glob.glob(imgs_path + '/*.ppm')):
             # cv2.waitKey(500)
 
     tree = ET.ElementTree(xml_root)
-    tree.write(result_fldr + '/' + file.split('.')[0] + '.xml', pretty_print=True, xml_declaration=True,   encoding="utf-8")
+    tree.write(annotation_fldr + '/' + file.split('.')[0] + '.xml', pretty_print=True, xml_declaration=True,   encoding="utf-8")
+
+    copyfile(fpath, images_fldr + '/' + file)
