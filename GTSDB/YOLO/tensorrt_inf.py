@@ -12,6 +12,8 @@ import keras.backend as K
 import pycuda.driver as cuda
 import pycuda.autoinit
 
+from keras.models import load_model
+
 from frontend import YOLO
 
 import tensorrt.parsers.uffparser as uffparser
@@ -38,6 +40,13 @@ argparser.add_argument(
     help='path to PB (frozen TF graph) converted file')
 
 argparser.add_argument(
+    '-m',
+    '--model',
+    default='',
+    help='path to PB (frozen TF graph) converted file')
+
+
+argparser.add_argument(
     '-i',
     '--input',
     help='path to an image or an video (mp4 format)')
@@ -58,8 +67,7 @@ def _main_(args):
     with open(config_path) as config_buffer:
         config = json.load(config_buffer)
 
-    # if weights_path == '':
-        # weights_path = config['train']['saved_weights_name']
+    weights_path = config['train']['saved_weights_name']
 
     ###############################
     #   Make the model 
@@ -71,6 +79,10 @@ def _main_(args):
     K.set_session(sess)
     K.set_learning_phase(0)
 
+    if os.path.exists(args.model):
+        yolo = load_model( args.model )
+
+
     yolo = YOLO(backend             = config['model']['backend'],
                 input_size          = (config['model']['input_size_h'],config['model']['input_size_w']), 
                 labels              = config['model']['labels'], 
@@ -79,15 +91,17 @@ def _main_(args):
                 trainable           = config['model']['trainable'],
                 gray_mode           = config['model']['gray_mode'])
 
-    ###############################
-    #   Load trained weights
-    ###############################    
+    if os.path.exists(weights_path):
+        yolo.load_weights(weights_path)
 
-    # yolo.load_weights(weights_path)
+    elif os.path.exists(args.model):
+        yolo.load_weights(args.model)
 
-    model = yolo.model
 
-    test_count = 100
+
+    model = yolo.get_inference_model()
+
+    test_count = 10
  
     # Inference
     orig_image = cv2.imread(image_path)
@@ -98,19 +112,17 @@ def _main_(args):
     image = image.astype('float32')
     image = image / 127.5 - 1
 
-    dummy_array = np.zeros((1,1,1,1,config['model']['max_box_per_image'],4))
+    # dummy_array = np.zeros((1,1,1,1,config['model']['max_box_per_image'],4))
 
     time_k1 = time()
     
     for i in range(test_count):
-        keras_result = model.predict([[image], dummy_array])[0]
+        # keras_result = model.predict([[image], dummy_array])[0]
+        keras_result = model.predict([[image]])[0]
     
     time_k2 = time()
 
-
     # boxes  = decode_netout(netout, self.anchors, self.nb_class)
-
-
 
     # print(model.layers[-4].data_format)
     # exit(1)

@@ -9,9 +9,25 @@ from utils import draw_boxes
 from frontend import YOLO
 from utils import list_images
 import json
+import tensorflow as tf
+import common as cmn
+import keras.backend as K
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
+def init_session():
+    config = tf.ConfigProto()
+
+    config.gpu_options.allow_growth                     = True
+    config.gpu_options.per_process_gpu_memory_fraction  = 0.5
+
+    if cmn.isDataFormatCv():
+        print('Data format: HWC')
+    else:
+        print('Data format: CWH')
+
+    K.set_session(tf.Session(config=config))
 
 argparser = argparse.ArgumentParser(
     description='Train and validate YOLO_v2 model on any dataset')
@@ -38,6 +54,8 @@ def _main_(args):
     config_path  = args.conf
     weights_path = args.weights
     image_path   = args.input
+
+    init_session()
 
     with open(config_path) as config_buffer:    
         config = json.load(config_buffer)

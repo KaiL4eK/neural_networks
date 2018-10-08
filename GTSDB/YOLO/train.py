@@ -15,7 +15,8 @@ import keras
 import argparse
 import os
 
-
+import common as cmn
+import keras.backend as K
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -29,59 +30,62 @@ argparser.add_argument(
     default='config.json',
     help='path to configuration file')
 
+argparser.add_argument(
+    '-d',
+    '--debug',
+    action='store_true',
+    default=False,
+    help='debug')
 
-def get_session():
+def init_session():
     config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    return tf.Session(config=config)
+
+    config.gpu_options.allow_growth                     = True
+    # config.gpu_options.per_process_gpu_memory_fraction  = 0.9
+
+    # cmn.setCHWDataFormat()
+
+    if cmn.isDataFormatCv():
+        print('Data format: HWC')
+    else:
+        print('Data format: CWH')
+
+    K.set_session(tf.Session(config=config))
 
 
 def _main_(args):
     config_path = args.conf
+    debug_enabled = args.debug
     
-    keras.backend.tensorflow_backend.set_session(get_session())
+    init_session()
 
     with open(config_path) as config_buffer:    
         config = json.loads(config_buffer.read())
 
-    if config['parser_annotation_type'] == 'xml':
-        # parse annotations of the training set
-        train_imgs, train_labels = parse_annotation(config['train']['train_annot_folder'], 
-                                                    config['train']['train_image_folder'], 
+    # parse annotations of the training set
+    train_imgs, train_labels = parse_annotation(config['train']['train_annot_folder'], 
+                                                config['train']['train_image_folder'], 
+                                                config['model']['labels'])
+
+    # parse annotations of the validation set, if any, otherwise split the training set
+    if os.path.exists(config['valid']['valid_annot_folder']):
+        valid_imgs, valid_labels = parse_annotation(config['valid']['valid_annot_folder'], 
+                                                    config['valid']['valid_image_folder'], 
                                                     config['model']['labels'])
-
-        # parse annotations of the validation set, if any, otherwise split the training set
-        if os.path.exists(config['valid']['valid_annot_folder']):
-            valid_imgs, valid_labels = parse_annotation(config['valid']['valid_annot_folder'], 
-                                                        config['valid']['valid_image_folder'], 
-                                                        config['model']['labels'])
-            split = False
-        else:
-            split = True
-    elif config['parser_annotation_type'] == 'csv':
-        # parse annotations of the training set
-        train_imgs, train_labels = parse_annotation_csv(config['train']['train_csv_file'],
-                                                        config['model']['labels'],
-                                                        config['train']['train_csv_base_path'])
-
-        # parse annotations of the validation set, if any, otherwise split the training set
-        if os.path.exists(config['valid']['valid_csv_file']):
-            valid_imgs, valid_labels = parse_annotation_csv(config['valid']['valid_csv_file'],
-                                                        config['model']['labels'],
-                                                        config['valid']['valid_csv_base_path'])
-            split = False
-        else:
-            split = True
+        split = False
     else:
-        raise ValueError("'parser_annotations_type' must be 'xml' or 'csv' not {}.".format(config['parser_annotations_type']))
+        split = True
 
-    
     if split:
+        print('No validation, split training images: %d / %d' % (0.8 * len(train_imgs), len(train_imgs)) )
+
         train_valid_split = int(0.8*len(train_imgs))
         np.random.shuffle(train_imgs)
 
         valid_imgs = train_imgs[train_valid_split:]
         train_imgs = train_imgs[:train_valid_split]
+
+    print('Training / Validation images: %d / %d' % (len(train_imgs), len(valid_imgs)) )
 
     if len(config['model']['labels']) > 0:
         overlap_labels = set(config['model']['labels']).intersection(set(train_labels.keys()))
@@ -100,6 +104,14 @@ def _main_(args):
         with open("labels.json", 'w') as outfile:
             json.dump({"labels" : list(train_labels.keys())},outfile)
 
+    
+    max_box_per_image = config['model']['max_box_per_image']
+    max_box_per_image_calc = max([len(inst['object']) for inst in (train_imgs + valid_imgs)])
+
+    if max_box_per_image < max_box_per_image_calc:
+        print('Invalid max_box_per_image value')
+        exit(1)
+
     ###############################
     #   Construct the model 
     ###############################
@@ -107,10 +119,10 @@ def _main_(args):
     yolo = YOLO(backend             = config['model']['backend'],
                 input_size          = (config['model']['input_size_h'], config['model']['input_size_w']), 
                 labels              = config['model']['labels'], 
-                max_box_per_image   = config['model']['max_box_per_image'],
                 anchors             = config['model']['anchors'],
                 trainable           = config['model']['trainable'],
-                gray_mode           = config['model']['gray_mode'])
+                gray_mode           = config['model']['gray_mode'],
+                max_box_per_image   = max_box_per_image )
 
     ###############################
     #   Load the pretrained weights (if any) 
@@ -155,7 +167,7 @@ def _main_(args):
                coord_scale        = config['train']['coord_scale'],
                class_scale        = config['train']['class_scale'],
                saved_weights_name = config['train']['saved_weights_name'],
-               debug              = config['train']['debug'],
+               debug              = debug_enabled,
                early_stop         = config['train']['early_stop'],
                workers            = config['train']['workers'],
                max_queue_size     = config['train']['max_queue_size'],
