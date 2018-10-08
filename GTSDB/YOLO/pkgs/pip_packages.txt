@@ -1,6 +1,0 @@
-imgaug
-tqdm
-keras==2.2.2
-tensorflow-gpu==1.9.0
-numpy
-pycuda
