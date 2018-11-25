@@ -7,8 +7,7 @@ import glob
 from lxml import etree as ET
 from shutil import copyfile
 
-data_root_path = '../data_root/GTSDB_orig/FullIJCNN2013'
-
+data_root_path = 'GTSDB'
 
 imgs_path = data_root_path
 annots_fpath = data_root_path + '/gt.txt'

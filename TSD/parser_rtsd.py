@@ -3,100 +3,107 @@ import cv2
 import os
 import tqdm
 import glob
+import csv
 
 from lxml import etree as ET
 from shutil import copyfile
 
-data_root_path = '../data_root/GTSDB_orig/FullIJCNN2013'
+data_root_path = 'RTSD'
+
+frames_paths = ['rtsd-d1-frames']
+gt_frame_fpaths = []
+
+for frames_path in frames_paths:
+    frames_dirpath = os.path.join(data_root_path, frames_path)
+
+    for subdir in ['test', 'train']:
+        path = os.path.join(frames_dirpath, subdir)
+
+        gt_frame_fpaths += [os.path.join(path, i) for i in os.listdir(path)]
 
 
-imgs_path = data_root_path
-annots_fpath = data_root_path + '/gt.txt'
+gt_paths = ['rtsd-d1-gt']
+gt_classes = []
 
-dst_data_dir = 'GTSDB_voc'
-annotation_fldr = dst_data_dir + '/Annotations'
-images_fldr = dst_data_dir + '/Images'
+gt_train_csv_fname = 'train_gt.csv'
+gt_test_csv_fname  = 'test_gt.csv'
 
-class_dict = {
-    0: 'speed limit 20 (prohibitory)',
-    1: 'speed limit 30 (prohibitory)',
-    2: 'speed limit 50 (prohibitory)',
-    3: 'speed limit 60 (prohibitory)',
-    4: 'speed limit 70 (prohibitory)',
-    5: 'speed limit 80 (prohibitory)',
-    6: 'restriction ends 80 (other)',
-    7: 'speed limit 100 (prohibitory)',
-    8: 'speed limit 120 (prohibitory)',
-    9: 'no overtaking (prohibitory)',
-    10: 'no overtaking (trucks) (prohibitory)',
-    11: 'priority at next intersection (danger)',
-    12: 'priority road (other)',
-    13: 'give way (other)',
-    14: 'stop (other)',
-    15: 'no traffic both ways (prohibitory)',
-    16: 'no trucks (prohibitory)',
-    17: 'no entry (other)',
-    18: 'danger (danger)',
-    19: 'bend left (danger)',
-    20: 'bend right (danger)',
-    21: 'bend (danger)',
-    22: 'uneven road (danger)',
-    23: 'slippery road (danger)',
-    24: 'road narrows (danger)',
-    25: 'construction (danger)',
-    26: 'traffic signal (danger)',
-    27: 'pedestrian crossing (danger)',
-    28: 'school crossing (danger)',
-    29: 'cycles crossing (danger)',
-    30: 'snow (danger)',
-    31: 'animals (danger)',
-    32: 'restriction ends (other)',
-    33: 'go right (mandatory)',
-    34: 'go left (mandatory)',
-    35: 'go straight (mandatory)',
-    36: 'go right or straight (mandatory)',
-    37: 'go left or straight (mandatory)',
-    38: 'keep right (mandatory)',
-    39: 'keep left (mandatory)',
-    40: 'roundabout (mandatory)',
-    41: 'restriction ends (overtaking) (other)',
-    42: 'restriction ends (overtaking (trucks)) (other)',
-}
+gt_train_annot_fpaths = []
+gt_test_annot_fpaths  = []
 
-if not os.path.exists(annotation_fldr):
-    os.makedirs(annotation_fldr)
+for gt_path in gt_paths:
+    gt_dirpath = os.path.join(data_root_path, gt_path)
+    local_classes = os.listdir(gt_dirpath)
+
+    for local_class in local_classes:
+        class_dirpath = os.path.join(gt_dirpath, local_class)
+
+        if os.path.isdir(class_dirpath):
+            if local_class not in gt_classes:
+                gt_classes.append(local_class)
+
+            gt_train_annot_fpaths.append((local_class, os.path.join(class_dirpath, gt_train_csv_fname)))
+            gt_test_annot_fpaths.append((local_class, os.path.join(class_dirpath, gt_test_csv_fname)))
+
+print(gt_train_annot_fpaths)
+print(gt_test_annot_fpaths)
+print(gt_classes)
+
+
+
+dst_data_dir = 'RTSD_voc'
+annotation_train_fldr = os.path.join(dst_data_dir, 'Annotations_train')
+annotation_test_fldr  = os.path.join(dst_data_dir, 'Annotations_test')
+images_fldr = os.path.join(dst_data_dir, 'Images')
+
+if not os.path.exists(annotation_train_fldr):
+    os.makedirs(annotation_train_fldr)
+
+if not os.path.exists(annotation_test_fldr):
+    os.makedirs(annotation_test_fldr)
 
 if not os.path.exists(images_fldr):
     os.makedirs(images_fldr)
 
+print('Copy frames to dst folder')
+
+for frame_fpath in tqdm.tqdm(gt_frame_fpaths):
+    copyfile(frame_fpath, os.path.join(images_fldr, os.path.basename(frame_fpath)))
+
+FILENAME_KEY='filename'
+LEFT_X_KEY  ='x_from'
+UUPPER_Y_KEY='y_from'
+WIDTH_KEY   ='width'
+HEIGHT_KEY  ='height'
+SIGN_CLS_KEY='sign_class'
+
 checked_files = {}
 
-with open(annots_fpath) as fp: 
-    for cnt, line in enumerate(fp):
-        fname = line.split(';')[0]
-        xmin = int(line.split(';')[1])
-        ymin = int(line.split(';')[2])
-        xmax = int(line.split(';')[3])
-        ymax = int(line.split(';')[4])
-        classId = int(line.split(';')[5])
+print('Reading annotations')
 
-        if fname in checked_files:
-            checked_files[fname] += [[xmin, ymin, xmax, ymax, classId]]
-        else:
-            checked_files[fname] = [[xmin, ymin, xmax, ymax, classId]]
+for train_annot in tqdm.tqdm(gt_train_annot_fpaths):
+    class_name, annot_fpath = train_annot
 
+    with open(annot_fpath, 'r') as annot_fd:
+        d_reader = csv.DictReader(annot_fd)
 
-# print("Line {}: {} / {} / {} / {} / {} / {}".format(cnt, fname, xmin, ymin, xmax, ymax, classId))
-# print(checked_files)
+        for row in d_reader:
+            fname = row[FILENAME_KEY]
+            xmin = int(row[LEFT_X_KEY])
+            ymin = int(row[UUPPER_Y_KEY])
+            xmax = int(xmin) + int(row[WIDTH_KEY])
+            ymax = int(ymin) + int(row[HEIGHT_KEY])
 
+            if fname in checked_files:
+                checked_files[fname] += [(xmin, ymin, xmax, ymax, class_name)]
+            else:
+                checked_files[fname] = [(xmin, ymin, xmax, ymax, class_name)]
 
-for fpath in tqdm.tqdm(glob.glob(imgs_path + '/*.ppm')):
-    
-    file = os.path.basename(fpath)
+print('Creating annotations')
 
-# for file, infos in tqdm.tqdm(checked_files.items()):
+for file in tqdm.tqdm(checked_files.keys()):
 
-    img = cv2.imread(os.path.join(imgs_path, file))
+    img = cv2.imread(os.path.join(images_fldr, file))
 
     xml_root = ET.Element("annotation")
     xml_filename = ET.SubElement(xml_root, "filename")
@@ -112,15 +119,14 @@ for fpath in tqdm.tqdm(glob.glob(imgs_path + '/*.ppm')):
 
     if file in checked_files:
         infos = checked_files[file]
-        # print(file)
+
         for info in infos:
 
-            xmin, ymin, xmax, ymax, classId = info
+            xmin, ymin, xmax, ymax, class_name = info
 
             xml_object = ET.SubElement(xml_root, "object")
             xml_name = ET.SubElement(xml_object, "name")
-            # xml_name.text = str(classId)
-            xml_name.text = 'sign'
+            xml_name.text = class_name
 
             xml_bndbox = ET.SubElement(xml_object, "bndbox")
 
@@ -133,15 +139,10 @@ for fpath in tqdm.tqdm(glob.glob(imgs_path + '/*.ppm')):
             xml_ymax = ET.SubElement(xml_bndbox, "ymax")
             xml_ymax.text = str(ymax)
 
+            cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (255,0,0), 3)
 
-            # print('\t%s' % info)
-
-            # cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (255,0,0), 3)
-
-            # cv2.imshow('Result', img)
-            # cv2.waitKey(500)
+            cv2.imshow('Result', img)
+            cv2.waitKey(1000)
 
     tree = ET.ElementTree(xml_root)
-    tree.write(annotation_fldr + '/' + file.split('.')[0] + '.xml', pretty_print=True, xml_declaration=True,   encoding="utf-8")
-
-    copyfile(fpath, images_fldr + '/' + file)
+    tree.write(os.path.join(annotation_train_fldr, file.split('.')[0] + '.xml'), pretty_print=True, xml_declaration=True,   encoding="utf-8")
