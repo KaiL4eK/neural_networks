@@ -50,8 +50,7 @@ print(gt_test_annot_fpaths)
 print(gt_classes)
 
 
-
-dst_data_dir = 'RTSD_voc'
+dst_data_dir = 'data/RTSD_voc'
 annotation_train_fldr = os.path.join(dst_data_dir, 'Annotations_train')
 annotation_test_fldr  = os.path.join(dst_data_dir, 'Annotations_test')
 images_fldr = os.path.join(dst_data_dir, 'Images')

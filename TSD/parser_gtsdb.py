@@ -12,7 +12,7 @@ data_root_path = 'GTSDB'
 imgs_path = data_root_path
 annots_fpath = data_root_path + '/gt.txt'
 
-dst_data_dir = 'GTSDB_voc'
+dst_data_dir = 'data/GTSDB_voc'
 annotation_fldr = dst_data_dir + '/Annotations'
 images_fldr = dst_data_dir + '/Images'
 

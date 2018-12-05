@@ -1,0 +1,47 @@
+{
+    "model" : {
+        "min_input_size":       288,
+        "max_input_size":       448,
+        "base":                 "MobileNetv2",
+        "anchors":              [6,11, 9,16, 12,20, 15,26, 21,35, 31,51],
+        "labels":               ["sign"]
+    },
+
+    "train": {
+        "train_image_folder":   "../data/GTSDB_voc/Images/",
+        "train_annot_folder":   "../data/GTSDB_voc/annots_train/",
+        "cache_name":           "pkl/sign_train.pkl",
+
+        "train_times":          3,
+        "batch_size":           4,
+        "learning_rate":        1e-4,
+        "nb_epochs":            300,
+        "warmup_epochs":        0,
+        "ignore_thresh":        0.5,
+        "gpus":                 "0",
+
+        "grid_scales":          [1,1,1],
+        "obj_scale":            5,
+        "noobj_scale":          1,
+        "xywh_scale":           1,
+        "class_scale":          1,
+
+        "tensorboard_dir":      "logs/sign_mobilev2",
+        "saved_weights_name":   "chk/sign_mobilev2.h5",
+        "debug":                false
+    },
+
+    "valid": {
+        "valid_image_folder":   "../data/GTSDB_voc/Images/",
+        "valid_annot_folder":   "../data/GTSDB_voc/annots_test/",
+        "cache_name":           "pkl/sign_test.pkl",
+
+        "valid_times":          1
+    },
+
+    "eval": {
+        "valid_image_folder":   "../data/GTSDB_voc/Images/",
+        "valid_annot_folder":   "../data/GTSDB_voc/annots_test/",
+        "cache_name":           "pkl/sign_eval.pkl"
+    }
+}

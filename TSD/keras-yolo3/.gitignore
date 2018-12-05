@@ -1,0 +1,8 @@
+*.jpg
+*.jpeg
+*.weights
+*.h5
+*.pyc
+
+*test*
+*output

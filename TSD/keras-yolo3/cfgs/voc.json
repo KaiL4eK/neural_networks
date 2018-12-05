@@ -1,0 +1,47 @@
+{
+    "model" : {
+        "min_input_size":       288,
+        "max_input_size":       448,
+        "base":                 "Darknet53",
+        "anchors":              [23,32, 43,80, 64,172, 111,270, 111,89, 163,163, 207,320, 316,191, 358,351],
+        "labels":               []
+    },
+
+    "train": {
+        "train_image_folder":   "../data/VOCdevkit_train/VOC2007/JPEGImages/",
+        "train_annot_folder":   "../data/VOCdevkit_train/VOC2007/Annotations/",
+        "cache_name":           "pkl/VOC07_train.pkl",
+
+        "train_times":          5,
+        "batch_size":           4,
+        "learning_rate":        3e-4,
+        "nb_epochs":            100,
+        "warmup_epochs":        0,
+        "ignore_thresh":        0.5,
+        "gpus":                 "0",
+
+        "grid_scales":          [1,1,1],
+        "obj_scale":            5,
+        "noobj_scale":          3,
+        "xywh_scale":           1,
+        "class_scale":          1,
+
+        "tensorboard_dir":      "logs/VOC07",
+        "saved_weights_name":   "chk/VOC07.h5",
+        "debug":                false
+    },
+
+    "valid": {
+        "valid_image_folder":   "../data/VOCdevkit_test/VOC2007/JPEGImages/",
+        "valid_annot_folder":   "../data/VOCdevkit_test/VOC2007/Annotations/",
+        "cache_name":           "pkl/VOC07_test.pkl",
+
+        "valid_times":          1
+    },
+
+    "eval": {
+        "valid_image_folder":   "../data/VOCdevkit_test/VOC2007/JPEGImages/",
+        "valid_annot_folder":   "../data/VOCdevkit_test/VOC2007/Annotations/",
+        "cache_name":           "pkl/VOC07_eval.pkl"
+    }
+}

@@ -1,0 +1,51 @@
+{
+    "model" : {
+        "min_input_size":       288,
+        "max_input_size":       448,
+        "base":                 "Darknet53",
+        "anchors":              [6,10, 7,12, 9,15, 10,17, 12,20, 14,24, 18,30, 23,38, 32,54],
+        "labels":               ["sign"]
+    },
+
+    "train": {
+        "train_image_folder":   "../data/GTSDB_voc/Images/",
+        "train_annot_folder":   "../data/GTSDB_voc/annots_train/",
+        "cache_name":           "pkl/sign_train.pkl",
+
+        "train_times":          3,
+        "batch_size":           4,
+        "learning_rate":        1e-4,
+        "nb_epochs":            100,
+        "warmup_epochs":        0,
+        "ignore_thresh":        0.5,
+        "gpus":                 "0",
+
+        "grid_scales":          [1,1,1],
+        "obj_scale":            5,
+        "noobj_scale":          1,
+        "xywh_scale":           3,
+        "class_scale":          1,
+
+        "tensorboard_dir":      "logs/sign_v3",
+        "saved_weights_name":   "chk/sign_v3.h5",
+        "debug":                false
+    },
+
+    "valid": {
+        "valid_image_folder":   "../data/GTSDB_voc/Images/",
+        "valid_annot_folder":   "../data/GTSDB_voc/annots_test/",
+        "cache_name":           "pkl/sign_test.pkl",
+
+        "valid_times":          1
+    },
+
+    "eval": {
+        "valid_image_folder":   "../data/GTSDB_voc/Images/",
+        "valid_annot_folder":   "../data/GTSDB_voc/annots_test/",
+        "cache_name":           "pkl/sign_eval.pkl"
+    },
+
+    "infer": {
+        "input_sz":             416
+    }
+}
