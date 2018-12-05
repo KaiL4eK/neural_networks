@@ -1,0 +1,4 @@
+*.cxx
+*.py
+*.so
+*numpy.i.1

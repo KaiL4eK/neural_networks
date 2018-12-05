@@ -4,5 +4,10 @@
 *.h5
 *.pyc
 
-*test*
-*output
+test*
+output
+logs
+pkl
+engines
+vpu_output
+.ipynb_checkpoints

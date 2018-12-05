@@ -2,6 +2,7 @@
 
 TRT_ROOT = $(HOME)/data/nvidia/TensorRT-4.0.1.6
 INCLUDES = -I $(TRT_ROOT)/include -I src -I $(PYTHON_HEADER_PATH)
+LIBS = -L $(TRT_ROOT)/lib
 
 all:
 	swig -c++ -python src/tensorNet.i 
