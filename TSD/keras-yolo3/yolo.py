@@ -1,4 +1,4 @@
-from keras.layers import Conv2D, Input, BatchNormalization, LeakyReLU, ZeroPadding2D, UpSampling2D, Lambda, Conv2DTranspose
+from keras.layers import Conv2D, Input, BatchNormalization, LeakyReLU, ZeroPadding2D, UpSampling2D, Lambda, Conv2DTranspose, Flatten
 from keras.layers.merge import add, concatenate
 from keras.models import Model
 from keras.engine.topology import Layer
@@ -212,12 +212,12 @@ def create_yolo_squeeze_model(
     noobj_scale,
     xywh_scale,
     class_scale,
-    img_shape
+    train_shape
 ):
     outputs = 1
     anchors_per_output = len(anchors)//2//outputs
 
-    input_image = Input(shape=img_shape, name='input_img')
+    image_input = Input(shape=train_shape, name='input_img')
     true_boxes  = Input(shape=(1, 1, 1, max_box_per_image, 4), name='input_true_boxes')
     true_yolo_1 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x32') # grid_h, grid_w, nb_anchor, 5+nb_class
 
@@ -252,7 +252,7 @@ def create_yolo_squeeze_model(
 
         return x
 
-    x = Conv2D(64, (3, 3), strides=(2, 2), padding='valid', name='conv1')(input_image)
+    x = Conv2D(64, (3, 3), strides=(2, 2), padding='valid', name='conv1')(image_input)
     x = LeakyReLU(name='relu_conv1')(x)
     x = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), name='pool1')(x)
 
@@ -289,10 +289,10 @@ def create_yolo_squeeze_model(
                             obj_scale,
                             noobj_scale,
                             xywh_scale,
-                            class_scale)([input_image, pred_yolo_1, true_yolo_1, true_boxes])
+                            class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes])
 
-    train_model = Model([input_image, true_boxes, true_yolo_1], [loss_yolo_1])
-    infer_model = Model(input_image, [pred_yolo_1])
+    train_model = Model([image_input, true_boxes, true_yolo_1], [loss_yolo_1])
+    infer_model = Model(image_input, [pred_yolo_1])
 
     return [train_model, infer_model]
 
@@ -310,12 +310,12 @@ def create_yolov2_model(
     noobj_scale,
     xywh_scale,
     class_scale,
-    img_shape
+    train_shape
 ):
     outputs = 1
     anchors_per_output = len(anchors)//2//outputs
 
-    input_image = Input(shape=img_shape, name='input_img')
+    image_input = Input(shape=train_shape, name='input_img')
     true_boxes  = Input(shape=(1, 1, 1, max_box_per_image, 4), name='input_true_boxes')
     true_yolo_1 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x32') # grid_h, grid_w, nb_anchor, 5+nb_class
 
@@ -335,7 +335,7 @@ def create_yolov2_model(
         return tf.space_to_depth(x, block_size=2)
 
     # Layer 1
-    x = Conv2D(32, (3,3), strides=(1,1), padding='same', name='conv_1', use_bias=False)(input_image)
+    x = Conv2D(32, (3,3), strides=(1,1), padding='same', name='conv_1', use_bias=False)(image_input)
     x = BatchNormalization(name='norm_1')(x)
     x = LeakyReLU(alpha=0.1)(x)
     x = MaxPooling2D(pool_size=(2, 2))(x)
@@ -473,10 +473,10 @@ def create_yolov2_model(
                             obj_scale,
                             noobj_scale,
                             xywh_scale,
-                            class_scale)([input_image, pred_yolo_1, true_yolo_1, true_boxes])
+                            class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes])
 
-    train_model = Model([input_image, true_boxes, true_yolo_1], [loss_yolo_1])
-    infer_model = Model(input_image, [pred_yolo_1])
+    train_model = Model([image_input, true_boxes, true_yolo_1], [loss_yolo_1])
+    infer_model = Model(image_input, [pred_yolo_1])
 
     return [train_model, infer_model]
 
@@ -493,12 +493,12 @@ def create_xception_model(
     noobj_scale,
     xywh_scale,
     class_scale,
-    img_shape
+    train_shape
 ):
     outputs = 1
     anchors_per_output = len(anchors)//2//outputs
 
-    input_image = Input(shape=img_shape, name='input_img')
+    image_input = Input(shape=train_shape, name='input_img')
     true_boxes  = Input(shape=(1, 1, 1, max_box_per_image, 4), name='input_true_boxes')
     true_yolo_1 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x32') # grid_h, grid_w, nb_anchor, 5+nb_class
 
@@ -512,7 +512,7 @@ def create_xception_model(
 
     from keras.applications.xception import Xception
 
-    xception = Xception(input_tensor=input_image, include_top=False, weights='imagenet')
+    xception = Xception(input_tensor=image_input, include_top=False, weights='imagenet')
 
     x = xception.output
 
@@ -527,12 +527,12 @@ def create_xception_model(
                         obj_scale,
                         noobj_scale,
                         xywh_scale,
-                        class_scale)([input_image, pred_yolo_1, true_yolo_1, true_boxes])
+                        class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes])
 
 
 
-    train_model = Model([input_image, true_boxes, true_yolo_1], [loss_yolo_1])
-    infer_model = Model(input_image, [pred_yolo_1])
+    train_model = Model([image_input, true_boxes, true_yolo_1], [loss_yolo_1])
+    infer_model = Model(image_input, [pred_yolo_1])
 
     return [train_model, infer_model]
 
@@ -551,12 +551,12 @@ def create_mobilenetv2_model(
     noobj_scale,
     xywh_scale,
     class_scale,
-    img_shape
+    train_shape
 ):
     outputs = 2
     anchors_per_output = len(anchors)//2//outputs
 
-    input_image = Input(shape=img_shape, name='input_img')
+    image_input = Input(shape=train_shape, name='input_img')
     true_boxes  = Input(shape=(1, 1, 1, max_box_per_image, 4), name='input_true_boxes')
     true_yolo_1 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x32') # grid_h, grid_w, nb_anchor, 5+nb_class
     true_yolo_2 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x16') # grid_h, grid_w, nb_anchor, 5+nb_class
@@ -571,7 +571,7 @@ def create_mobilenetv2_model(
 
     from keras.applications.mobilenetv2 import MobileNetV2
 
-    mobilenetv2 = MobileNetV2(input_tensor=input_image, include_top=False, weights='imagenet')
+    mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet')
 
     out13 = mobilenetv2.output
 
@@ -585,7 +585,7 @@ def create_mobilenetv2_model(
                         obj_scale,
                         noobj_scale,
                         xywh_scale,
-                        class_scale)([input_image, pred_yolo_1, true_yolo_1, true_boxes])
+                        class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes])
 
 
     x = Conv2D(256, 1, strides=(1,1), padding='same', name='conv_20', use_bias=False)(out13)
@@ -630,10 +630,10 @@ def create_mobilenetv2_model(
                         obj_scale,
                         noobj_scale,
                         xywh_scale,
-                        class_scale)([input_image, pred_yolo_2, true_yolo_2, true_boxes])
+                        class_scale)([image_input, pred_yolo_2, true_yolo_2, true_boxes])
 
-    train_model = Model([input_image, true_boxes, true_yolo_1, true_yolo_2], [loss_yolo_1, loss_yolo_2])
-    infer_model = Model(input_image, [pred_yolo_1, pred_yolo_2])
+    train_model = Model([image_input, true_boxes, true_yolo_1, true_yolo_2], [loss_yolo_1, loss_yolo_2])
+    infer_model = Model(image_input, [pred_yolo_1, pred_yolo_2])
 
     return [train_model, infer_model]
 
@@ -651,23 +651,24 @@ def create_yolov3_model(
     noobj_scale,
     xywh_scale,
     class_scale,
-    img_shape
+    train_shape
 ):
     outputs = 3
     anchors_per_output = len(anchors)//2//outputs
 
-    input_image = Input(shape=img_shape, name='input_img')
+    image_input = Input(shape=train_shape, name='input_img')
     true_boxes  = Input(shape=(1, 1, 1, max_box_per_image, 4), name='input_true_boxes')
     true_yolo_1 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x32') # grid_h, grid_w, nb_anchor, 5+nb_class
     true_yolo_2 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x16') # grid_h, grid_w, nb_anchor, 5+nb_class
     true_yolo_3 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x8') # grid_h, grid_w, nb_anchor, 5+nb_class
 
     yolo_anchors = []
-
+    # yolo_anchors = [anchors[12:18], anchors[6:12], anchors[0:6]]
+    
     for i in reversed(range(outputs)):
         yolo_anchors += [anchors[i*2*anchors_per_output:(i+1)*2*anchors_per_output]]
 
-    # yolo_anchors = [anchors[12:18], anchors[6:12], anchors[0:6]]
+    
     pred_filter_count = (anchors_per_output*(5+nb_class))
 
     def _conv_block(inp, convs, do_skip=True):
@@ -693,7 +694,7 @@ def create_yolov3_model(
 
 
     # Layer  0 => 4
-    x = _conv_block(input_image, [{'filter': 32, 'kernel': 3, 'stride': 1, 'bnorm': True, 'leaky': True, 'layer_idx': 0},
+    x = _conv_block(image_input, [{'filter': 32, 'kernel': 3, 'stride': 1, 'bnorm': True, 'leaky': True, 'layer_idx': 0},
                                   {'filter': 64, 'kernel': 3, 'stride': 2, 'bnorm': True, 'leaky': True, 'layer_idx': 1},
                                   {'filter': 32, 'kernel': 1, 'stride': 1, 'bnorm': True, 'leaky': True, 'layer_idx': 2},
                                   {'filter': 64, 'kernel': 3, 'stride': 1, 'bnorm': True, 'leaky': True, 'layer_idx': 3}])
@@ -760,7 +761,7 @@ def create_yolov3_model(
                             obj_scale,
                             noobj_scale,
                             xywh_scale,
-                            class_scale)([input_image, pred_yolo_1, true_yolo_1, true_boxes])
+                            class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes])
 
     # Layer 83 => 86
     x = _conv_block(x, [{'filter': 256, 'kernel': 1, 'stride': 1, 'bnorm': True, 'leaky': True, 'layer_idx': 84}], do_skip=False)
@@ -786,7 +787,7 @@ def create_yolov3_model(
                             obj_scale,
                             noobj_scale,
                             xywh_scale,
-                            class_scale)([input_image, pred_yolo_2, true_yolo_2, true_boxes])
+                            class_scale)([image_input, pred_yolo_2, true_yolo_2, true_boxes])
 
     # Layer 95 => 98
     x = _conv_block(x, [{'filter': 128, 'kernel': 1, 'stride': 1, 'bnorm': True, 'leaky': True,   'layer_idx': 96}], do_skip=False)
@@ -810,10 +811,10 @@ def create_yolov3_model(
                             obj_scale,
                             noobj_scale,
                             xywh_scale,
-                            class_scale)([input_image, pred_yolo_3, true_yolo_3, true_boxes]) 
+                            class_scale)([image_input, pred_yolo_3, true_yolo_3, true_boxes]) 
 
-    train_model = Model([input_image, true_boxes, true_yolo_1, true_yolo_2, true_yolo_3], [loss_yolo_1, loss_yolo_2, loss_yolo_3])
-    infer_model = Model(input_image, [pred_yolo_1, pred_yolo_2, pred_yolo_3])
+    train_model = Model([image_input, true_boxes, true_yolo_1, true_yolo_2, true_yolo_3], [loss_yolo_1, loss_yolo_2, loss_yolo_3])
+    infer_model = Model(image_input, [pred_yolo_1, pred_yolo_2, pred_yolo_3])
 
     return [train_model, infer_model]
 
@@ -831,12 +832,12 @@ def create_tiny_yolov3_model(
     noobj_scale,
     xywh_scale,
     class_scale,
-    img_shape
+    train_shape
 ):
     outputs = 2
     anchors_per_output = len(anchors)//2//outputs
 
-    input_image = Input(shape=img_shape, name='input_img')
+    image_input = Input(shape=train_shape, name='input_img')
     true_boxes  = Input(shape=(1, 1, 1, max_box_per_image, 4), name='input_true_boxes')
     true_yolo_1 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x32') # grid_h, grid_w, nb_anchor, 5+nb_class
     true_yolo_2 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x16') # grid_h, grid_w, nb_anchor, 5+nb_class
@@ -891,7 +892,7 @@ def create_tiny_yolov3_model(
             MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='same'),
             DarknetConv2D_BN_Leaky(128, (3,3)),
             MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='same'),
-            DarknetConv2D_BN_Leaky(256, (3,3)))(input_image)
+            DarknetConv2D_BN_Leaky(256, (3,3)))(image_input)
     x2 = compose(
             MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='same'),
             DarknetConv2D_BN_Leaky(512, (3,3)),
@@ -911,13 +912,13 @@ def create_tiny_yolov3_model(
                             obj_scale,
                             noobj_scale,
                             xywh_scale,
-                            class_scale)([input_image, pred_yolo_1, true_yolo_1, true_boxes]) 
+                            class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes]) 
 
     x2 = compose(
             DarknetConv2D_BN_Leaky(128, (1,1)),
             # UpSampling2D(2))(x2)
             Conv2DTranspose(filters=128, 
-                            kernel_size=3, 
+                            kernel_size=2, 
                             strides=2, 
                             padding='same', 
                             use_bias=False, 
@@ -937,18 +938,26 @@ def create_tiny_yolov3_model(
                             obj_scale,
                             noobj_scale,
                             xywh_scale,
-                            class_scale)([input_image, pred_yolo_2, true_yolo_2, true_boxes]) 
+                            class_scale)([image_input, pred_yolo_2, true_yolo_2, true_boxes]) 
 
-    train_model = Model([input_image, true_boxes, true_yolo_1, true_yolo_2], [loss_yolo_1, loss_yolo_2])
-    infer_model = Model(input_image, [pred_yolo_1, pred_yolo_2])
+    train_model = Model([image_input, true_boxes, true_yolo_1, true_yolo_2], [loss_yolo_1, loss_yolo_2])
+    infer_model = Model(image_input, [pred_yolo_1, pred_yolo_2])
 
-    return [train_model, infer_model]
+    yolo1_flat = Flatten()(pred_yolo_1)
+    yolo2_flat = Flatten()(pred_yolo_2)
+
+    mvnc_output = Concatenate()([yolo1_flat, yolo2_flat])
+
+    mvnc_model  = Model(image_input, mvnc_output)
+
+    return [train_model, infer_model, mvnc_model]
 
 def create_model(
     nb_class, 
     anchors, 
-    max_box_per_image, 
-    max_input_size, batch_size, 
+    max_box_per_image   = 1, 
+    max_input_size      = 416, 
+    batch_size          = 1, 
     base                = 'Tiny',
     warmup_batches      = 0, 
     ignore_thresh       = 0.5, 
@@ -958,7 +967,7 @@ def create_model(
     noobj_scale         = 1,
     xywh_scale          = 1,
     class_scale         = 1,
-    img_shape           = (None, None, 3),
+    train_shape         = (None, None, 3),
     load_src_weights    = True
 ):
     
@@ -979,26 +988,24 @@ def create_model(
                         max_grid            = max_grid, 
                         batch_size          = batch_size//multi_gpu, 
                         warmup_batches      = warmup_batches,
-
                         ignore_thresh       = ignore_thresh,
                         grid_scales         = grid_scales,
                         obj_scale           = obj_scale,
                         noobj_scale         = noobj_scale,
                         xywh_scale          = xywh_scale,
                         class_scale         = class_scale,
-                        img_shape           = img_shape )
+                        train_shape         = train_shape )
 
     anchor_count = len(anchors) // 2
 
     print('Loading "{}" model'.format(base))
 
-
-
-    if multi_gpu > 1:
-        with tf.device('/cpu:0'):
-            template_model, infer_model = backends[base][0](**model_args)
-    else:
-        template_model, infer_model = backends[base][0](**model_args)  
+    # if multi_gpu > 1:
+    #     with tf.device('/cpu:0'):
+    #         template_model, infer_model = backends[base][0](**model_args)
+    # else:
+    
+    template_model, infer_model, mvnc_model = backends[base][0](**model_args)  
 
     orig_weights_name = backends[base][1]
 
@@ -1013,7 +1020,7 @@ def create_model(
     else:
         train_model = template_model      
 
-    return train_model, infer_model, backends[base][2]
+    return train_model, infer_model, mvnc_model, backends[base][2]
 
 def dummy_loss(y_true, y_pred):
     return tf.sqrt(tf.reduce_sum(y_pred))

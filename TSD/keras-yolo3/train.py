@@ -16,6 +16,7 @@ from callbacks import CustomModelCheckpoint, CustomTensorBoard, MAP_evaluation
 import keras
 from keras.models import load_model
 
+INFER_SIZE = 416
 
 def create_training_instances(
     train_annot_folder,
@@ -113,12 +114,8 @@ def _main_(args):
         downsample          = 32, # ratio between network input's size and network output's size, 32 for YOLOv3
         max_box_per_image   = max_box_per_image,
         batch_size          = config['train']['batch_size'],
-        min_net_size        = config['model']['min_input_size'],
-        max_net_size        = config['model']['max_input_size'],   
-        shuffle             = True, 
-        jitter              = 0.0, 
         norm                = normalize,
-        isValid             = True
+        infer_sz            = INFER_SIZE
     )
 
     ###############################
@@ -156,7 +153,7 @@ def _main_(args):
     # load the pretrained weight if exists, otherwise load the backend weight only
     if initial_weights and os.path.exists(initial_weights):
         print("\nLoading pretrained weights {}".format(initial_weights))
-        train_model.load_weights(initial_weights, by_name=True, skip_mismatch=True)          
+        train_model.load_weights(initial_weights, by_name=True, skip_mismatch=True)
 
         freezing = False
 

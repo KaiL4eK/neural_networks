@@ -20,6 +20,7 @@ argparser.add_argument('-c', '--conf', help='path to configuration file', defaul
 argparser.add_argument('-w', '--weights', help='weights path', default=None) 
 argparser.add_argument('-e', '--engine', help='engine path', default=None) 
 argparser.add_argument('-p', '--cpp', help='enable CPP TRT', action="store_true") 
+argparser.add_argument('-g', '--gui', help='enable GUI', action="store_true") 
 
 def _main_(args):
 
@@ -27,6 +28,7 @@ def _main_(args):
     input_path = args.input
     weights_path = args.weights
     engine_path = args.engine
+    render_mode = args.gui
 
     trt_engine = TRTengine(isCppInf=args.cpp)
 
@@ -66,11 +68,12 @@ def _main_(args):
         sum_time += time.time() - start_time
         processing_count += 1
 
-        # draw_boxes(image, boxes, trt_engine.get_labels(), 0.5) 
- 
-        # cv2.imshow('result', np.uint8(image))
-        # if cv2.waitKey(0) == 27:
-            # break  # esc to quit
+        if render_mode:
+            draw_boxes(image, boxes, trt_engine.get_labels(), 0.5) 
+            cv2.imshow('result', np.uint8(image))
+            
+            if render_mode and cv2.waitKey(0) == 27:
+                break  # esc to quit
 
     fps = processing_count / sum_time
     print('Result: {}'.format(fps))

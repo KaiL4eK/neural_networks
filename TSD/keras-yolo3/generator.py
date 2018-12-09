@@ -19,7 +19,7 @@ class BatchGenerator(Sequence):
         shuffle=True, 
         jitter=True, 
         norm=None,
-        isValid=False
+        infer_sz=None
     ):
         self.instances          = instances
         self.batch_size         = batch_size
@@ -32,10 +32,7 @@ class BatchGenerator(Sequence):
         self.jitter             = jitter
         self.norm               = norm
         self.anchors            = [BoundBox(0, 0, anchors[2*i], anchors[2*i+1]) for i in range(len(anchors)//2)]
-        self.net_h              = 416  
-        self.net_w              = 416
-
-        self.valid_mode         = isValid
+        self.infer_sz           = infer_sz
 
         self.anchors_per_output = 3
 
@@ -51,13 +48,9 @@ class BatchGenerator(Sequence):
         return int(np.ceil(float(len(self.instances))/self.batch_size))           
 
     def __getitem__(self, idx):
-        # if self.valid_mode:
-        #     print('V/%d' % (idx))
-        # else:
-        #     print('T/%d' % (idx))
 
-        if self.valid_mode:
-            net_h, net_w = self.net_h, self.net_w
+        if self.infer_sz:
+            net_h, net_w = self.infer_sz, self.infer_sz
         else:
             # get image input size, change every 10 batches
             net_h, net_w = self._get_net_size(idx)
@@ -180,14 +173,8 @@ class BatchGenerator(Sequence):
         if idx%10 == 0:
             net_size = self.downsample*np.random.randint(self.min_net_size/self.downsample, \
                                                          self.max_net_size/self.downsample+1)
-            
-            # if self.valid_mode:
-            #     print("V/resizing: ", net_size, net_size)
-            # else:
-            #     print("T/resizing: ", net_size, net_size)
 
-            self.net_h, self.net_w = net_size, net_size
-        return self.net_h, self.net_w
+        return net_size, net_size
     
     def _aug_image(self, instance, net_h, net_w):
         image_name = instance['filename']
@@ -198,7 +185,7 @@ class BatchGenerator(Sequence):
         # image = image[:,:,::-1] # RGB image
         image_h, image_w, _ = image.shape
 
-        if self.valid_mode:
+        if self.infer_sz:
             new_ar = (image_w) * 1. / (image_h);
             scale = 1;
 
@@ -281,4 +268,4 @@ class BatchGenerator(Sequence):
         return np.array(annots)
 
     def load_image(self, i):
-        return cv2.imread(self.instances[i]['filename'])     
+        return cv2.imread(self.instances[i]['filename'])

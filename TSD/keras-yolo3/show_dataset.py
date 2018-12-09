@@ -44,7 +44,7 @@ def _main_(args):
         shuffle             = True, 
         jitter              = 0.0, 
         norm                = None,
-        isValid             = True
+        infer_sz            = 416
     )
 
     for i in range(len(instances)):

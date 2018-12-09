@@ -35,7 +35,7 @@ def robofest_data_get_samples():
         mask_img = mask_img[1+upper_clip_px:img_h-1, 1:img_w-1]
 
         orig_img = cv2.resize(orig_img, dst_shape);
-        mask_img = cv2.resize(mask_img, dst_shape, interpolation=cv2.INTER_NEAREST);
+        mask_img = cv2.resize(mask_img, (320, 160), interpolation=cv2.INTER_NEAREST);
 
         layer_colors = set( tuple(v) for m2d in mask_img for v in m2d )
         lane_color = (250, 250, 250)
@@ -49,14 +49,28 @@ def robofest_data_get_samples():
         orig_imgs += [orig_img]
         lane_imgs += [lane_layer]
 
-    return (np.array(orig_imgs), np.array(lane_imgs))
+        # cv2.imshow('src', orig_img)
+        # cv2.imshow('mask', lane_layer)
+        # cv2.waitKey()
+
+
+    orig_imgs = np.array(orig_imgs)
+    # Extend to 4 dims
+    lane_imgs = np.expand_dims(lane_imgs, axis=-1)
+
+    # lane_imgs = lane_imgs.reshape((2, 51200))
+
+    # if len(orig_imgs.shape) != 4 or len(lane_imgs.shape) != 4:
+        # raise Exception('Invalid data shape')
+
+    return (orig_imgs, lane_imgs)
 
 def robofest_data_get_samples_preprocessed():
 
     orig_imgs, lane_imgs = robofest_data_get_samples()
 
     orig_imgs = orig_imgs.astype('float32', copy=False) / 255. * 2 - 1
-    lane_imgs = lane_imgs.astype('float32', copy=False) / 255. * 2 - 1
+    lane_imgs = lane_imgs.astype('float32', copy=False) / 255.# * 2 - 1
 
     return (orig_imgs, lane_imgs)
 

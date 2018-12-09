@@ -1,0 +1,13 @@
+*.jpg
+*.jpeg
+*.weights
+*.h5
+*.pyc
+
+test*
+output
+logs
+pkl
+engines
+vpu_output
+.ipynb_checkpoints

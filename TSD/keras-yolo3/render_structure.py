@@ -27,21 +27,10 @@ def _main_(args):
 
 
     train_model, infer_model, freeze_num = create_model(
-        nb_class            = 1, 
+        nb_class            = 1,
         anchors             = config['model']['anchors'], 
-        max_box_per_image   = 1, 
-        max_input_size      = config['model']['max_input_size'], 
-        batch_size          = config['train']['batch_size'], 
-        warmup_batches      = 0,
-        ignore_thresh       = config['train']['ignore_thresh'],
-        multi_gpu           = 1,
-        grid_scales         = config['train']['grid_scales'],
-        obj_scale           = config['train']['obj_scale'],
-        noobj_scale         = config['train']['noobj_scale'],
-        xywh_scale          = config['train']['xywh_scale'],
-        class_scale         = config['train']['class_scale'],
         base                = config['model']['base'],
-        img_shape           = (416, 416, 3),
+        train_shape         = (416, 416, 3),
         load_src_weights    = False
     )
 
