@@ -35,7 +35,7 @@ def robofest_data_get_samples():
         mask_img = mask_img[1+upper_clip_px:img_h-1, 1:img_w-1]
 
         orig_img = cv2.resize(orig_img, dst_shape);
-        mask_img = cv2.resize(mask_img, (320, 160), interpolation=cv2.INTER_NEAREST);
+        mask_img = cv2.resize(mask_img, dst_shape, interpolation=cv2.INTER_NEAREST);
 
         layer_colors = set( tuple(v) for m2d in mask_img for v in m2d )
         lane_color = (250, 250, 250)

@@ -35,17 +35,17 @@ def train_and_predict():
 
 	print_pretty('Creating and compiling model...')
 
-	model = create_model(input_shape=(320, 640, 3), lr=1e-4)
+	train_model, infer_model = create_model(input_shape=(320, 640, 3), lr=1e-4)
 	
 
 	if structure_mode:
-		print_summary(model)
+		print_summary(train_model)
 		# plot_model(model, show_shapes=True)
 
 		return
 
 	if pretrained_weights_path:
-		model.load_weights(args.weights)
+		train_model.load_weights(args.weights)
 
 
 	print_pretty('Loading and preprocessing train data...')
@@ -88,10 +88,9 @@ def train_and_predict():
 
 	train_generator = zip(image_generator, mask_generator)
 
-
 	print_pretty('Fitting model...')
 
-	model.fit_generator( train_generator, steps_per_epoch=10, epochs=100, verbose=1,
+	train_model.fit_generator( train_generator, steps_per_epoch=10, epochs=100, verbose=1,
 		callbacks=[ModelCheckpoint('chk/weights_best.h5', monitor='loss', save_best_only=True, save_weights_only=False, verbose=1)])
 
 
