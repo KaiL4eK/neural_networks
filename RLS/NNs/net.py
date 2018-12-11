@@ -199,6 +199,64 @@ def _make_divisible(v, divisor=8, min_value=8):
         new_v += divisor
     return new_v
 
+def _deconv_block(inputs, filters, alpha, kernel=(3, 3), strides=(1, 1), bn_epsilon=1e-3,
+                bn_momentum=0.99, block_id=1):
+    """Adds an initial convolution layer (with batch normalization and relu6).
+    # Arguments
+        inputs: Input tensor of shape `(rows, cols, 3)`
+            (with `channels_last` data format) or
+            (3, rows, cols) (with `channels_first` data format).
+            It should have exactly 3 inputs channels,
+            and width and height should be no smaller than 32.
+            E.g. `(224, 224, 3)` would be one valid value.
+        filters: Integer, the dimensionality of the output space
+            (i.e. the number output of filters in the convolution).
+        alpha: controls the width of the network.
+            - If `alpha` < 1.0, proportionally decreases the number
+                of filters in each layer.
+            - If `alpha` > 1.0, proportionally increases the number
+                of filters in each layer.
+            - If `alpha` = 1, default number of filters from the paper
+                 are used at each layer.
+        kernel: An integer or tuple/list of 2 integers, specifying the
+            width and height of the 2D convolution window.
+            Can be a single integer to specify the same value for
+            all spatial dimensions.
+        strides: An integer or tuple/list of 2 integers,
+            specifying the strides of the convolution along the width and height.
+            Can be a single integer to specify the same value for
+            all spatial dimensions.
+            Specifying any stride value != 1 is incompatible with specifying
+            any `dilation_rate` value != 1.
+        bn_epsilon: Epsilon value for BatchNormalization
+        bn_momentum: Momentum value for BatchNormalization
+    # Input shape
+        4D tensor with shape:
+        `(samples, channels, rows, cols)` if data_format='channels_first'
+        or 4D tensor with shape:
+        `(samples, rows, cols, channels)` if data_format='channels_last'.
+    # Output shape
+        4D tensor with shape:
+        `(samples, filters, new_rows, new_cols)` if data_format='channels_first'
+        or 4D tensor with shape:
+        `(samples, new_rows, new_cols, filters)` if data_format='channels_last'.
+        `rows` and `cols` values might have changed due to stride.
+    # Returns
+        Output tensor of block.
+    """
+    channel_axis = 1 if K.image_data_format() == 'channels_first' else -1
+    filters = filters * alpha
+    filters = _make_divisible(filters)
+    x = Conv2DTranspose(filters, kernel,
+                        padding='valid',
+                        use_bias=False,
+                        strides=strides,
+                        name='deconv%d' % block_id,
+                        kernel_initializer='glorot_normal')(inputs)
+    x = BatchNormalization(axis=channel_axis, momentum=bn_momentum, epsilon=bn_epsilon,
+                           name='deconv%d_bn' % block_id)(x)
+    return Activation(relu6, name='deconv%d_relu' % block_id)(x)
+
 def _conv_block(inputs, filters, alpha, kernel=(3, 3), strides=(1, 1), bn_epsilon=1e-3,
                 bn_momentum=0.99, block_id=1):
     """Adds an initial convolution layer (with batch normalization and relu6).
@@ -362,16 +420,22 @@ def mobilenetv2(input_shape, lr, alpha=0.5, expansion_factor=6, depth_multiplier
     input = Input(input_shape, name='input_img')
 
     x = _conv_block(input, 32, alpha, bn_epsilon=1e-3, strides=(2, 2))
+    x_d2 = x
+
     x = _depthwise_conv_block_v2(x, 16, alpha, 1, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
                                  block_id=1)
 
     x = _depthwise_conv_block_v2(x, 24, alpha, expansion_factor, depth_multiplier, block_id=2,
                                  bn_epsilon=1e-3, bn_momentum=0.999, strides=(2, 2))
+    x_d4 = x
+
     x = _depthwise_conv_block_v2(x, 24, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
                                  block_id=3)
 
     x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, block_id=4,
                                  bn_epsilon=1e-3, bn_momentum=0.999, strides=(2, 2))
+    x_d8 = x
+
     x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
                                  block_id=5)
     x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
@@ -379,6 +443,8 @@ def mobilenetv2(input_shape, lr, alpha=0.5, expansion_factor=6, depth_multiplier
 
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=7,
                                  bn_epsilon=1e-3, bn_momentum=0.999, strides=(2, 2))
+    x_d16 = x
+
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
                                  block_id=8)
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
@@ -395,6 +461,8 @@ def mobilenetv2(input_shape, lr, alpha=0.5, expansion_factor=6, depth_multiplier
 
     x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=14,
                                  bn_epsilon=1e-3, bn_momentum=0.999, strides=(2, 2))
+    x_d32 = x
+
     x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
                                  block_id=15)
     x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
@@ -403,13 +471,21 @@ def mobilenetv2(input_shape, lr, alpha=0.5, expansion_factor=6, depth_multiplier
     x = _depthwise_conv_block_v2(x, 320, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
                                  block_id=17)
 
-    # 
+    ################
 
-    x = Conv2DTranspose(filters=128, kernel_size=2, strides=2, padding='valid')(x)
-    x = Conv2DTranspose(filters=64, kernel_size=2, strides=2, padding='valid')(x)
-    x = Conv2DTranspose(filters=32, kernel_size=2, strides=2, padding='valid')(x)
-    x = Conv2DTranspose(filters=16, kernel_size=2, strides=2, padding='valid')(x)
-    x = Conv2DTranspose(filters=8, kernel_size=2, strides=2, padding='valid')(x)
+    x = _deconv_block(x, 64, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=18)
+    x = Add()([x, x_d16])
+
+    x = _deconv_block(x, 32, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=19)
+    x = Add()([x, x_d8])
+
+    x = _deconv_block(x, 24, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=20)
+    x = Add()([x, x_d4])
+
+    x = _deconv_block(x, 32, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=21)
+    x = Add()([x, x_d2])
+
+    x = _deconv_block(x, 32, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=22)
 
     output_lin = Conv2D(filters=1, kernel_size=1, padding='same', use_bias=False, name='conv_out', kernel_initializer='glorot_normal')(x)
     output_sig = Activation(activation = 'sigmoid')(output_lin)
