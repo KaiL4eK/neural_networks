@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 def makedirs(path):
     try:
@@ -23,3 +24,9 @@ def print_pretty(str):
 	print('-'*30)
 	print(str)
 	print('-'*30)
+
+def sigmoid(x):
+    # return scipy.special.expit(x)
+    return 1.0/(1.0 + np.exp(-x))
+    # y = np.exp(x); return y/(1+y)
+    # return x

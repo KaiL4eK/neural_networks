@@ -56,11 +56,7 @@ def get_test_model(input_shape, lr):
     return train_model, infer_model
 
 
-def sigmoid(x):
-    # return scipy.special.expit(x)
-    return 1.0/(1.0 + np.exp(-x))
-    # y = np.exp(x); return y/(1+y)
-    # return x
+
 
 def _main_(args):
     weights_path = args.weights

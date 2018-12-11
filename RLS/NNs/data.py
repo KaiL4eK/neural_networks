@@ -2,6 +2,24 @@ import os
 import cv2
 import numpy as np
 
+dst_shape_img = (640, 320)
+dst_shape_msk = (320, 160)
+
+def input_preprocess(img):
+
+    
+
+    if len(img.shape) == 4:
+        imgs = img
+        for im in imgs:
+            im = cv2.resize(im, dst_shape_img)
+    else:
+        img = cv2.resize(img, dst_shape_img)
+
+    img = img / 255. * 2 - 1
+
+    return img
+
 def robofest_data_get_samples():
 
     rootdir = '../data/robofest_18_lanes'
@@ -20,7 +38,7 @@ def robofest_data_get_samples():
     lane_imgs = []
 
     src_shape = (640, 480)
-    dst_shape = (640, 320)
+
 
     upper_clip_px = 50
 
@@ -34,8 +52,8 @@ def robofest_data_get_samples():
         orig_img = orig_img[1+upper_clip_px:img_h-1, 1:img_w-1]
         mask_img = mask_img[1+upper_clip_px:img_h-1, 1:img_w-1]
 
-        orig_img = cv2.resize(orig_img, dst_shape);
-        mask_img = cv2.resize(mask_img, dst_shape, interpolation=cv2.INTER_NEAREST);
+        orig_img = cv2.resize(orig_img, dst_shape_img);
+        mask_img = cv2.resize(mask_img, dst_shape_msk, interpolation=cv2.INTER_NEAREST);
 
         layer_colors = set( tuple(v) for m2d in mask_img for v in m2d )
         lane_color = (250, 250, 250)
@@ -48,6 +66,8 @@ def robofest_data_get_samples():
 
         orig_imgs += [orig_img]
         lane_imgs += [lane_layer]
+
+        # print(src_file)
 
         # cv2.imshow('src', orig_img)
         # cv2.imshow('mask', lane_layer)
@@ -69,16 +89,23 @@ def robofest_data_get_samples_preprocessed():
 
     orig_imgs, lane_imgs = robofest_data_get_samples()
 
-    orig_imgs = orig_imgs.astype('float32', copy=False) / 255. * 2 - 1
-    lane_imgs = lane_imgs.astype('float32', copy=False) / 255.# * 2 - 1
+    orig_imgs = input_preprocess(orig_imgs.astype('float32', copy=False))
+    lane_imgs = lane_imgs.astype('float32', copy=False) / 255.
 
     return (orig_imgs, lane_imgs)
 
 def test_robofest_data():
 
-    robofest_data_get_samples_preprocessed()
+    # robofest_data_get_samples_preprocessed()
 
     orig_imgs, lane_imgs = robofest_data_get_samples()
+
+    for i, lane_im in enumerate(lane_imgs):
+        lane_imgs[i] = cv2.resize(lane_im, (orig_imgs.shape[2], orig_imgs.shape[1]))
+
+        print(lane_im.shape)
+
+    print(orig_imgs.shape, lane_imgs.shape)
 
     for i in range(len(orig_imgs)):
 

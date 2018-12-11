@@ -54,5 +54,5 @@ esac
 done
 
 rsync "$OPTIONS ssh -p $REMOTE_PORT" * \
---exclude=.git --exclude=.gitignore --exclude=*.jpg --exclude=__pycache__ --exclude=output --exclude=logs \
+--exclude=.git --exclude=.gitignore --exclude=*.jpg --exclude=__pycache__ --exclude=best_chk --exclude=output --exclude=logs \
 $REMOTE_ADDR:$DST/

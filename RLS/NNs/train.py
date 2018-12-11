@@ -62,6 +62,27 @@ def train_and_predict():
     imgs_train      = orig_imgs
     imgs_mask_train = mask_imgs
 
+
+
+    ###############################
+
+    if 0:
+        for img, mask in zip(orig_imgs, mask_imgs):
+            cv2.imshow('src', img)
+            cv2.imshow('mask', mask)
+            cv2.waitKey() 
+
+        result = train_model.predict(np.expand_dims(orig_imgs[0], axis=0))
+        mask = result[0]
+
+        cv2.imshow('src', orig_imgs[0])
+        cv2.imshow('mask', mask)
+        cv2.waitKey() 
+
+
+    ###############################
+
+
     imgs_train, imgs_mask_train = shuffle(imgs_train, imgs_mask_train)
 
     samples_count = len(imgs_train)
@@ -110,7 +131,7 @@ def train_and_predict():
 
     print_pretty('Fitting model...')
 
-    train_model.fit_generator( train_generator, steps_per_epoch=20, epochs=1000, verbose=1, validation_data=(imgs_valid, imgs_mask_valid),
+    train_model.fit_generator( train_generator, steps_per_epoch=20, epochs=10000, verbose=1, validation_data=(imgs_valid, imgs_mask_valid),
         callbacks=[ModelCheckpoint('chk/weights_best.h5', monitor='val_iou_metrics', mode='max', save_best_only=True, save_weights_only=False, verbose=1)])
 
 
