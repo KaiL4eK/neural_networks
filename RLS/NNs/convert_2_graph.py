@@ -62,7 +62,7 @@ def _main_(args):
     from subprocess import call
 
     process_args = ["mvNCCompile", output_pb_fpath, "-in", model_inputs[0], "-on", model_outputs[0], "-s", "12", "-o", "output/laneseg.graph"]
-    # call(process_args)
+    call(process_args)
 
     process_args = ["mvNCProfile", output_pb_fpath, "-in", model_inputs[0], "-on", model_outputs[0], "-s", "12"]
     call(process_args)
