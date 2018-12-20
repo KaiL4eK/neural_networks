@@ -103,8 +103,6 @@ class TRTengine:
 
         uff_model = uff.from_tensorflow(frozen_graph, self.model_outputs, output_filename=self.engine_uff_fname)
 
-
-
         parser = uffparser.create_uff_parser()
 
         # kNCHW = 0

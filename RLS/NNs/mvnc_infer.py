@@ -3,8 +3,10 @@ import time
 import cv2
 import argparse
 import numpy as np
+from tqdm import tqdm
 from utils import *
-from data import input_preprocess
+
+import config
 
 argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
 argparser.add_argument('-g', '--graph', help='graph file')
@@ -16,7 +18,7 @@ args = argparser.parse_args()
 
 def _main_(args):
 
-    input_image = args.input
+    input_path = args.input
     graph_fpath = args.graph
 
     fx.global_set_option(fx.GlobalOption.RW_LOG_LEVEL, 0)
@@ -50,35 +52,52 @@ def _main_(args):
     else:
         fifoIn, fifoOut = graph.allocate_with_fifos(dev, graphFileBuff)
 
+    image_paths = []
 
-    img = cv2.imread(input_image)
-    inf_img = input_preprocess(img)
-
-    if DECREASE_SZ:
-        inf_img = inf_img.astype(np.float16)
+    if os.path.isdir(input_path): 
+        for inp_file in os.listdir(input_path):
+            image_paths += [os.path.join(input_path, inp_file)]
     else:
-        inf_img = inf_img.astype(np.float32)
+        image_paths += [input_path]
 
-    start = time.time()
+    full_time = 0
+    image_cnt = 0
 
-    graph.queue_inference_with_fifo_elem(fifoIn, fifoOut, inf_img, 'user object')
-    ncs_output, userobj = fifoOut.read_elem()
-    print("NCS: ", ncs_output.shape, ncs_output.dtype)
+    for image_path in tqdm(image_paths):
 
-    ncs_output = sigmoid(ncs_output)
-    
+        img = cv2.imread(image_path)
+        inf_img = image_preprocess(img, (config.NETWORK_INPUT_W, config.NETWORK_INPUT_H))
 
-    ncs_output = ncs_output.reshape((160, 320, 1))
+        if DECREASE_SZ:
+            inf_img = inf_img.astype(np.float16)
+        else:
+            inf_img = inf_img.astype(np.float32)
 
-    print("Time: %.3f [ms]" % ((time.time() - start) * 1000))
-    print("NCS: ", ncs_output.shape, ncs_output.dtype)
+        start = time.time()
 
-    mask = cv2.resize(ncs_output, (640, 480), interpolation=cv2.INTER_NEAREST)
+        graph.queue_inference_with_fifo_elem(fifoIn, fifoOut, inf_img, None)
+        ncs_output, _ = fifoOut.read_elem()
+        # print("NCS: ", ncs_output.shape, ncs_output.dtype)
 
+        ncs_output = sigmoid(ncs_output)
+        ncs_output = ncs_output.reshape((160, 320, 1))
 
-    cv2.imshow('origin', img)
-    cv2.imshow('result', mask)
-    cv2.waitKey()
+        if DECREASE_SZ:
+            ncs_output = ncs_output.astype(np.float32)
+
+        full_time += time.time() - start
+        image_cnt += 1
+        
+        # print("NCS: ", ncs_output.shape, ncs_output.dtype)
+
+        mask = cv2.resize(ncs_output, (640, 480), interpolation=cv2.INTER_NEAREST)
+
+        cv2.imshow('origin', img)
+        cv2.imshow('result', mask)
+        if cv2.waitKey() == 27:
+            break
+
+    print("Time: %.3f [ms] / FPS: %.1f" % (full_time * 1000, image_cnt / full_time))
 
     fifoIn.destroy()
     fifoOut.destroy()

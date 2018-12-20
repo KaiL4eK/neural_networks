@@ -8,6 +8,7 @@ from keras.utils.layer_utils import print_summary
 
 import numpy as np
 import cv2
+import config
 
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
@@ -35,12 +36,14 @@ def intersect_over_union(y_true, y_pred):
     
     return (intersection + 1) / (union + 1)
 
-# def iou_loss(y_true, y_pred):
-    # return 1 - iou_coef(y_true, y_pred)
+def iou_loss(y_true, y_pred):
+    return 1 - intersect_over_union(y_true, y_pred)
 
 def iou_metrics(y_true, y_pred):
     return intersect_over_union(y_true, y_pred)
 
+def bin_ce_n_iou(y_true, y_pred):
+    return iou_loss(y_true, y_pred) + binary_crossentropy(y_true, y_pred)
 
 ### Image preprocessing ###
 
@@ -375,7 +378,7 @@ def _depthwise_conv_block_v2(inputs, pointwise_conv_filters, alpha, expansion_fa
 
 def mobilenetv2(input_shape, lr, alpha=0.5, expansion_factor=6, depth_multiplier=1):
 
-    input = Input(input_shape, name='input_img')
+    input = Input(input_shape, name=config.INPUT_TENSOR_NAMES[0])
 
     x = _conv_block(input, 32, alpha, bn_epsilon=1e-3, strides=(2, 2))
     x_d2 = x
@@ -443,22 +446,20 @@ def mobilenetv2(input_shape, lr, alpha=0.5, expansion_factor=6, depth_multiplier
     x = _deconv_block(x, 32, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=21)
     x = Add()([x, x_d2])
 
-    # x = _deconv_block(x, 8, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=22)
+    x = _deconv_block(x, 8, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=22)
 
-    output_lin = Conv2D(filters=1, kernel_size=1, padding='same', use_bias=False, name='conv_out', kernel_initializer='glorot_normal')(x)
+    output_lin = Conv2D(filters=1, kernel_size=1, padding='same', use_bias=False, name=config.OUTPUT_TENSOR_NAMES[0], kernel_initializer='glorot_normal')(x)
     output_sig = Activation(activation = 'sigmoid')(output_lin)
 
     train_model = Model(input, output_sig)
     infer_model = Model(input, output_lin)
 
-    # print_summary(train_model)
-
-    train_model.compile(optimizer=Adam(lr=lr), loss='binary_crossentropy', metrics=['accuracy', iou_metrics])
+    train_model.compile(optimizer=Adam(lr=lr), loss=bin_ce_n_iou, metrics=['accuracy', iou_metrics])
 
     return train_model, infer_model
 
 
-def create_model(input_shape=(320, 640, 3), lr=1e-3):
+def create_model(input_shape=(160, 320, 3), lr=1e-3):
 
     # return get_unet(input_shape=input_shape, lr=lr)
     # return get_unet_simple(input_shape=input_shape, lr=lr)

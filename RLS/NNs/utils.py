@@ -1,5 +1,7 @@
 import os
 import numpy as np
+from scipy import special
+import cv2
 
 def makedirs(path):
     try:
@@ -26,7 +28,22 @@ def print_pretty(str):
 	print('-'*30)
 
 def sigmoid(x):
-    # return scipy.special.expit(x)
-    return 1.0/(1.0 + np.exp(-x))
+    return special.expit(x)
+    # return 1.0/(1.0 + np.exp(-x))
     # y = np.exp(x); return y/(1+y)
     # return x
+
+
+def image_preprocess(img, result_sz):
+
+    img = cv2.resize(img, result_sz[0:2])
+    img = img / 255. #* 2 - 1
+
+    return img
+
+def mask_preprocess(img, result_sz):
+
+    img = cv2.resize(img, result_sz, interpolation=cv2.INTER_NEAREST)
+    img = img / 255. #* 2 - 1
+
+    return img

@@ -18,6 +18,7 @@ import argparse
 
 from utils import print_pretty, init_gpu_session
 from sklearn.utils import shuffle
+import config
 
 parser = argparse.ArgumentParser(description='Process video with ANN')
 parser.add_argument('-w', '--weights', action='store', help='Path to weights file')
@@ -26,7 +27,7 @@ parser.add_argument('-s', '--structure', action='store_true', help='Show only st
 
 args = parser.parse_args()
 
-init_gpu_session(0.7)
+init_gpu_session(1.0)
 
 def train_and_predict():
     
@@ -36,9 +37,11 @@ def train_and_predict():
 
     print_pretty('Creating and compiling model...')
 
-    train_model, infer_model = create_model(input_shape=(320, 640, 3), lr=1e-4)
-    
+    network_input_shp = (config.NETWORK_INPUT_H, config.NETWORK_INPUT_W, config.NETWORK_INPUT_C)
+    output_shp = (config.NETWORK_INPUT_H, config.NETWORK_INPUT_W, 1)
 
+    train_model, infer_model = create_model(input_shape=network_input_shp, lr=1e-4)
+    
     if structure_mode:
         print_summary(train_model)
         # plot_model(model, show_shapes=True)
@@ -48,10 +51,10 @@ def train_and_predict():
     if pretrained_weights_path:
         train_model.load_weights(args.weights)
 
-
+    
     print_pretty('Loading and preprocessing train data...')
 
-    orig_imgs, mask_imgs = robofest_data_get_samples_preprocessed()
+    orig_imgs, mask_imgs = robofest_data_get_samples_preprocessed(network_input_shp, output_shp)
 
     if len( np.unique(mask_imgs) ) > 2:
         print('Preprocessing created mask with more than two binary values')
@@ -86,7 +89,7 @@ def train_and_predict():
     imgs_train, imgs_mask_train = shuffle(imgs_train, imgs_mask_train)
 
     samples_count = len(imgs_train)
-    split_idx = int(0.2 * samples_count)
+    split_idx = int(0.1 * samples_count)
 
     imgs_valid      = imgs_train[:split_idx]
     imgs_mask_valid = imgs_mask_train[:split_idx]
@@ -97,8 +100,8 @@ def train_and_predict():
     train_count = len(imgs_train)
 
     print(samples_count, split_idx)
-    print(imgs_train.shape)
-    print(imgs_valid.shape)
+    print('Train:', imgs_train.shape)
+    print('Valid:', imgs_valid.shape)
 
     data_gen_args = dict( rotation_range=5,
                           width_shift_range=0.1,
@@ -106,10 +109,19 @@ def train_and_predict():
                           zoom_range=0.1,
                           horizontal_flip=True,
                           fill_mode='constant',
+                          cval=0,
+                          brightness_range=[0.8, 1.2] )
+
+    data_gen_msk_args = dict( rotation_range=5,
+                          width_shift_range=0.1,
+                          height_shift_range=0.1,
+                          zoom_range=0.1,
+                          horizontal_flip=True,
+                          fill_mode='constant',
                           cval=0 )
 
-    image_datagen = ImageDataGenerator(**data_gen_args)
-    mask_datagen = ImageDataGenerator(**data_gen_args)
+    image_datagen = ImageDataGenerator(**data_gen_msk_args)
+    mask_datagen = ImageDataGenerator(**data_gen_msk_args)
 
     seed = 1
     batch_size = 8
@@ -119,8 +131,8 @@ def train_and_predict():
 
     print_pretty('Flowing data...')
 
-    # image_generator = image_datagen.flow(imgs_train, batch_size=batch_size, seed=seed, save_to_dir='flow_dir', save_prefix='img_', save_format='png')
-    # mask_generator  = mask_datagen.flow(imgs_mask_train, batch_size=batch_size, seed=seed, save_to_dir='flow_dir', save_prefix='mask_', save_format='png')
+    image_generator = image_datagen.flow(imgs_train, batch_size=batch_size, seed=seed, save_to_dir='flow', save_prefix='img_', save_format='png')
+    mask_generator  = mask_datagen.flow(imgs_mask_train, batch_size=batch_size, seed=seed, save_to_dir='flow', save_prefix='mask_', save_format='png')
 
     image_generator = image_datagen.flow(imgs_train, batch_size=batch_size, seed=seed)
     mask_generator  = mask_datagen.flow(imgs_mask_train, batch_size=batch_size, seed=seed)

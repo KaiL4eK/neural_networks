@@ -1,24 +1,10 @@
 import os
 import cv2
 import numpy as np
+from utils import *
 
 dst_shape_img = (640, 320)
-dst_shape_msk = (320, 160)
 
-def input_preprocess(img):
-
-    
-
-    if len(img.shape) == 4:
-        imgs = img
-        for im in imgs:
-            im = cv2.resize(im, dst_shape_img)
-    else:
-        img = cv2.resize(img, dst_shape_img)
-
-    img = img / 255. * 2 - 1
-
-    return img
 
 def robofest_data_get_samples():
 
@@ -32,17 +18,14 @@ def robofest_data_get_samples():
 
         png_fpaths += [os.path.join(root, file) for file in files if file.endswith('.png')]
 
-    annotation_files = [(file, file.replace('.png', '_color_mask.png')) for file in png_fpaths if os.path.exists(file.replace('.png', '_color_mask.png'))]
+    annotation_pairs = [(file, file.replace('.png', '_color_mask.png')) for file in png_fpaths if os.path.exists(file.replace('.png', '_color_mask.png'))]
 
     orig_imgs = []
     lane_imgs = []
 
-    src_shape = (640, 480)
-
-
     upper_clip_px = 50
 
-    for src_file, msk_file in annotation_files:
+    for src_file, msk_file in annotation_pairs:
 
         orig_img = cv2.imread(src_file)
         mask_img = cv2.imread(msk_file)
@@ -53,7 +36,7 @@ def robofest_data_get_samples():
         mask_img = mask_img[1+upper_clip_px:img_h-1, 1:img_w-1]
 
         orig_img = cv2.resize(orig_img, dst_shape_img);
-        mask_img = cv2.resize(mask_img, dst_shape_msk, interpolation=cv2.INTER_NEAREST);
+        mask_img = cv2.resize(mask_img, dst_shape_img, interpolation=cv2.INTER_NEAREST);
 
         layer_colors = set( tuple(v) for m2d in mask_img for v in m2d )
         lane_color = (250, 250, 250)
@@ -78,21 +61,31 @@ def robofest_data_get_samples():
     # Extend to 4 dims
     lane_imgs = np.expand_dims(lane_imgs, axis=-1)
 
-    # lane_imgs = lane_imgs.reshape((2, 51200))
-
-    # if len(orig_imgs.shape) != 4 or len(lane_imgs.shape) != 4:
-        # raise Exception('Invalid data shape')
+    if len(orig_imgs.shape) != 4 or len(lane_imgs.shape) != 4:
+        raise Exception('Invalid data shape')
 
     return (orig_imgs, lane_imgs)
 
-def robofest_data_get_samples_preprocessed():
+def robofest_data_get_samples_preprocessed(input_shp, output_shp):
 
     orig_imgs, lane_imgs = robofest_data_get_samples()
 
-    orig_imgs = input_preprocess(orig_imgs.astype('float32', copy=False))
-    lane_imgs = lane_imgs.astype('float32', copy=False) / 255.
+    data_count = len(orig_imgs)
 
-    return (orig_imgs, lane_imgs)
+    orig_imgs_shp = tuple([data_count] + list(input_shp))
+    mask_imgs_shp = tuple([data_count] + list(output_shp))
+
+    inputs  = np.ndarray(orig_imgs_shp, dtype=np.float32)
+    outputs = np.ndarray(mask_imgs_shp, dtype=np.float32)
+
+    print(orig_imgs_shp, mask_imgs_shp)
+
+    for i in range(data_count):
+        inputs[i]  = image_preprocess(orig_imgs[i], (input_shp[1], input_shp[0]))
+        outputs[i] = np.expand_dims(mask_preprocess(lane_imgs[i], (output_shp[1], output_shp[0])), axis=-1)
+
+
+    return (inputs, outputs)
 
 def test_robofest_data():
 
