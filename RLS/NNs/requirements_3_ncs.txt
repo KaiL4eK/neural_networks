@@ -1,0 +1,8 @@
+/opt/movidius/NCSDK/ncsdk-x86_64/api
+mvnc
+
+graphviz
+pygraphviz
+scikit-image
+
+tensorflow==1.9

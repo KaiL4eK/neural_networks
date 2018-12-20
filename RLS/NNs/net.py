@@ -326,26 +326,26 @@ def mobilenetv2(input_shape, lr, alpha=0.5, expansion_factor=6, depth_multiplier
     x = _deconv_block(x, 64, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=get_block_idx())
     x = Add()([x, x_d16])
 
-    x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
+    x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
                                  block_id=get_block_idx())
 
     x = _deconv_block(x, 32, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=get_block_idx())
     x = Add()([x, x_d8])
 
-    x = _depthwise_conv_block_v2(x, 24, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
+    x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
                                  block_id=get_block_idx())
 
     x = _deconv_block(x, 24, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=get_block_idx())
     x = Add()([x, x_d4])
 
-    # x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 # block_id=get_block_idx())
+    x = _depthwise_conv_block_v2(x, 24, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
+                                 block_id=get_block_idx())
 
     x = _deconv_block(x, 16, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=get_block_idx())
     # x = Add()([x, x_d2])
 
-    x = _depthwise_conv_block_v2(x, 8, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=get_block_idx())
+    # x = _depthwise_conv_block_v2(x, 8, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
+    #                              block_id=get_block_idx())
 
     x = _deconv_block(x, 8, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=get_block_idx())
 
