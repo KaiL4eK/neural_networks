@@ -259,6 +259,11 @@ def _depthwise_conv_block_v2(inputs, pointwise_conv_filters, alpha, expansion_fa
 
     return x
 
+global_blk_idx = 0
+def get_block_idx():
+    global global_blk_idx
+    global_blk_idx += 1
+    return global_blk_idx
 
 def mobilenetv2(input_shape, lr, alpha=0.5, expansion_factor=6, depth_multiplier=1):
 
@@ -268,69 +273,81 @@ def mobilenetv2(input_shape, lr, alpha=0.5, expansion_factor=6, depth_multiplier
     x_d2 = x
 
     x = _depthwise_conv_block_v2(x, 16, alpha, 1, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=1)
+                                 block_id=get_block_idx())
 
-    x = _depthwise_conv_block_v2(x, 24, alpha, expansion_factor, depth_multiplier, block_id=2,
+    x = _depthwise_conv_block_v2(x, 24, alpha, expansion_factor, depth_multiplier, block_id=get_block_idx(),
                                  bn_epsilon=1e-3, bn_momentum=0.999, strides=(2, 2))
     x_d4 = x
 
     x = _depthwise_conv_block_v2(x, 24, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=3)
+                                 block_id=get_block_idx())
 
-    x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, block_id=4,
+    x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, block_id=get_block_idx(),
                                  bn_epsilon=1e-3, bn_momentum=0.999, strides=(2, 2))
     x_d8 = x
 
     x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=5)
+                                 block_id=get_block_idx())
     x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=6)
+                                 block_id=get_block_idx())
 
-    x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=7,
+    x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, block_id=get_block_idx(),
                                  bn_epsilon=1e-3, bn_momentum=0.999, strides=(2, 2))
     x_d16 = x
 
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=8)
+                                 block_id=get_block_idx())
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=9)
+                                 block_id=get_block_idx())
     x = _depthwise_conv_block_v2(x, 64, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=10)
+                                 block_id=get_block_idx())
 
     x = _depthwise_conv_block_v2(x, 96, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=11)
+                                 block_id=get_block_idx())
     x = _depthwise_conv_block_v2(x, 96, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=12)
+                                 block_id=get_block_idx())
     x = _depthwise_conv_block_v2(x, 96, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=13)
+                                 block_id=get_block_idx())
 
-    x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=14,
+    x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, block_id=get_block_idx(),
                                  bn_epsilon=1e-3, bn_momentum=0.999, strides=(2, 2))
     x_d32 = x
 
     x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=15)
+                                 block_id=get_block_idx())
     x = _depthwise_conv_block_v2(x, 160, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=16)
+                                 block_id=get_block_idx())
 
     x = _depthwise_conv_block_v2(x, 320, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
-                                 block_id=17)
+                                 block_id=get_block_idx())
 
     ################
 
-    x = _deconv_block(x, 64, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=18)
+    x = _deconv_block(x, 64, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=get_block_idx())
     x = Add()([x, x_d16])
 
-    x = _deconv_block(x, 32, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=19)
+    x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
+                                 block_id=get_block_idx())
+
+    x = _deconv_block(x, 32, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=get_block_idx())
     x = Add()([x, x_d8])
 
-    x = _deconv_block(x, 24, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=20)
+    x = _depthwise_conv_block_v2(x, 24, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
+                                 block_id=get_block_idx())
+
+    x = _deconv_block(x, 24, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=get_block_idx())
     x = Add()([x, x_d4])
 
-    x = _deconv_block(x, 32, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=21)
-    x = Add()([x, x_d2])
+    # x = _depthwise_conv_block_v2(x, 32, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
+                                 # block_id=get_block_idx())
 
-    x = _deconv_block(x, 8, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=22)
+    x = _deconv_block(x, 16, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=get_block_idx())
+    # x = Add()([x, x_d2])
+
+    x = _depthwise_conv_block_v2(x, 8, alpha, expansion_factor, depth_multiplier, bn_epsilon=1e-3, bn_momentum=0.999,
+                                 block_id=get_block_idx())
+
+    x = _deconv_block(x, 8, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=get_block_idx())
 
     output_lin = Conv2D(filters=1, kernel_size=1, padding='same', use_bias=False, name=config.OUTPUT_TENSOR_NAMES[0], kernel_initializer='glorot_normal')(x)
     output_sig = Activation(activation = 'sigmoid')(output_lin)
