@@ -6,3 +6,5 @@ INPUT_TENSOR_NAMES = ['input_img']
 OUTPUT_TENSOR_NAMES = ['output_mask']
 
 NET_BASENAME='laneseg'
+
+NCS_GRAPH='output/laneseg.graph'
