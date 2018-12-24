@@ -134,6 +134,16 @@ def train_and_predict():
 
     print_pretty('Fitting model...')
 
+    checkpoint_vloss = CustomModelCheckpoint(
+        model_to_save   = infer_model,
+        filepath        = config.NET_BASENAME+'_ep{epoch:03d}-iou{iou_metrics:.3f}-val_iou{val_iou_metrics:.3f}'+'.h5',
+        monitor         = 'val_loss', 
+        verbose         = 1,
+        save_best_only  = True, 
+        mode            = 'min', 
+        period          = 1
+    )
+
     train_model.fit_generator( train_generator, steps_per_epoch=20, epochs=10000, verbose=1, validation_data=(imgs_valid, imgs_mask_valid),
         callbacks=[ModelCheckpoint('chk/weights_best.h5', monitor='val_iou_metrics', mode='max', save_best_only=True, save_weights_only=False, verbose=1)])
 
