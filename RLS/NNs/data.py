@@ -2,13 +2,13 @@ import os
 import cv2
 import numpy as np
 from utils import *
+from tqdm import tqdm
 
 dst_shape_img = (640, 320)
 
 
-def robofest_data_get_samples():
+def get_samples(rootdir):
 
-    rootdir = '../data/robofest_18_lanes'
     png_fpaths = []
 
     for root, subdirs, files in os.walk(rootdir):
@@ -25,7 +25,7 @@ def robofest_data_get_samples():
 
     upper_clip_px = 50
 
-    for src_file, msk_file in annotation_pairs:
+    for src_file, msk_file in tqdm(annotation_pairs):
 
         orig_img = cv2.imread(src_file)
         mask_img = cv2.imread(msk_file)
@@ -66,52 +66,73 @@ def robofest_data_get_samples():
 
     return (orig_imgs, lane_imgs)
 
-def robofest_data_get_samples_preprocessed(input_shp, output_shp):
 
-    orig_imgs, lane_imgs = robofest_data_get_samples()
+def preprocess_data(inputs, outputs, input_shp, output_shp):
+    data_count = len(inputs)
 
-    data_count = len(orig_imgs)
+    input_imgs_shp = tuple([data_count] + list(input_shp))
+    output_imgs_shp = tuple([data_count] + list(output_shp))
 
-    orig_imgs_shp = tuple([data_count] + list(input_shp))
-    mask_imgs_shp = tuple([data_count] + list(output_shp))
-
-    inputs  = np.ndarray(orig_imgs_shp, dtype=np.float32)
-    outputs = np.ndarray(mask_imgs_shp, dtype=np.float32)
-
-    print(orig_imgs_shp, mask_imgs_shp)
+    new_inputs  = np.ndarray(input_imgs_shp, dtype=np.float32)
+    new_outputs = np.ndarray(output_imgs_shp, dtype=np.float32)
 
     for i in range(data_count):
-        inputs[i]  = image_preprocess(orig_imgs[i], (input_shp[1], input_shp[0]))
-        outputs[i] = np.expand_dims(mask_preprocess(lane_imgs[i], (output_shp[1], output_shp[0])), axis=-1)
+        new_inputs[i]  = image_preprocess(inputs[i], (input_shp[1], input_shp[0]))
+        new_output = mask_preprocess(outputs[i], (output_shp[1], output_shp[0]))
+        new_outputs[i] = np.expand_dims(new_output, axis=-1)
+
+    return (new_inputs, new_outputs)
+
+###############################################################################
+
+def robofest_data_get_samples():
+
+    train_rootdir = '../data/robofest_18_lanes'
+    valid_rootdir = '../data/robofest_18_test'
+    
+    print('Processing train data')
+    train_imgs, train_masks = get_samples(train_rootdir)
+    
+    print('Processing test data')
+    valid_imgs, valid_masks = get_samples(valid_rootdir)
+
+    return train_imgs, train_masks, valid_imgs, valid_masks
 
 
-    return (inputs, outputs)
+def robofest_data_get_samples_preprocessed(input_shp, output_shp):
+
+    train_imgs, train_masks, valid_imgs, valid_masks = robofest_data_get_samples()
+
+    train_imgs, train_masks = preprocess_data(train_imgs, train_masks, input_shp, output_shp)
+    valid_imgs, valid_masks = preprocess_data(valid_imgs, valid_masks, input_shp, output_shp)
+
+    return train_imgs, train_masks, valid_imgs, valid_masks
 
 def test_robofest_data():
-
+    pass
     # robofest_data_get_samples_preprocessed()
 
-    orig_imgs, lane_imgs = robofest_data_get_samples()
+    # orig_imgs, lane_imgs = robofest_data_get_samples()
 
-    for i, lane_im in enumerate(lane_imgs):
-        lane_imgs[i] = cv2.resize(lane_im, (orig_imgs.shape[2], orig_imgs.shape[1]))
+    # for i, lane_im in enumerate(lane_imgs):
+    #     lane_imgs[i] = cv2.resize(lane_im, (orig_imgs.shape[2], orig_imgs.shape[1]))
 
-        print(lane_im.shape)
+    #     print(lane_im.shape)
 
-    print(orig_imgs.shape, lane_imgs.shape)
+    # print(orig_imgs.shape, lane_imgs.shape)
 
-    for i in range(len(orig_imgs)):
+    # for i in range(len(orig_imgs)):
 
-        msk_clr_image = np.zeros_like(orig_imgs[i], np.uint8)
-        msk_clr_image[:] = (255, 0, 0)
+    #     msk_clr_image = np.zeros_like(orig_imgs[i], np.uint8)
+    #     msk_clr_image[:] = (255, 0, 0)
 
-        img1_bg = cv2.bitwise_and(orig_imgs[i], orig_imgs[i], mask=cv2.bitwise_not(lane_imgs[i]))
-        img2_fg = cv2.bitwise_and(msk_clr_image, msk_clr_image, mask=lane_imgs[i])
+    #     img1_bg = cv2.bitwise_and(orig_imgs[i], orig_imgs[i], mask=cv2.bitwise_not(lane_imgs[i]))
+    #     img2_fg = cv2.bitwise_and(msk_clr_image, msk_clr_image, mask=lane_imgs[i])
 
-        full_img = cv2.add(img1_bg,img2_fg)
+    #     full_img = cv2.add(img1_bg,img2_fg)
 
-        cv2.imshow('1', full_img)
-        cv2.waitKey(0)
+    #     cv2.imshow('1', full_img)
+    #     cv2.waitKey(0)
 
 if __name__ == '__main__':
     test_robofest_data()

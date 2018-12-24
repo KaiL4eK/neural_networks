@@ -34,7 +34,6 @@ def train_and_predict():
     pretrained_weights_path = args.weights
     structure_mode = args.structure
 
-
     print_pretty('Creating and compiling model...')
 
     network_input_shp = (config.NETWORK_INPUT_H, config.NETWORK_INPUT_W, config.NETWORK_INPUT_C)
@@ -54,52 +53,44 @@ def train_and_predict():
     
     print_pretty('Loading and preprocessing train data...')
 
-    orig_imgs, mask_imgs = robofest_data_get_samples_preprocessed(network_input_shp, output_shp)
+    train_imgs, train_masks, valid_imgs, valid_masks = robofest_data_get_samples_preprocessed(network_input_shp, output_shp)
 
-    if len( np.unique(mask_imgs) ) > 2:
-        print('Preprocessing created mask with more than two binary values')
+    if len( np.unique(valid_masks) ) > 2:
+        print('Valid: Preprocessing created mask with more than two binary values')
+        exit(1)
+
+    if len( np.unique(train_masks) ) > 2:
+        print('Train: Preprocessing created mask with more than two binary values')
         exit(1)
 
     print_pretty('Setup data generator...')
 
-    imgs_train      = orig_imgs
-    imgs_mask_train = mask_imgs
+    ###############################
 
+    # if 0:
+    #     for img, mask in zip(orig_imgs, mask_imgs):
+    #         cv2.imshow('src', img)
+    #         cv2.imshow('mask', mask)
+    #         cv2.waitKey() 
+
+    #     result = train_model.predict(np.expand_dims(orig_imgs[0], axis=0))
+    #     mask = result[0]
+
+    #     cv2.imshow('src', orig_imgs[0])
+    #     cv2.imshow('mask', mask)
+    #     cv2.waitKey() 
 
 
     ###############################
 
-    if 0:
-        for img, mask in zip(orig_imgs, mask_imgs):
-            cv2.imshow('src', img)
-            cv2.imshow('mask', mask)
-            cv2.waitKey() 
+    imgs_valid      = valid_imgs
+    imgs_mask_valid = valid_masks
 
-        result = train_model.predict(np.expand_dims(orig_imgs[0], axis=0))
-        mask = result[0]
-
-        cv2.imshow('src', orig_imgs[0])
-        cv2.imshow('mask', mask)
-        cv2.waitKey() 
-
-
-    ###############################
-
-
-    imgs_train, imgs_mask_train = shuffle(imgs_train, imgs_mask_train)
-
-    samples_count = len(imgs_train)
-    split_idx = int(0.1 * samples_count)
-
-    imgs_valid      = imgs_train[:split_idx]
-    imgs_mask_valid = imgs_mask_train[:split_idx]
-
-    imgs_train      = imgs_train[split_idx:]
-    imgs_mask_train = imgs_mask_train[split_idx:]
+    imgs_train      = train_imgs
+    imgs_mask_train = train_masks
 
     train_count = len(imgs_train)
 
-    print(samples_count, split_idx)
     print('Train:', imgs_train.shape)
     print('Valid:', imgs_valid.shape)
 

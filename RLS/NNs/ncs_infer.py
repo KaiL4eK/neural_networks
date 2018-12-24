@@ -10,7 +10,6 @@ from utils import *
 import config
 
 argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
-argparser.add_argument('-g', '--graph', help='graph file')
 argparser.add_argument('-i', '--input', help='input image path')
 
 args = argparser.parse_args()
@@ -18,9 +17,8 @@ args = argparser.parse_args()
 def _main_(args):
 
     input_path = args.input
-    graph_fpath = args.graph
 
-    ncs_dev = ncs.InferNCS(graph_fpath)
+    ncs_dev = ncs.InferNCS(config.NCS_GRAPH)
 
     image_paths = []
 
@@ -35,6 +33,7 @@ def _main_(args):
 
     for image_path in tqdm(image_paths):
 
+        print('Processing: {}'.format(image_path))
         img = cv2.imread(image_path)
 
         start = time.time()

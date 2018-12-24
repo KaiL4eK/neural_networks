@@ -24,7 +24,7 @@ argparser.add_argument('-w', '--weights', help='weights path')
 def _main_(args):
     weights_path = args.weights
 
-    output_pb_fpath = 'output/{}.pb'.format(config.NET_BASENAME)
+    output_pb_fpath = config.NCS_GRAPH
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.4, allow_growth=True)
     sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))

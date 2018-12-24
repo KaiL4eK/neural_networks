@@ -18,7 +18,8 @@ case $i in
     -f|--full-sync)
 		echo "Full sync"
 		# Just to sync DB
-		rsync "$OPTIONS ssh -p $REMOTE_PORT" ../data $REMOTE_ADDR:$DST/../
+		rsync "$OPTIONS ssh -p $REMOTE_PORT" ../data/robofest_18_lanes/ $REMOTE_ADDR:$DST/../robofest_18_lanes/ --delete
+		rsync "$OPTIONS ssh -p $REMOTE_PORT" ../data/robofest_18_test/ $REMOTE_ADDR:$DST/../robofest_18_test/	--delete
     ;;
     -t|--download-output)
 		echo "Download results"
