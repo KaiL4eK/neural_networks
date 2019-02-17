@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 
 import os
-import argparse
 import json
 import cv2
 from utils.utils import get_yolo_boxes, makedirs, init_session
@@ -10,7 +9,17 @@ from keras.models import load_model
 from tqdm import tqdm
 import numpy as np
 
-def _main_(args):
+import argparse
+argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
+argparser.add_argument('-c', '--conf', help='path to configuration file')
+argparser.add_argument('-i', '--input', help='path to an image, a directory of images, a video, or webcam')
+argparser.add_argument('-w', '--weights', help='weights path')
+argparser.add_argument('-o', '--output', default='output/', help='path to output directory')
+
+args = argparser.parse_args()
+
+
+def _main_():
     config_path  = args.conf
     input_path   = args.input
     output_path  = args.output
@@ -31,7 +40,7 @@ def _main_(args):
     #   Load the model
     ###############################
     os.environ['CUDA_VISIBLE_DEVICES'] = config['train']['gpus']
-    infer_model = load_model( weights_path )
+    infer_model = load_model(weights_path)
 
     ###############################
     #   Predict bounding boxes 
@@ -135,11 +144,4 @@ def _main_(args):
         print('Result: {}'.format(fps))
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
-    argparser.add_argument('-c', '--conf', help='path to configuration file')
-    argparser.add_argument('-i', '--input', help='path to an image, a directory of images, a video, or webcam')
-    argparser.add_argument('-w', '--weights', help='weights path')
-    argparser.add_argument('-o', '--output', default='output/', help='path to output directory')   
-    
-    args = argparser.parse_args()
-    _main_(args)
+    _main_()

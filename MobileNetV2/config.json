@@ -1,0 +1,39 @@
+{
+    "model" : {
+        "base":                 "MobileNet2",
+
+        "input_side_sz":        32
+    },
+
+    "train": {
+        "train_folder":         "../data_root/__signs/robofest_data/signs_only",
+        "cache_name":           "pkl/sign_train.pkl",
+
+        "train_times":          3,
+        "batch_size":           4,
+        "learning_rate":        1e-4,
+        "nb_epochs":            300,
+
+        "tensorboard_dir":      "logs/mobilenet_v2",
+        "saved_weights_name":   "chk/mobilenet_v2.h5",
+
+        "debug":                false
+    },
+
+    "valid": {
+        "valid_folder":         "../data_root/__signs/robofest_data/signs_only",
+        "cache_name":           "pkl/sign_test.pkl",
+
+        "valid_times":          1
+    },
+
+    "eval": {
+        "valid_image_folder":   "../data/GTSDB_voc/Images/",
+        "valid_annot_folder":   "../data/GTSDB_voc/annots_test/",
+        "cache_name":           "pkl/sign_eval.pkl"
+    },
+
+    "infer": {
+        "input_sz":             416
+    }
+}

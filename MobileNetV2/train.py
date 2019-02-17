@@ -1,122 +1,130 @@
 import os
 import sys
-import argparse
 import pandas as pd
-
 from sklearn.model_selection import train_test_split
-
-from model import *
-from data import *
-
+import models
+import data
+import generator as gen
+import json
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
-from keras.callbacks import EarlyStopping
-from keras.layers import Conv2D, Reshape, Activation
-from keras.models import Model
-from keras.utils import to_categorical
+from keras.utils.vis_utils import plot_model
+from keras.utils.layer_utils import print_summary
+
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from callbacks import CustomModelCheckpoint
+
+import argparse
+argparser = argparse.ArgumentParser(description='train and evaluate YOLOv3 model on any dataset')
+argparser.add_argument('-c', '--conf', help='path to configuration file')
+argparser.add_argument('-w', '--weights', help='path to trained model', default=None)
+
+args = argparser.parse_args()
 
 
-def main(argv):
-    parser = argparse.ArgumentParser()
-    # Required arguments.
-    parser.add_argument(
-        "--classes",
-        default=43,
-        help="The number of classes of dataset.")
-    # Optional arguments.
-    parser.add_argument(
-        "--size",
-        default=48,
-        help="The image size of train sample.")
-    parser.add_argument(
-        "--batch",
-        default=32,
-        help="The number of train samples per batch.")
-    parser.add_argument(
-        "--epochs",
-        default=300,
-        help="The number of train iterations.")
-    parser.add_argument(
-        "--weights",
-        default=False,
-        help="Fine tune with other weights.")
-    parser.add_argument(
-        "--tclasses",
-        default=0,
-        help="The number of classes of pre-trained model.")
+def main():
+    config_path = args.conf
+    initial_weights = args.weights
 
-    args = parser.parse_args()
+    with open(config_path) as config_buffer:
+        config = json.loads(config_buffer.read())
 
-    train(int(args.batch), int(args.epochs), int(args.classes), int(args.size), args.weights, int(args.tclasses))
+    train_set, valid_set, classes = data.create_training_instances(config['train']['train_folder'],
+                                                                   None,
+                                                                   config['train']['cache_name'])
 
+    num_classes = len(classes)
+    print('Readed {} classes: {}'.format(num_classes, classes))
 
-def generate(batch, size):
-    """Data generation and augmentation
-    # Arguments
-        batch: Integer, batch size.
-        size: Integer, image size.
-    # Returns
-        train_generator: train set generator
-        validation_generator: validation set generator
-        count1: Integer, number of train set.
-        count2: Integer, number of test set.
-    """
+    train_generator = gen.BatchGenerator(
+        instances           = train_set,
+        labels              = classes,
+        batch_size          = config['train']['batch_size'],
+        input_sz            = config['model']['input_side_sz'],
+        shuffle             = True,
+        jitter              = 0.3,
+        norm                = data.normalize
+    )
 
-    #  Using the data Augmentation in traning data
-    ptrain = 'data/train'
-    pval = 'data/validation'
+    valid_generator = gen.BatchGenerator(
+        instances           = valid_set,
+        labels              = classes,
+        batch_size          = config['train']['batch_size'],
+        input_sz            = config['model']['input_side_sz'],
+        norm                = data.normalize,
+        infer               = True
+    )
 
-    datagen1 = ImageDataGenerator(
-        rescale=1. / 255,
-        shear_range=0.2,
-        zoom_range=0.2,
-        rotation_range=90,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        horizontal_flip=True)
+    early_stop = EarlyStopping(
+        monitor     = 'val_loss',
+        min_delta   = 0.1,
+        patience    = 3,
+        mode        = 'min',
+        verbose     = 1
+    )
 
-    datagen2 = ImageDataGenerator(rescale=1. / 255)
+    reduce_on_plateau = ReduceLROnPlateau(
+        monitor  = 'loss',
+        factor   = 0.5,
+        patience = 5,
+        verbose  = 1,
+        mode     = 'min',
+        min_delta= 0.01,
+        cooldown = 0,
+        min_lr   = 0
+    )
 
-    train_generator = datagen1.flow_from_directory(
-        ptrain,
-        target_size=(size, size),
-        batch_size=batch,
-        class_mode='categorical')
+    net_input_shape = (config['model']['input_side_sz'],
+                       config['model']['input_side_sz'],
+                       3)
 
-    validation_generator = datagen2.flow_from_directory(
-        pval,
-        target_size=(size, size),
-        batch_size=batch,
-        class_mode='categorical')
+    train_model = models.create(
+        base            = config['model']['base'],
+        num_classes     = num_classes,
+        input_shape     = net_input_shape)
 
-    count1 = 0
-    for root, dirs, files in os.walk(ptrain):
-        for each in files:
-            count1 += 1
+    print_summary(train_model)
+    plot_model(train_model, to_file='images/MobileNetv2.png', show_shapes=True)
 
-    count2 = 0
-    for root, dirs, files in os.walk(pval):
-        for each in files:
-            count2 += 1
+    optimizer = Adam(lr=config['train']['learning_rate'], clipnorm=0.001)
+    # optimizer = SGD(lr=config['train']['learning_rate'], clipnorm=0.001)
 
-    return train_generator, validation_generator, count1, count2
+    train_model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
+    chk_name = config['train']['saved_weights_name']
+    chk_root, chk_ext = os.path.splitext(chk_name)
+    checkpoint_vloss = CustomModelCheckpoint(
+        model_to_save   = train_model,
+        filepath        = chk_root+'_ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}'+chk_ext,
+        monitor         = 'val_loss',
+        verbose         = 1,
+        save_best_only  = True,
+        mode            = 'min',
+        period          = 1
+    )
 
+    if chk_name:
+        if not os.path.isdir(os.path.dirname(chk_name)):
+            os.makedirs(os.path.dirname(chk_name))
 
+    callbacks = [early_stop, reduce_on_plateau, checkpoint_vloss]
 
-def train(batch, epochs, num_classes, size, weights, tclasses):
-    """Train the model.
-    # Arguments
-        batch: Integer, The number of train samples per batch.
-        epochs: Integer, The number of train iterations.
-        num_classes, Integer, The number of classes of dataset.
-        size: Integer, image size.
-        weights, String, The pre_trained model weights.
-        tclasses, Integer, The number of classes of pre-trained model.
-    """
+    train_model.fit_generator(
+        generator=train_generator,
+        steps_per_epoch=len(train_generator) * config['train']['train_times'],
 
-    imgs_data  = npy_data_load_images()
-    lbls_data  = npy_data_load_labels()
+        validation_data=valid_generator,
+        validation_steps=len(valid_generator) * config['valid']['valid_times'],
+
+        epochs=config['train']['nb_epochs'],
+        verbose=2 if config['train']['debug'] else 1,
+        callbacks=callbacks,
+        workers=os.cpu_count(),
+        max_queue_size=100
+    )
+
+    exit(1)
+
 
     full_imgs_dict = {}
 
@@ -185,13 +193,14 @@ def train(batch, epochs, num_classes, size, weights, tclasses):
     earlystop = EarlyStopping(monitor='val_acc', patience=30, verbose=0, mode='auto')
     model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 
-    hist = model.fit( imgs_train_input, lbls_train_input, 
-            batch_size=batch, 
-            epochs=7000, 
-            verbose=1, 
-            shuffle=True, 
-            validation_data=(imgs_test_input, lbls_test_input), 
+    hist = model.fit( imgs_train_input, lbls_train_input,
+            batch_size=config['train']['batch_size'],
+            epochs=config['train']['nb_epochs'],
+            verbose=1,
+            shuffle=True,
+            validation_data=(imgs_test_input, lbls_test_input),
             callbacks=[earlystop])
+
 
     # hist = model.fit_generator(
     #     train_generator,
@@ -210,4 +219,4 @@ def train(batch, epochs, num_classes, size, weights, tclasses):
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    main()

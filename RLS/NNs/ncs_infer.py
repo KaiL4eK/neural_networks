@@ -64,8 +64,7 @@ def _main_(args):
         show_delay = 0
 
         if write_mode:
-
-            # new_name = basename + '_mask.' + extension
+            
             show_delay = 1
 
             basedir  = os.path.split(image_path)[0]

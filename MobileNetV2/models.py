@@ -1,12 +1,9 @@
 from keras.models import Model
 from keras.layers import Input, Conv2D, GlobalAveragePooling2D, Dropout, DepthwiseConv2D
 from keras.layers import Activation, BatchNormalization, add, Reshape, ReLU
-from keras.utils.vis_utils import plot_model
-from keras.utils.layer_utils import print_summary
 
 from keras import backend as K
 
-### Model
 
 def _conv_block(inputs, filters, kernel, strides):
     """Convolution Block
@@ -92,7 +89,7 @@ def _inverted_residual_block(inputs, filters, kernel, t, strides, n):
     return x
 
 
-def MobileNetv2(input_shape, k):
+def mobilenet_v2(input_shape, k):
     """MobileNetv2
     This function defines a MobileNetv2 architectures.
     # Arguments
@@ -140,12 +137,16 @@ def MobileNetv2(input_shape, k):
 
     model = Model(inputs, output)
 
-    print_summary(model)
-    plot_model(model, to_file='images/MobileNetv2.png', show_shapes=True)
-
     return model
 
 
+def create(
+        base,
+        num_classes,
+        input_shape=(32, 32, 3)
+):
+    return mobilenet_v2(input_shape, num_classes)
+
+
 if __name__ == '__main__':
-    MobileNetv2((48, 48, 3), 43)
-    # MobileNetv2((224, 224, 3), 1000)
+    create(6, (48, 48, 3))
