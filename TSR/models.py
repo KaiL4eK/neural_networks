@@ -1,5 +1,5 @@
 from keras.models import Model
-from keras.layers import Input, Conv2D, GlobalAveragePooling2D, Dropout, DepthwiseConv2D
+from keras.layers import Input, Conv2D, GlobalAveragePooling2D, Dropout, DepthwiseConv2D, MaxPooling2D
 from keras.layers import Activation, BatchNormalization, add, Reshape, ReLU
 
 from keras import backend as K
@@ -81,10 +81,10 @@ def _inverted_residual_block(inputs, filters, kernel, t, strides, n):
         Output tensor.
     """
 
-    x = _bottleneck(inputs, filters, kernel, t, strides)
+    x = _bottleneck(inputs, filters, kernel, t, s=strides)
 
     for i in range(1, n):
-        x = _bottleneck(x, filters, kernel, t, 1, True)
+        x = _bottleneck(x, filters, kernel, t, s=1, r=True)
 
     return x
 
@@ -99,20 +99,22 @@ def mobilenet_v2(input_shape, k):
     # Returns
         MobileNetv2 model.
     """
+    fc_count = 320
 
-    inputs = Input(shape=input_shape)
+    inputs = Input(shape=input_shape, name='input_img')
+    x = inputs
 
     # New variant
-    x = _conv_block(inputs, 32, (3, 3), strides=(2, 2))
+    x = _conv_block(x, 32, (3, 3), strides=(2, 2))
 
     x = _inverted_residual_block(x, 16, (3, 3), t=1, strides=1, n=1)
     x = _inverted_residual_block(x, 24, (3, 3), t=6, strides=2, n=2)
     x = _inverted_residual_block(x, 32, (3, 3), t=6, strides=2, n=3)
     x = _inverted_residual_block(x, 64, (3, 3), t=6, strides=1, n=1)
-    fcCount = 320
-    x = _conv_block(x, fcCount, (1, 1), strides=(1, 1))
+
+    x = _conv_block(x, fc_count, (1, 1), strides=(1, 1))
     x = GlobalAveragePooling2D()(x)
-    x = Reshape((1, 1, fcCount))(x)
+    x = Reshape((1, 1, fc_count))(x)
     x = Dropout(0.3, name='Dropout')(x)
     x = Conv2D(k, (1, 1), padding='same')(x)
 
@@ -132,9 +134,10 @@ def mobilenet_v2(input_shape, k):
     # x = Dropout(0.3, name='Dropout')(x)
     # x = Conv2D(k, (1, 1), padding='same')(x)
 
+    x = Reshape((k,), name='out_reshape')(x)
     x = Activation('softmax', name='softmax')(x)
-    output = Reshape((k,))(x)
 
+    output = x
     model = Model(inputs, output)
 
     return model
@@ -149,4 +152,4 @@ def create(
 
 
 if __name__ == '__main__':
-    create(6, (48, 48, 3))
+    create(10, (32, 32, 3))

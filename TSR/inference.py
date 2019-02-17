@@ -27,9 +27,7 @@ def _main_():
     with open(config_path) as config_buffer:
         config = json.load(config_buffer)
 
-    _, _, classes = data.create_training_instances(None,
-                                                   None,
-                                                   config['train']['cache_name'])
+    classes = data.get_classes(config['train']['cache_name'])
 
     if not classes:
         print('Failed to get train classes')
@@ -63,7 +61,7 @@ def _main_():
 
         image = data.normalize(image)
         image = np.expand_dims(image, axis=0)
-        result = infer_model.predict([image])[0]
+        result = infer_model.predict(image)[0]
 
         sum_time += time.time() - start_time
         processing_count += 1
@@ -74,9 +72,6 @@ def _main_():
         cv2.imshow('1', src_image)
         if 27 == cv2.waitKey(0):
             break
-
-        # write the image with bounding boxes to file
-        # cv2.imwrite(output_path + image_path.split('/')[-1], np.uint8(image))
 
     fps = processing_count / sum_time
     print('Result: {}'.format(fps))

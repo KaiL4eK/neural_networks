@@ -1,13 +1,10 @@
 import os
-import sys
 import pandas as pd
-from sklearn.model_selection import train_test_split
 import models
 import data
 import generator as gen
 import json
 from keras.optimizers import Adam
-from keras.preprocessing.image import ImageDataGenerator
 from keras.utils.vis_utils import plot_model
 from keras.utils.layer_utils import print_summary
 
@@ -109,7 +106,7 @@ def main():
 
     callbacks = [early_stop, reduce_on_plateau, checkpoint_vloss]
 
-    train_model.fit_generator(
+    hist = train_model.fit_generator(
         generator=train_generator,
         steps_per_epoch=len(train_generator) * config['train']['train_times'],
 
@@ -123,99 +120,11 @@ def main():
         max_queue_size=100
     )
 
-    exit(1)
-
-
-    full_imgs_dict = {}
-
-    for key in np.unique( lbls_data ):
-        full_imgs_dict[key] = []
-
-    max_class_num = np.max( lbls_data ) + 1
-
-    fill_input_idx = 0
-    imgs_train_input = []
-    lbls_train_input = []
-
-    imgs_test_input = []
-    lbls_test_input = []
-
-
-    for i in range(imgs_data.shape[0]):
-
-        c_img = imgs_data[i].astype('float32', copy=False)
-        c_img /= 255.
-
-        # imgs_train_input[i] = c_img
-
-        class_number = lbls_data[i]
-
-        full_imgs_dict[class_number].append( c_img )
-
-        # Convert to binary ( 0-42 - classes )
-        # lbls_train_input[i] = to_categorical( class_number, num_classes=max_class_num )
-
-        # print( class_number, lbls_train_input[i] )
-
-    for key, value in full_imgs_dict.items():
-        # print( key, len(value) )
-
-        class_imgs = np.array(value)
-
-        class_categ = to_categorical( key, num_classes=max_class_num )
-        label_list = np.full( shape=(class_imgs.shape[0], max_class_num), fill_value=class_categ )
-
-        img_train, img_test, lbl_train, lbl_test = train_test_split(class_imgs, label_list, test_size=0.1)
-
-        for i, img in enumerate(img_train):
-            imgs_train_input.append( img_train[i] )
-            lbls_train_input.append( lbl_train[i] )
-
-        for i, img in enumerate(img_test):
-            imgs_test_input.append( img_test[i] )
-            lbls_test_input.append( lbl_test[i] )
-
-        # print( img_train.shape, lbl_train.shape )
-        # print( img_test.shape, lbl_test.shape )
-        # print( np.array(imgs_train_input).shape )
-
-    imgs_train_input = np.array(imgs_train_input, dtype=np.float32)
-    lbls_train_input = np.array(lbls_train_input, dtype=np.float32)
-    imgs_test_input = np.array(imgs_test_input, dtype=np.float32)
-    lbls_test_input = np.array(lbls_test_input, dtype=np.float32)
-
-    print( imgs_train_input.shape, lbls_train_input.shape )
-    print( imgs_test_input.shape, lbls_test_input.shape )
-
-    model = MobileNetv2((size, size, 3), num_classes)
-
-    opt = Adam()
-    earlystop = EarlyStopping(monitor='val_acc', patience=30, verbose=0, mode='auto')
-    model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
-
-    hist = model.fit( imgs_train_input, lbls_train_input,
-            batch_size=config['train']['batch_size'],
-            epochs=config['train']['nb_epochs'],
-            verbose=1,
-            shuffle=True,
-            validation_data=(imgs_test_input, lbls_test_input),
-            callbacks=[earlystop])
-
-
-    # hist = model.fit_generator(
-    #     train_generator,
-    #     validation_data=validation_generator,
-    #     steps_per_epoch=count1 // batch,
-    #     validation_steps=count2 // batch,
-    #     epochs=epochs,
-    #     callbacks=[earlystop])
-
     if not os.path.exists('model'):
         os.makedirs('model')
 
     df = pd.DataFrame.from_dict(hist.history)
     df.to_csv('model/hist.csv', encoding='utf-8', index=False)
-    model.save_weights('model/weights.h5')
 
 
 if __name__ == '__main__':
