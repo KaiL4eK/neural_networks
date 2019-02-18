@@ -3,6 +3,7 @@ from keras.layers.merge import add, concatenate
 from keras.models import Model
 from keras.engine.topology import Layer
 import tensorflow as tf
+import numpy as np
 
 from keras.layers import Concatenate, MaxPooling2D
 from functools import wraps, reduce
@@ -29,8 +30,8 @@ class YoloLayer(Layer):
         max_grid_h, max_grid_w = max_grid
 
         cell_x = tf.to_float(tf.reshape(tf.tile(tf.range(max_grid_w), [max_grid_h]), (1, max_grid_h, max_grid_w, 1, 1)))
-        cell_y = tf.transpose(cell_x, (0,2,1,3,4))
-        self.cell_grid = tf.tile(tf.concat([cell_x,cell_y],-1), [batch_size, 1, 1, 3, 1])
+        cell_y = tf.transpose(cell_x, (0, 2, 1, 3, 4))
+        self.cell_grid = tf.tile(tf.concat([cell_x, cell_y], -1), [batch_size, 1, 1, 3, 1])
 
         super(YoloLayer, self).__init__(**kwargs)
 
@@ -540,118 +541,6 @@ def create_xception_model(
 
     return [train_model, infer_model]
 
-
-
-def create_mobilenetv2_model(
-    nb_class, 
-    anchors, 
-    max_box_per_image, 
-    max_grid, 
-    batch_size, 
-    warmup_batches,
-    ignore_thresh,
-    grid_scales,
-    obj_scale,
-    noobj_scale,
-    xywh_scale,
-    class_scale,
-    train_shape
-):
-    outputs = 2
-    anchors_per_output = len(anchors)//2//outputs
-
-    image_input = Input(shape=train_shape, name='input_img')
-    true_boxes  = Input(shape=(1, 1, 1, max_box_per_image, 4), name='input_true_boxes')
-    true_yolo_1 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x32') # grid_h, grid_w, nb_anchor, 5+nb_class
-    true_yolo_2 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x16') # grid_h, grid_w, nb_anchor, 5+nb_class
-
-    yolo_anchors = []
-
-    for i in reversed(range(outputs)):
-        yolo_anchors += [anchors[i*2*anchors_per_output:(i+1)*2*anchors_per_output]]
-
-    # yolo_anchors = [anchors[12:18], anchors[6:12], anchors[0:6]]
-    pred_filter_count = (anchors_per_output*(5+nb_class))
-
-    from keras.applications.mobilenetv2 import MobileNetV2
-
-    mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=0.5)
-
-    out13 = mobilenetv2.output
-
-    pred_yolo_1 = Conv2D(pred_filter_count, 1, padding='same', strides=1, name='DetectionLayer1')(out13)
-    loss_yolo_1 = YoloLayer(yolo_anchors[0], 
-                        [1*num for num in max_grid], 
-                        batch_size, 
-                        warmup_batches, 
-                        ignore_thresh, 
-                        grid_scales[0],
-                        obj_scale,
-                        noobj_scale,
-                        xywh_scale,
-                        class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes])
-
-    #
-    # x = Conv2D(256, 1, strides=(1,1), padding='same', name='conv_20', use_bias=False)(out13)
-    # x = BatchNormalization(name='norm_20')(x)
-    # x = LeakyReLU(alpha=0.1)(x)
-    #
-    # from keras.layers import Conv2DTranspose
-    #
-    # x = Conv2DTranspose(256, 1, strides=2, padding='same')(x)
-    #
-    # out26 = mobilenetv2.get_layer(name='block_13_expand_relu').output
-    #
-    # x = concatenate([x, out26])
-    #
-    # x = Conv2D(256, (1,1), strides=(1,1), padding='same', name='conv_21', use_bias=False)(x)
-    # x = BatchNormalization(name='norm_21')(x)
-    # x = LeakyReLU(alpha=0.1)(x)
-    #
-    # x = Conv2D(512, (3,3), strides=(1,1), padding='same', name='conv_22', use_bias=False)(x)
-    # x = BatchNormalization(name='norm_22')(x)
-    # x = LeakyReLU(alpha=0.1)(x)
-    #
-    # x = Conv2D(256, (1,1), strides=(1,1), padding='same', name='conv_23', use_bias=False)(x)
-    # x = BatchNormalization(name='norm_23')(x)
-    # x = LeakyReLU(alpha=0.1)(x)
-    #
-    # x = Conv2D(512, (3,3), strides=(1,1), padding='same', name='conv_24', use_bias=False)(x)
-    # x = BatchNormalization(name='norm_24')(x)
-    # x = LeakyReLU(alpha=0.1)(x)
-    #
-    # x = Conv2D(256, (1,1), strides=(1,1), padding='same', name='conv_25', use_bias=False)(x)
-    # x = BatchNormalization(name='norm_25')(x)
-    # x = LeakyReLU(alpha=0.1)(x)
-    #
-    # pred_yolo_2 = Conv2D(pred_filter_count, 1, padding='same', strides=1, name='DetectionLayer2')(x)
-    # loss_yolo_2 = YoloLayer(yolo_anchors[1],
-    #                     [2*num for num in max_grid],
-    #                     batch_size,
-    #                     warmup_batches,
-    #                     ignore_thresh,
-    #                     grid_scales[1],
-    #                     obj_scale,
-    #                     noobj_scale,
-    #                     xywh_scale,
-    #                     class_scale)([image_input, pred_yolo_2, true_yolo_2, true_boxes])
-
-    # train_model = Model([image_input, true_boxes, true_yolo_1, true_yolo_2], [loss_yolo_1, loss_yolo_2])
-    # infer_model = Model(image_input, [pred_yolo_1, pred_yolo_2])
-
-    yolo1_flat = Flatten()(pred_yolo_1)
-    # yolo2_flat = Flatten()(pred_yolo_2)
-
-    train_model = Model([image_input, true_boxes, true_yolo_1], loss_yolo_1)
-    infer_model = Model(image_input, pred_yolo_1)
-
-    # mvnc_output = Concatenate()([yolo1_flat, yolo2_flat])
-    mvnc_model  = infer_model
-    #Model(image_input, yolo1_flat)
-
-    return [train_model, infer_model, mvnc_model]
-
-
 def create_yolov3_model(
     nb_class, 
     anchors, 
@@ -963,11 +852,67 @@ def create_tiny_yolov3_model(
 
     return [train_model, infer_model, mvnc_model]
 
+
+def create_mobilenetv2_model(
+    nb_class,
+    anchors,
+    max_box_per_image,
+    max_grid,
+    batch_size,
+    warmup_batches,
+    ignore_thresh,
+    grid_scales,
+    obj_scale,
+    noobj_scale,
+    xywh_scale,
+    class_scale,
+    train_shape
+):
+    outputs = 1
+    anchors_per_output = len(anchors)//2//outputs
+
+    image_input = Input(shape=train_shape, name='input_img')
+    true_boxes  = Input(shape=(1, 1, 1, max_box_per_image, 4), name='input_true_boxes')
+    true_yolo_1 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x32') # grid_h, grid_w, nb_anchor, 5+nb_class
+
+    yolo_anchors = []
+
+    for i in reversed(range(outputs)):
+        yolo_anchors += [anchors[i*2*anchors_per_output:(i+1)*2*anchors_per_output]]
+
+    pred_filter_count = (anchors_per_output*(5+nb_class))
+
+    from keras.applications.mobilenetv2 import MobileNetV2
+
+    mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=0.5)
+
+    out13 = mobilenetv2.output
+
+    pred_yolo_1 = Conv2D(pred_filter_count, 1, padding='same', strides=1, name='DetectionLayer1')(out13)
+    loss_yolo_1 = YoloLayer(yolo_anchors[0],
+                        [1*num for num in max_grid],
+                        batch_size,
+                        warmup_batches,
+                        ignore_thresh,
+                        grid_scales[0],
+                        obj_scale,
+                        noobj_scale,
+                        xywh_scale,
+                        class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes])
+
+    train_model = Model([image_input, true_boxes, true_yolo_1], loss_yolo_1)
+    infer_model = Model(image_input, pred_yolo_1)
+
+    mvnc_model  = infer_model
+
+    return [train_model, infer_model, mvnc_model]
+
+
 def create_model(
     nb_class, 
-    anchors, 
-    max_box_per_image   = 1, 
-    max_input_size      = 416, 
+    anchors,
+    max_input_size      = [416, 416],
+    max_box_per_image   = 1,
     batch_size          = 1, 
     base                = 'Tiny',
     warmup_batches      = 0, 
@@ -981,8 +926,6 @@ def create_model(
     train_shape         = (None, None, 3),
     load_src_weights    = True
 ):
-    
-
     backends = {'Tiny':         (create_tiny_yolov3_model,  "src_weights/yolov3-tiny.h5",   2, 32),
                 'Darknet53':    (create_yolov3_model,       "src_weights/yolov3_exp.h5",    3, 32),
                 'Darknet19':    (create_yolov2_model,       "src_weights/yolov2.h5",        1, 32),
@@ -991,7 +934,8 @@ def create_model(
                 'Xception':     (create_xception_model,     "",                             1, 32)
                 }
 
-    max_grid = [max_input_size // backends[base][3], max_input_size // backends[base][3]]
+    # h, w
+    max_grid = np.array([max_input_size[0] // backends[base][3], max_input_size[1] // backends[base][3]])
 
     model_args = dict(  nb_class            = nb_class, 
                         anchors             = anchors, 

@@ -29,12 +29,14 @@ def _main_():
     K.set_session(sess)
     K.set_learning_phase(0)
 
+    train_sz = config['model']['infer_shape']
+
     _, _, mvnc_model, _ = create_model(
         nb_class            = 1,
         anchors             = config['model']['anchors'],
         base                = config['model']['base'],
         load_src_weights    = False,
-        train_shape         = (240, 320, 3)
+        train_shape         = (train_sz[0], train_sz[1], 3)
     )
 
     print_summary(mvnc_model)

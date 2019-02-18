@@ -90,7 +90,7 @@ def main():
 
         img = cv2.flip(img, 1)
 
-        image_name = '{};{};{};{};{};{}.png'.format(id, xmin, ymin, width, height, class_name)
+        image_name = '{};{};{};{};{};{}.png'.format(id+'m', xmin, ymin, width, height, class_name)
         cv2.imwrite(os.path.join(images_fldr, image_name), img)
 
         info = (xmin, ymin, xmax, ymax, class_name)

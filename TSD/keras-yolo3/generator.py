@@ -8,14 +8,14 @@ from utils.image import apply_random_scale_and_crop, random_distort_image, rando
 
 class BatchGenerator(Sequence):
     def __init__(self, 
-        instances, 
-        anchors,   
-        labels,        
+        instances,
+        anchors,
+        labels,
+        min_net_size=[0, 0],
+        max_net_size=[0, 0],
         downsample=32, # ratio between network input's size and network output's size, 32 for YOLOv3
         max_box_per_image=30,
         batch_size=1,
-        min_net_size=320,
-        max_net_size=608,    
         shuffle=True, 
         jitter=True,
         flip=False,
@@ -27,18 +27,22 @@ class BatchGenerator(Sequence):
         self.labels             = labels
         self.downsample         = downsample
         self.max_box_per_image  = max_box_per_image
-        self.min_net_size       = (min_net_size//self.downsample)*self.downsample
-        self.max_net_size       = (max_net_size//self.downsample)*self.downsample
         self.shuffle            = shuffle
+
+        self.min_net_size       = (np.array(min_net_size)//self.downsample)*self.downsample
+        self.max_net_size       = (np.array(max_net_size)//self.downsample)*self.downsample
+
         self.jitter             = jitter
         self.flip               = flip
         self.norm               = norm
         self.anchors            = [BoundBox(0, 0, anchors[2*i], anchors[2*i+1]) for i in range(len(anchors)//2)]
         self.infer_sz           = infer_sz
 
-        self.anchors_per_output = 3
+        self.net_size_h         = 0
+        self.net_size_w         = 0
 
-        self.output_layers_count= len(self.anchors) // self.anchors_per_output
+        self.anchors_per_output = 3
+        self.output_layers_count = len(self.anchors) // self.anchors_per_output
 
         if self.output_layers_count not in [1, 2, 3]:
             assert False, "Unchecked network output"
@@ -52,12 +56,11 @@ class BatchGenerator(Sequence):
     def __getitem__(self, idx):
 
         if self.infer_sz:
-            net_h, net_w = self.infer_sz, self.infer_sz
+            net_h, net_w = self.infer_sz[0], self.infer_sz[1]
         else:
             # get image input size, change every 10 batches
             net_h, net_w = self._get_net_size(idx)
 
-        # 13, 13
         base_grid_h, base_grid_w = net_h//self.downsample, net_w//self.downsample
 
         # determine the first and the last indices of the batch
@@ -76,10 +79,10 @@ class BatchGenerator(Sequence):
         # According to reversed outputs
         yolos = [np.zeros((r_bound - l_bound, (2**i)*base_grid_h,  (2**i)*base_grid_w, self.anchors_per_output, 4+1+len(self.labels))) for i in reversed(range(self.output_layers_count))]
 
-        #     yolo_1 = np.zeros((r_bound - l_bound, 1*base_grid_h,  1*base_grid_w, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 1
-        #     yolo_2 = np.zeros((r_bound - l_bound, 2*base_grid_h,  2*base_grid_w, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 2
-        #     yolo_3 = np.zeros((r_bound - l_bound, 4*base_grid_h,  4*base_grid_w, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 3
-        #     yolos = [yolo_3, yolo_2, yolo_1]
+        # yolo_1 = np.zeros((r_bound - l_bound, 1*base_grid_h,  1*base_grid_w, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 1
+        # yolo_2 = np.zeros((r_bound - l_bound, 2*base_grid_h,  2*base_grid_w, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 2
+        # yolo_3 = np.zeros((r_bound - l_bound, 4*base_grid_h,  4*base_grid_w, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 3
+        # yolos = [yolo_3, yolo_2, yolo_1]
         
         instance_count = 0
         true_box_index = 0
@@ -88,10 +91,10 @@ class BatchGenerator(Sequence):
         for train_instance in self.instances[l_bound:r_bound]:
             # augment input image and fix object's position and size
             img, all_objs = self._aug_image(train_instance, net_h, net_w)
-            
+
             for obj in all_objs:
                 # find the best anchor box for this object
-                max_anchor = None                
+                max_anchor = None
                 max_index  = -1
                 max_iou    = -1
 
@@ -150,7 +153,7 @@ class BatchGenerator(Sequence):
                 true_box_index  = true_box_index % self.max_box_per_image    
 
             # assign input image to x_batch
-            if self.norm != None: 
+            if self.norm:
                 x_batch[instance_count] = self.norm(img)
             else:
                 # plot image and bounding boxes for sanity check
@@ -166,17 +169,19 @@ class BatchGenerator(Sequence):
             # increase instance counter in the current batch
             instance_count += 1                 
         
-        if self.norm != None:
+        if self.norm:
             return [x_batch, t_batch] + [yolo for yolo in reversed(yolos)], dummies
         else:
             return x_batch
 
     def _get_net_size(self, idx):
-        if idx%10 == 0:
-            net_size = self.downsample*np.random.randint(self.min_net_size/self.downsample, \
-                                                         self.max_net_size/self.downsample+1)
-
-        return net_size, net_size
+        if idx%10 == 0 or self.net_size_w == 0:
+            self.net_size_h = self.downsample * np.random.randint(self.min_net_size[0] / self.downsample,
+                                                                    self.max_net_size[0] / self.downsample+1)
+            self.net_size_w = self.downsample * np.random.randint(self.min_net_size[1] / self.downsample,
+                                                                    self.max_net_size[1] / self.downsample + 1)
+        # TODO <<< Fix size!
+        return self.net_size_w, self.net_size_w
     
     def _aug_image(self, instance, net_h, net_w):
         image_name = instance['filename']

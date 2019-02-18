@@ -53,8 +53,8 @@ class MAP_evaluation(keras.callbacks.Callback):
                                                 net_w=416,
                                                 save_path=None)
                 print('\n')
-                # for label, average_precision in average_precisions.items():
-                #     print(self.yolo.labels[label], '{:.4f}'.format(average_precision))
+                for label, average_precision in average_precisions.items():
+                    print(label, '{:.4f}'.format(average_precision))
                 mAP = sum(average_precisions.values()) / len(average_precisions)
                 print('mAP: {:.4f}'.format(mAP)) 
 

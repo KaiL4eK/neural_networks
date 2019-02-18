@@ -16,7 +16,6 @@ from callbacks import CustomModelCheckpoint, CustomTensorBoard, MAP_evaluation
 import keras
 from keras.models import load_model
 
-INFER_SIZE = (240, 320)
 
 def create_training_instances(
     train_annot_folder,
@@ -115,7 +114,7 @@ def _main_(args):
         max_box_per_image   = max_box_per_image,
         batch_size          = config['train']['batch_size'],
         norm                = normalize,
-        infer_sz            = INFER_SIZE
+        infer_sz            = config['model']['infer_shape']
     )
 
     ###############################
@@ -130,7 +129,7 @@ def _main_(args):
 
     warmup_batches = config['train']['warmup_epochs'] * (config['train']['train_times']*len(train_generator))   
 
-    train_model, infer_model, freeze_num = create_model(
+    train_model, infer_model, _, freeze_num = create_model(
         nb_class            = len(labels), 
         anchors             = config['model']['anchors'], 
         max_box_per_image   = max_box_per_image, 
