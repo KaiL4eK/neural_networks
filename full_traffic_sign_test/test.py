@@ -28,7 +28,7 @@ import time
 from keras.models import Model, load_model, save_model
 
 from labeled_traffic_sign import net
-# from common import confusion_matrix as cm
+# from _common import confusion_matrix as cm
 # import argparse
 
 # parser = argparse.ArgumentParser(description='Process test with ANN')

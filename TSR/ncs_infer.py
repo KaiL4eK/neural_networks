@@ -1,10 +1,12 @@
+import core
 import time
 import cv2
 import argparse
 import numpy as np
 from tqdm import tqdm
 import os
-import ncs
+from _common import ncs
+from _common import utils
 import data
 import json
 
@@ -28,14 +30,7 @@ def _main_():
 
     ncs_dev = ncs.InferNCS(graph_fpath, fp16=False)
 
-    image_paths = []
-
-    if os.path.isdir(input_path): 
-        for root, subdirs, files in os.walk(input_path):
-            pic_extensions = ('.png', '.PNG')
-            image_paths += [os.path.join(root, file) for file in files if file.endswith(pic_extensions)]
-    else:
-        image_paths += [input_path]
+    image_paths = utils.get_impaths_from_path(input_path)
 
     full_time = 0
     image_cnt = 0

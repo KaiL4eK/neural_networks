@@ -1,10 +1,12 @@
 #! /usr/bin/env python
 
+import core
 import os
 import json
 import cv2
 import time
 import data
+from _common import utils
 import tensorflow as tf
 import keras.backend as K
 from keras.models import load_model
@@ -40,14 +42,7 @@ def _main_():
 
     infer_model = load_model(weights_path)
 
-    image_paths = []
-
-    if os.path.isdir(input_path):
-        for root, subdirs, files in os.walk(input_path):
-            pic_extensions = ('.jpg', '.png', 'JPEG', '.ppm')
-            image_paths += [os.path.join(root, file) for file in files if file.endswith(pic_extensions)]
-    else:
-        image_paths += [input_path]
+    image_paths = utils.get_impaths_from_path(input_path)
 
     processing_count = 0
     sum_time = 0
