@@ -99,6 +99,8 @@ def mobilenet_v2(input_shape, k):
     # Returns
         MobileNetv2 model.
     """
+    # K.set_floatx('float16')
+
     fc_count = 320
 
     inputs = Input(shape=input_shape, name='input_img')

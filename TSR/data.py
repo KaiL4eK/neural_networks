@@ -19,6 +19,10 @@ sum_0 = 0
 sum_1 = 0
 
 
+def image_preprocess(image):
+    return normalize(image)
+
+
 def normalize(image):
     return image/255.
 

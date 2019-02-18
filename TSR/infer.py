@@ -5,6 +5,8 @@ import json
 import cv2
 import time
 import data
+import tensorflow as tf
+import keras.backend as K
 from keras.models import load_model
 from tqdm import tqdm
 import numpy as np
@@ -27,6 +29,10 @@ def _main_():
     with open(config_path) as config_buffer:
         config = json.load(config_buffer)
 
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2, allow_growth=True)
+    sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+    K.set_session(sess)
+
     classes = data.get_classes(config['train']['cache_name'])
 
     if not classes:
@@ -37,12 +43,11 @@ def _main_():
     image_paths = []
 
     if os.path.isdir(input_path):
-        for inp_file in os.listdir(input_path):
-            image_paths += [os.path.join(input_path, inp_file)]
+        for root, subdirs, files in os.walk(input_path):
+            pic_extensions = ('.jpg', '.png', 'JPEG', '.ppm')
+            image_paths += [os.path.join(root, file) for file in files if file.endswith(pic_extensions)]
     else:
         image_paths += [input_path]
-
-    image_paths = [inp_file for inp_file in image_paths if (inp_file[-4:] in ['.jpg', '.png', 'JPEG', '.ppm'])]
 
     processing_count = 0
     sum_time = 0

@@ -54,8 +54,8 @@ def main():
 
     early_stop = EarlyStopping(
         monitor     = 'val_loss',
-        min_delta   = 0.1,
-        patience    = 3,
+        min_delta   = 0,
+        patience    = 10,
         mode        = 'min',
         verbose     = 1
     )
