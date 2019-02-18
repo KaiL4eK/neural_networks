@@ -5,6 +5,7 @@ from utils.utils import makedirs
 import os
 import json
 from yolo import create_model
+from keras.utils.layer_utils import print_summary
 
 import shutil
 
@@ -22,20 +23,21 @@ def _main_(args):
     with open(config_path) as config_buffer:    
         config = json.loads(config_buffer.read())
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.4, allow_growth=True)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.3, allow_growth=True)
     sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
     K.set_session(sess)
     K.set_learning_phase(0)
 
-    _, infer_model, mvnc_model, _ = create_model(
+    _, _, mvnc_model, _ = create_model(
         nb_class            = 1,
         anchors             = config['model']['anchors'],
         base                = config['model']['base'],
         load_src_weights    = False,
-        train_shape         = (416, 416, 3)
+        train_shape         = (320, 320, 3)
     )
 
+    print_summary(mvnc_model)
     # mvnc_model.load_weights(weights_path)
 
     model_input_names = [mvnc_model.input.name.split(':')[0]]

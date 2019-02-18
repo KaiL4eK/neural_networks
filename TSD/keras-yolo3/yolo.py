@@ -4,6 +4,10 @@ from keras.models import Model
 from keras.engine.topology import Layer
 import tensorflow as tf
 
+from keras.layers import Concatenate, MaxPooling2D
+from functools import wraps, reduce
+from keras.regularizers import l2
+
 class YoloLayer(Layer):
     def __init__(self, anchors, max_grid, batch_size, warmup_batches, ignore_thresh, 
                     grid_scale, obj_scale, noobj_scale, xywh_scale, class_scale, debug=False, 
@@ -571,7 +575,7 @@ def create_mobilenetv2_model(
 
     from keras.applications.mobilenetv2 import MobileNetV2
 
-    mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet')
+    mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=0.35)
 
     out13 = mobilenetv2.output
 
@@ -635,7 +639,13 @@ def create_mobilenetv2_model(
     train_model = Model([image_input, true_boxes, true_yolo_1, true_yolo_2], [loss_yolo_1, loss_yolo_2])
     infer_model = Model(image_input, [pred_yolo_1, pred_yolo_2])
 
-    return [train_model, infer_model]
+    yolo1_flat = Flatten()(pred_yolo_1)
+    yolo2_flat = Flatten()(pred_yolo_2)
+
+    mvnc_output = Concatenate()([yolo1_flat, yolo2_flat])
+    mvnc_model  = Model(image_input, mvnc_output)
+
+    return [train_model, infer_model, mvnc_model]
 
 
 def create_yolov3_model(
@@ -850,9 +860,6 @@ def create_tiny_yolov3_model(
     # yolo_anchors = [anchors[12:18], anchors[6:12], anchors[0:6]]
     pred_filter_count = (anchors_per_output*(5+nb_class))
 
-    from keras.layers import Concatenate, MaxPooling2D
-    from functools import wraps, reduce
-    from keras.regularizers import l2
 
     @wraps(Conv2D)
     def DarknetConv2D(*args, **kwargs):
@@ -1021,6 +1028,7 @@ def create_model(
         train_model = template_model      
 
     return train_model, infer_model, mvnc_model, backends[base][2]
+
 
 def dummy_loss(y_true, y_pred):
     return tf.sqrt(tf.reduce_sum(y_pred))
