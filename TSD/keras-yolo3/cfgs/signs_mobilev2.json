@@ -1,15 +1,15 @@
 {
     "model" : {
-        "min_input_size":       288,
-        "max_input_size":       448,
+        "min_input_size":       200,
+        "max_input_size":       360,
         "base":                 "MobileNetv2",
         "anchors":              [6,11, 9,16, 12,20, 15,26, 21,35, 31,51],
-        "labels":               ["sign"]
+        "labels":               []
     },
 
     "train": {
-        "train_image_folder":   "../data/GTSDB_voc/Images/",
-        "train_annot_folder":   "../data/GTSDB_voc/annots_train/",
+        "train_image_folder":   "../../data_root/__signs/robofest_data/tsd_voc/Images/",
+        "train_annot_folder":   "../../data_root/__signs/robofest_data/tsd_voc/Annotations_train/",
         "cache_name":           "pkl/sign_train.pkl",
 
         "train_times":          3,
@@ -32,16 +32,16 @@
     },
 
     "valid": {
-        "valid_image_folder":   "../data/GTSDB_voc/Images/",
-        "valid_annot_folder":   "../data/GTSDB_voc/annots_test/",
+        "valid_image_folder":   "../../data_root/__signs/robofest_data/tsd_voc/Images/",
+        "valid_annot_folder":   "../../data_root/__signs/robofest_data/tsd_voc/Annotations_test",
         "cache_name":           "pkl/sign_test.pkl",
 
         "valid_times":          1
     },
 
     "eval": {
-        "valid_image_folder":   "../data/GTSDB_voc/Images/",
-        "valid_annot_folder":   "../data/GTSDB_voc/annots_test/",
+        "valid_image_folder":   "../../data_root/__signs/robofest_data/tsd_voc/Images/",
+        "valid_annot_folder":   "../../data_root/__signs/robofest_data/tsd_voc/Annotations_test",
         "cache_name":           "pkl/sign_eval.pkl"
     }
 }

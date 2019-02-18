@@ -17,7 +17,8 @@ class BatchGenerator(Sequence):
         min_net_size=320,
         max_net_size=608,    
         shuffle=True, 
-        jitter=True, 
+        jitter=True,
+        flip=False,
         norm=None,
         infer_sz=None
     ):
@@ -30,6 +31,7 @@ class BatchGenerator(Sequence):
         self.max_net_size       = (max_net_size//self.downsample)*self.downsample
         self.shuffle            = shuffle
         self.jitter             = jitter
+        self.flip               = flip
         self.norm               = norm
         self.anchors            = [BoundBox(0, 0, anchors[2*i], anchors[2*i+1]) for i in range(len(anchors)//2)]
         self.infer_sz           = infer_sz
@@ -230,9 +232,11 @@ class BatchGenerator(Sequence):
             im_sized = random_distort_image(im_sized)
             
             # randomly flip
-            flip = np.random.randint(2)
-            im_sized = random_flip(im_sized, flip)
-           
+            if self.flip:
+                flip = np.random.randint(self.flip)
+                im_sized = random_flip(im_sized, flip)
+            else:
+                flip = 0
 
         # correct the size and pos of bounding boxes
         all_objs = correct_bounding_boxes(instance['object'], new_w, new_h, net_w, net_h, dx, dy, flip, image_w, image_h)

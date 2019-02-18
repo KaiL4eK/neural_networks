@@ -1,4 +1,3 @@
-import argparse
 import tensorflow as tf
 import keras.backend as K
 from utils.utils import makedirs
@@ -9,13 +8,14 @@ from keras.utils.layer_utils import print_summary
 
 import shutil
 
+import argparse
 argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
 argparser.add_argument('-o', '--output', help='path output frozen graph (.pb file)')
 argparser.add_argument('-w', '--weights', help='weights path')
-argparser.add_argument('-c', '--conf', help='path to configuration file')  
+argparser.add_argument('-c', '--conf', help='path to configuration file')
+args = argparser.parse_args()
 
-
-def _main_(args):
+def _main_():
     weights_path = args.weights
     output_pb_fpath = args.output
     config_path = args.conf
@@ -34,7 +34,7 @@ def _main_(args):
         anchors             = config['model']['anchors'],
         base                = config['model']['base'],
         load_src_weights    = False,
-        train_shape         = (320, 320, 3)
+        train_shape         = (240, 320, 3)
     )
 
     print_summary(mvnc_model)
@@ -73,19 +73,18 @@ def _main_(args):
     graph_fpath = output_pb_fpath + '.graph'
     print('    Writing to {}'.format(graph_fpath))
 
-    # process_args = ["mvNCCompile", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12",
-    #                 "-o", graph_fpath]
+    process_args = ["mvNCCompile", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12",
+                    "-o", graph_fpath]
     # call(process_args)
 
     # print('    Compiled, check performance')
 
-    # process_args = ["mvNCProfile", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12"]
-    # call(process_args)
+    process_args = ["mvNCProfile", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12"]
+    call(process_args)
 
     process_args = ["mvNCCheck", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12"]
     call(process_args)
 
 
 if __name__ == '__main__':
-    args = argparser.parse_args()
-    _main_(args)
+    _main_()

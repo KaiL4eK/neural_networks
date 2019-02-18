@@ -575,7 +575,7 @@ def create_mobilenetv2_model(
 
     from keras.applications.mobilenetv2 import MobileNetV2
 
-    mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=0.35)
+    mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=0.5)
 
     out13 = mobilenetv2.output
 
@@ -591,59 +591,63 @@ def create_mobilenetv2_model(
                         xywh_scale,
                         class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes])
 
+    #
+    # x = Conv2D(256, 1, strides=(1,1), padding='same', name='conv_20', use_bias=False)(out13)
+    # x = BatchNormalization(name='norm_20')(x)
+    # x = LeakyReLU(alpha=0.1)(x)
+    #
+    # from keras.layers import Conv2DTranspose
+    #
+    # x = Conv2DTranspose(256, 1, strides=2, padding='same')(x)
+    #
+    # out26 = mobilenetv2.get_layer(name='block_13_expand_relu').output
+    #
+    # x = concatenate([x, out26])
+    #
+    # x = Conv2D(256, (1,1), strides=(1,1), padding='same', name='conv_21', use_bias=False)(x)
+    # x = BatchNormalization(name='norm_21')(x)
+    # x = LeakyReLU(alpha=0.1)(x)
+    #
+    # x = Conv2D(512, (3,3), strides=(1,1), padding='same', name='conv_22', use_bias=False)(x)
+    # x = BatchNormalization(name='norm_22')(x)
+    # x = LeakyReLU(alpha=0.1)(x)
+    #
+    # x = Conv2D(256, (1,1), strides=(1,1), padding='same', name='conv_23', use_bias=False)(x)
+    # x = BatchNormalization(name='norm_23')(x)
+    # x = LeakyReLU(alpha=0.1)(x)
+    #
+    # x = Conv2D(512, (3,3), strides=(1,1), padding='same', name='conv_24', use_bias=False)(x)
+    # x = BatchNormalization(name='norm_24')(x)
+    # x = LeakyReLU(alpha=0.1)(x)
+    #
+    # x = Conv2D(256, (1,1), strides=(1,1), padding='same', name='conv_25', use_bias=False)(x)
+    # x = BatchNormalization(name='norm_25')(x)
+    # x = LeakyReLU(alpha=0.1)(x)
+    #
+    # pred_yolo_2 = Conv2D(pred_filter_count, 1, padding='same', strides=1, name='DetectionLayer2')(x)
+    # loss_yolo_2 = YoloLayer(yolo_anchors[1],
+    #                     [2*num for num in max_grid],
+    #                     batch_size,
+    #                     warmup_batches,
+    #                     ignore_thresh,
+    #                     grid_scales[1],
+    #                     obj_scale,
+    #                     noobj_scale,
+    #                     xywh_scale,
+    #                     class_scale)([image_input, pred_yolo_2, true_yolo_2, true_boxes])
 
-    x = Conv2D(256, 1, strides=(1,1), padding='same', name='conv_20', use_bias=False)(out13)
-    x = BatchNormalization(name='norm_20')(x)
-    x = LeakyReLU(alpha=0.1)(x)
-
-    from keras.layers import Conv2DTranspose
-
-    x = Conv2DTranspose(256, 1, strides=2, padding='same')(x)
-
-    out26 = mobilenetv2.get_layer(name='block_13_expand_relu').output
-
-    x = concatenate([x, out26])
-
-    x = Conv2D(256, (1,1), strides=(1,1), padding='same', name='conv_21', use_bias=False)(x)
-    x = BatchNormalization(name='norm_21')(x)
-    x = LeakyReLU(alpha=0.1)(x)
-
-    x = Conv2D(512, (3,3), strides=(1,1), padding='same', name='conv_22', use_bias=False)(x)
-    x = BatchNormalization(name='norm_22')(x)
-    x = LeakyReLU(alpha=0.1)(x)
-
-    x = Conv2D(256, (1,1), strides=(1,1), padding='same', name='conv_23', use_bias=False)(x)
-    x = BatchNormalization(name='norm_23')(x)
-    x = LeakyReLU(alpha=0.1)(x)
-
-    x = Conv2D(512, (3,3), strides=(1,1), padding='same', name='conv_24', use_bias=False)(x)
-    x = BatchNormalization(name='norm_24')(x)
-    x = LeakyReLU(alpha=0.1)(x)
-
-    x = Conv2D(256, (1,1), strides=(1,1), padding='same', name='conv_25', use_bias=False)(x)
-    x = BatchNormalization(name='norm_25')(x)
-    x = LeakyReLU(alpha=0.1)(x)
-
-    pred_yolo_2 = Conv2D(pred_filter_count, 1, padding='same', strides=1, name='DetectionLayer2')(x)
-    loss_yolo_2 = YoloLayer(yolo_anchors[1], 
-                        [2*num for num in max_grid], 
-                        batch_size, 
-                        warmup_batches, 
-                        ignore_thresh, 
-                        grid_scales[1],
-                        obj_scale,
-                        noobj_scale,
-                        xywh_scale,
-                        class_scale)([image_input, pred_yolo_2, true_yolo_2, true_boxes])
-
-    train_model = Model([image_input, true_boxes, true_yolo_1, true_yolo_2], [loss_yolo_1, loss_yolo_2])
-    infer_model = Model(image_input, [pred_yolo_1, pred_yolo_2])
+    # train_model = Model([image_input, true_boxes, true_yolo_1, true_yolo_2], [loss_yolo_1, loss_yolo_2])
+    # infer_model = Model(image_input, [pred_yolo_1, pred_yolo_2])
 
     yolo1_flat = Flatten()(pred_yolo_1)
-    yolo2_flat = Flatten()(pred_yolo_2)
+    # yolo2_flat = Flatten()(pred_yolo_2)
 
-    mvnc_output = Concatenate()([yolo1_flat, yolo2_flat])
-    mvnc_model  = Model(image_input, mvnc_output)
+    train_model = Model([image_input, true_boxes, true_yolo_1], loss_yolo_1)
+    infer_model = Model(image_input, pred_yolo_1)
+
+    # mvnc_output = Concatenate()([yolo1_flat, yolo2_flat])
+    mvnc_model  = infer_model
+    #Model(image_input, yolo1_flat)
 
     return [train_model, infer_model, mvnc_model]
 

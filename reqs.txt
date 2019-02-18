@@ -1,0 +1,17 @@
+/opt/movidius/NCSDK/ncsdk-x86_64/api
+catkin-pkg
+pyyaml
+empy
+rospkg
+tqdm 
+pandas
+pydot
+imgaug
+# pickle
+sklearn
+keras
+graphviz
+pygraphviz
+tensorflow-gpu==1.11
+# opencv-python
+lxml

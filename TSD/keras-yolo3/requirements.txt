@@ -1,4 +1,0 @@
-keras
-tensorflow-gpu
-tqdm
-imutils

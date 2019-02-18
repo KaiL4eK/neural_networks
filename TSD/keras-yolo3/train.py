@@ -16,7 +16,7 @@ from callbacks import CustomModelCheckpoint, CustomTensorBoard, MAP_evaluation
 import keras
 from keras.models import load_model
 
-INFER_SIZE = 416
+INFER_SIZE = (240, 320)
 
 def create_training_instances(
     train_annot_folder,
