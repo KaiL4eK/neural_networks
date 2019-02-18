@@ -32,6 +32,8 @@ def _main_():
 
     image_paths = utils.get_impaths_from_path(input_path)
 
+    show_delay = 0
+
     full_time = 0
     image_cnt = 0
 
@@ -59,8 +61,6 @@ def _main_():
 
         # print("NCS: ", ncs_output.shape, ncs_output.dtype)
         print('Result: {} / {}'.format(classes[max_idx], max_idx))
-
-        show_delay = 0
 
         cv2.imshow('res', image_src)
         if cv2.waitKey(show_delay) == 27:
