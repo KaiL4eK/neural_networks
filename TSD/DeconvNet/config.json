@@ -1,0 +1,41 @@
+{
+    "model" : {
+        "base":                 "Deconv",
+
+        "input_shape":          [320, 240]
+    },
+
+    "train": {
+        "train_folder":         "../../data_root/__signs/robofest_data/positive_bbox_class",
+        "train_masks":          "../../data_root/__signs/robofest_data/positive_masks_train",
+        "cache_name":           "pkl/sign_train.pkl",
+
+        "train_times":          3,
+        "batch_size":           4,
+        "learning_rate":        8e-4,
+        "nb_epochs":            300,
+
+        "tensorboard_dir":      "logs/deconv",
+        "saved_weights_name":   "chk/deconv.h5",
+
+        "debug":                false
+    },
+
+    "valid": {
+        "valid_folder":         "../../data_root/__signs/robofest_data/positive_bbox_class",
+        "valid_masks":          "../../data_root/__signs/robofest_data/positive_masks_test",
+        "cache_name":           "pkl/sign_test.pkl",
+
+        "valid_times":          1
+    },
+
+    "eval": {
+        "valid_image_folder":   "../data/GTSDB_voc/Images/",
+        "valid_annot_folder":   "../data/GTSDB_voc/annots_test/",
+        "cache_name":           "pkl/sign_eval.pkl"
+    },
+
+    "infer": {
+        "input_sz":             416
+    }
+}

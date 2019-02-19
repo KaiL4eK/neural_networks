@@ -26,36 +26,35 @@ def main():
     with open(config_path) as config_buffer:
         config = json.loads(config_buffer.read())
 
-    train_set, valid_set, classes = data.create_training_instances(config['train']['train_folder'],
-                                                                   None,
-                                                                   config['train']['cache_name'])
-
-    num_classes = len(classes)
-    print('Readed {} classes: {}'.format(num_classes, classes))
+    train_set, valid_set = data.create_training_instances(config['train']['train_folder'],
+                                                          config['train']['train_masks'],
+                                                          config['valid']['valid_folder'],
+                                                          config['valid']['valid_masks'],
+                                                          config['train']['cache_name'])
 
     train_generator = gen.BatchGenerator(
         instances           = train_set,
-        labels              = classes,
         batch_size          = config['train']['batch_size'],
-        input_sz            = config['model']['input_side_sz'],
+        input_sz            = config['model']['input_shape'],
         shuffle             = True,
         jitter              = 0.3,
-        norm                = data.normalize
+        norm                = data.normalize,
+        downsample          = 2
     )
 
     valid_generator = gen.BatchGenerator(
         instances           = valid_set,
-        labels              = classes,
         batch_size          = config['train']['batch_size'],
-        input_sz            = config['model']['input_side_sz'],
+        input_sz            = config['model']['input_shape'],
         norm                = data.normalize,
-        infer               = True
+        infer               = True,
+        downsample          = 2
     )
 
     early_stop = EarlyStopping(
         monitor     = 'val_loss',
         min_delta   = 0,
-        patience    = 10,
+        patience    = 100,
         mode        = 'min',
         verbose     = 1
     )
@@ -71,22 +70,30 @@ def main():
         min_lr   = 0
     )
 
-    net_input_shape = (config['model']['input_side_sz'],
-                       config['model']['input_side_sz'],
+    # Swapped as net input -> [H x W x C]
+    net_input_shape = (config['model']['input_shape'][1],
+                       config['model']['input_shape'][0],
                        3)
 
     train_model = models.create(
         base            = config['model']['base'],
-        num_classes     = num_classes,
         input_shape     = net_input_shape)
 
+    if initial_weights:
+        train_model.load_weights(initial_weights)
+
+    model_render_file = 'images/{}.png'.format(config['model']['base'])
+    if not os.path.isdir(os.path.dirname(model_render_file)):
+        os.makedirs(os.path.dirname(model_render_file))
+
+    plot_model(train_model, to_file=model_render_file, show_shapes=True)
     print_summary(train_model)
-    plot_model(train_model, to_file='images/MobileNetv2.png', show_shapes=True)
 
     optimizer = Adam(lr=config['train']['learning_rate'], clipnorm=0.001)
     # optimizer = SGD(lr=config['train']['learning_rate'], clipnorm=0.001)
 
-    train_model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    train_model.compile(loss=models.result_loss, optimizer=optimizer,
+                        metrics=[models.iou_loss, models.dice_coef_loss, models.pixelwise_crossentropy])
 
     chk_name = config['train']['saved_weights_name']
     chk_root, chk_ext = os.path.splitext(chk_name)
@@ -120,7 +127,6 @@ def main():
         max_queue_size=100
     )
 
-    # Hand-made history
     if not os.path.exists('model'):
         os.makedirs('model')
 

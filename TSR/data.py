@@ -1,22 +1,7 @@
 import os
-import numpy as np
-import cv2
 from os.path import isfile, isdir, join, dirname
 import pickle
 from sklearn.model_selection import train_test_split
-
-data_root = '../data_root/__signs/robofest_data/signs_only'
-
-save_data_path = 'data'
-
-npy_imgs_filename = 'imgs_train.npy'
-npy_lbls_filename = 'lbls_train.npy'
-
-npy_img_height = 48
-npy_img_width = 48
-
-sum_0 = 0
-sum_1 = 0
 
 
 def image_preprocess(image):
@@ -45,7 +30,7 @@ def create_training_instances(
     valid_entries = {}
     classes = []
 
-    if os.path.exists(cache_name):
+    if cache_name and os.path.exists(cache_name):
         print('Loading data from .pkl file')
         with open(cache_name, 'rb') as handle:
             cache = pickle.load(handle)
@@ -102,53 +87,6 @@ def create_training_instances(
             pickle.dump(cache, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     return train_entries, valid_entries, classes
-
-
-
-def create_train_data():
-    import readTrafficSigns as ts
-
-    images, labels = ts.readTrafficSigns(data_root)
-
-    total = len(images)
-
-    npy_img_list = np.ndarray((total, npy_img_height, npy_img_width, 3), dtype=np.uint8)
-    npy_lbl_list = np.ndarray((total), dtype=np.uint8)
-
-    for i, img in enumerate(images):
-        # (h, w, c)
-        # print(img.shape)
-
-        c_img = cv2.resize(img, (npy_img_width, npy_img_height), interpolation=cv2.INTER_LINEAR)
-
-        # Conversion just for OpenCV rendering
-        # c_img = cv2.cvtColor(c_img, cv2.COLOR_RGB2BGR)
-        # cv2.imshow('res', c_img)
-        # cv2.waitKey(1000)
-
-        npy_img_list[i] = c_img
-        npy_lbl_list[i] = labels[i]
-
-    # sum_0 += img.shape[0]
-    # sum_1 += img.shape[1]
-
-    # print( sum_0 / len(images), sum_1 / len(images) )
-
-    if not os.path.exists(save_data_path):
-        os.makedirs(save_data_path)
-
-    np.save(os.path.join(save_data_path, npy_imgs_filename), npy_img_list)
-    np.save(os.path.join(save_data_path, npy_lbls_filename), npy_lbl_list)
-
-    print('Saving to .npy {} files done'.format(total))
-
-
-def npy_data_load_images():
-    return np.load(os.path.join(save_data_path, npy_imgs_filename))
-
-
-def npy_data_load_labels():
-    return np.load(os.path.join(save_data_path, npy_lbls_filename))
 
 
 if __name__ == '__main__':
