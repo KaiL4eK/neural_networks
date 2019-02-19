@@ -92,7 +92,7 @@ def _main_():
 
     process_args = ["mvNCCompile", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12",
                     "-o", graph_fpath]
-    call(process_args)
+    # call(process_args)
 
     print('    Compiled, check performance')
 
