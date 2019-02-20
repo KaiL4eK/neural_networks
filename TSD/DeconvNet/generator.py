@@ -15,13 +15,20 @@ class BatchGenerator(Sequence):
                  jitter=True,
                  norm=None,
                  infer=False,
-                 downsample=1
+                 downsample=1,
+                 mem_mode=True
                  ):
         self.batch_size = batch_size
         self.downsample = downsample
+        self.mem_mode = mem_mode
 
         # Convert instances to pairs
-        self.instances = instances
+        if not self.mem_mode:
+            self.instances = instances
+        else:
+            self.instances = []
+            for ins in instances:
+                self.instances += [(cv2.imread(ins[0]), cv2.imread(ins[1]))]
 
         if not infer:
             print('Size of train dataset: {}'.format(len(self.instances)))
@@ -58,9 +65,9 @@ class BatchGenerator(Sequence):
         instance_count = 0
 
         # do the logic to fill in the inputs and the output
-        for img_fpath, mask_fpath in self.instances[l_bound:r_bound]:
+        for inst in self.instances[l_bound:r_bound]:
             # augment input image and fix object's position and size
-            img, msk = self._aug_image(img_fpath, mask_fpath, net_h, net_w)
+            img, msk = self._aug_image(inst, net_h, net_w)
 
             if self.norm is not None:
                 x_batch[instance_count] = self.norm(img)
@@ -81,15 +88,21 @@ class BatchGenerator(Sequence):
     def _get_net_size(self):
         return self.input_sz[1], self.input_sz[0]
 
-    def _aug_image(self, img_fpath, mask_fpath, net_h, net_w):
-        image = cv2.imread(img_fpath)  # RGB image
-        mask  = cv2.imread(mask_fpath)  # RGB image
+    def _aug_image(self, inst, net_h, net_w):
 
-        if image is None:
-            print('Cannot find ', img_fpath)
+        if self.mem_mode:
+            image = inst[0]
+            mask = inst[1]
+        else:
+            img_fpath, mask_fpath = inst
+            image = cv2.imread(img_fpath)  # RGB image
+            mask  = cv2.imread(mask_fpath)  # RGB image
 
-        if mask is None:
-            print('Cannot find ', mask_fpath)
+            if image is None:
+                print('Cannot find ', img_fpath)
+
+            if mask is None:
+                print('Cannot find ', mask_fpath)
 
         # image = image[:,:,::-1] # RGB image
         # image_h, image_w, _ = image.shape
