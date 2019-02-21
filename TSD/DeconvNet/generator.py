@@ -60,7 +60,7 @@ class BatchGenerator(Sequence):
             l_bound = r_bound - self.batch_size
 
         x_batch = np.zeros((r_bound - l_bound, net_h, net_w, 3))  # input images
-        y_batch = np.zeros((r_bound - l_bound, net_h//self.downsample, net_w//self.downsample, 1))  # list of groundtruth
+        y_batch = np.zeros((r_bound - l_bound, net_h//self.downsample, net_w//self.downsample, 2))  # list of groundtruth
 
         instance_count = 0
 
@@ -74,8 +74,14 @@ class BatchGenerator(Sequence):
             else:
                 x_batch[instance_count] = img
 
-            true_idxs = np.where((msk == [0, 255, 0]).all(axis=2))
-            y_batch[instance_count][true_idxs] = 1.
+            foreground_idxs = np.where((msk == [0, 255, 0]).all(axis=2))
+            background_idxs = np.where((msk == [255, 0, 0]).all(axis=2))
+            y_batch[instance_count][background_idxs] = [1, 0]
+            y_batch[instance_count][foreground_idxs] = [0, 1]
+
+            # cv2.imshow('back', y_batch[instance_count, :, :, 0])
+            # cv2.imshow('front', y_batch[instance_count, :, :, 1])
+            # cv2.waitKey(0)
 
             # increase instance counter in the current batch
             instance_count += 1
@@ -89,7 +95,6 @@ class BatchGenerator(Sequence):
         return self.input_sz[1], self.input_sz[0]
 
     def _aug_image(self, inst, net_h, net_w):
-
         if self.mem_mode:
             image = inst[0]
             mask = inst[1]

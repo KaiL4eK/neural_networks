@@ -71,8 +71,8 @@ def pixelwise_crossentropy(target, output):
 
 
 def result_loss(y_true, y_pred):
-    # return pixelwise_crossentropy(y_true, y_pred) / 10 + iou_loss(y_true, y_pred)
-    return iou_loss(y_true, y_pred)
+    return pixelwise_crossentropy(y_true, y_pred)
+    # return iou_loss(y_true, y_pred)
 
 
 def unet(input_shape):
@@ -147,7 +147,7 @@ def unet(input_shape):
     # # x = Conv2D(int(64 * a), 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
     # # x = Conv2D(int(64 * a), 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
     # x = Conv2D(2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
-    x = Conv2D(1, 1, activation='sigmoid')(x)
+    x = Conv2D(2, 1, activation='softmax')(x)
 
     _output = x
     model = Model(_input, _output)

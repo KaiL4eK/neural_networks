@@ -87,7 +87,7 @@ def main():
         os.makedirs(os.path.dirname(model_render_file))
 
     plot_model(train_model, to_file=model_render_file, show_shapes=True)
-    print_summary(train_model)
+    # print_summary(train_model)
 
     optimizer = Adam(lr=config['train']['learning_rate'], clipnorm=0.001)
     # optimizer = SGD(lr=config['train']['learning_rate'], clipnorm=0.001)

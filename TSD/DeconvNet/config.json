@@ -6,8 +6,8 @@
     },
 
     "train": {
-        "train_folder":         "../../data_root/__signs/robofest_data/positive_bbox_class",
-        "train_masks":          "../../data_root/__signs/robofest_data/positive_masks_train",
+        "train_folder":         "../../data_root/__signs/robofest_data/segmentation/sgn_images",
+        "train_masks":          "../../data_root/__signs/robofest_data/segmentation/sgn_train",
         "cache_name":           "pkl/sign_train.pkl",
 
         "train_times":          3,
@@ -22,8 +22,8 @@
     },
 
     "valid": {
-        "valid_folder":         "../../data_root/__signs/robofest_data/positive_bbox_class",
-        "valid_masks":          "../../data_root/__signs/robofest_data/positive_masks_test",
+        "valid_folder":         "../../data_root/__signs/robofest_data/segmentation/sgn_new_images",
+        "valid_masks":          "../../data_root/__signs/robofest_data/segmentation/sgn_test",
         "cache_name":           "pkl/sign_test.pkl",
 
         "valid_times":          1
