@@ -5,8 +5,10 @@ import os
 import json
 from yolo import create_model
 from keras.utils.layer_utils import print_summary
-
+from keras.models import load_model
 import shutil
+from keras.layers import Input
+from keras.models import Model
 
 import argparse
 argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
@@ -31,13 +33,19 @@ def _main_():
 
     train_sz = config['model']['infer_shape']
 
-    _, _, mvnc_model, _ = create_model(
-        nb_class            = 1,
-        anchors             = config['model']['anchors'],
-        base                = config['model']['base'],
-        load_src_weights    = False,
-        train_shape         = (train_sz[0], train_sz[1], 3)
-    )
+    mvnc_model = load_model(weights_path)
+    image_input = Input(shape=(train_sz[0], train_sz[1], 3), name='input_img')
+    mvnc_model_output = mvnc_model(image_input)
+
+    mvnc_model = Model(image_input, mvnc_model_output)
+
+    # _, _, mvnc_model, _ = create_model(
+    #     nb_class            = 1,
+    #     anchors             = config['model']['anchors'],
+    #     base                = config['model']['base'],
+    #     load_src_weights    = False,
+    #     train_shape         = (train_sz[0], train_sz[1], 3)
+    # )
 
     print_summary(mvnc_model)
     # mvnc_model.load_weights(weights_path)

@@ -8,6 +8,7 @@ from utils.bbox import draw_boxes
 from keras.models import load_model
 from tqdm import tqdm
 import numpy as np
+import time
 
 import argparse
 argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
@@ -30,21 +31,26 @@ def _main_():
 
     makedirs(output_path)
 
+    config['model']['labels'] = ['brick', 'forward', 'forward and left', 'forward and right', 'left', 'right']
+
     ###############################
     #   Set some parameter
-    ###############################       
-    net_h, net_w = 416, 416 # a multiple of 32, the smaller the faster
+    ###############################
+
+    net_h, net_w = config['model']['infer_shape']
     obj_thresh, nms_thresh = 0.5, 0.45
 
     ###############################
     #   Load the model
     ###############################
+
     os.environ['CUDA_VISIBLE_DEVICES'] = config['train']['gpus']
     infer_model = load_model(weights_path)
 
     ###############################
     #   Predict bounding boxes 
     ###############################
+
     if 'webcam' in input_path: # do detection on the first webcam
         video_reader = cv2.VideoCapture(0)
 
@@ -66,7 +72,7 @@ def _main_():
                 break  # esc to quit
         cv2.destroyAllWindows()        
     elif input_path[-4:] == '.mp4' or input_path[-5:] == '.webm': # do detection on a video  
-        video_out = output_path + input_path.split('/')[-1]
+        video_out = output_path + os.path.basename(input_path.split('.')[0] + '.mp4')
         video_reader = cv2.VideoCapture(input_path)
 
         nb_frames = int(video_reader.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -136,7 +142,9 @@ def _main_():
 
             # draw bounding boxes on the image using labels
             draw_boxes(image, boxes, config['model']['labels'], obj_thresh) 
-     
+
+            cv2.imshow('1', image)
+            cv2.waitKey(0)
             # write the image with bounding boxes to file
             # cv2.imwrite(output_path + image_path.split('/')[-1], np.uint8(image))         
 

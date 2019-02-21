@@ -74,7 +74,10 @@ def draw_boxes(image, boxes, labels, obj_thresh, quiet=True):
             if not quiet: print(label_str)
                 
         if label >= 0:
-            text_size = cv2.getTextSize(label_str, cv2.FONT_HERSHEY_SIMPLEX, 1.1e-3 * image.shape[0], 5)
+            font_scl = 1.5e-3 * image.shape[0]
+            thickness = 1
+
+            text_size = cv2.getTextSize(label_str, cv2.FONT_HERSHEY_SIMPLEX, font_scl, thickness)
             width, height = text_size[0][0], text_size[0][1]
             region = np.array([[box.xmin-3,        box.ymin], 
                                [box.xmin-3,        box.ymin-height-26], 
@@ -87,8 +90,8 @@ def draw_boxes(image, boxes, labels, obj_thresh, quiet=True):
                         text=label_str, 
                         org=(box.xmin+13, box.ymin - 13), 
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX, 
-                        fontScale=1e-3 * image.shape[0], 
+                        fontScale=font_scl,
                         color=(0,0,0), 
-                        thickness=2)
+                        thickness=thickness)
         
     return image          
