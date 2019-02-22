@@ -1,5 +1,6 @@
 import mvnc.mvncapi as fx
 import numpy as np
+import cv2
 
 class InferNCS:
     def __init__(self, graph_fpath, fp16=True):
@@ -38,6 +39,10 @@ class InferNCS:
         output_tensor_list = self.graph.get_option(fx.GraphOption.RO_OUTPUT_TENSOR_DESCRIPTORS)
         self.output_shape = (output_tensor_list[0].h, output_tensor_list[0].w, output_tensor_list[0].c)
 
+        input_tensor_list = self.graph.get_option(fx.GraphOption.RO_INPUT_TENSOR_DESCRIPTORS)
+        self.input_shape = (input_tensor_list[0].h, input_tensor_list[0].w, input_tensor_list[0].c)
+        self.input_cv_sz = (input_tensor_list[0].w, input_tensor_list[0].h)
+
     def __del__(self):
         self.fifoIn.destroy()
         self.fifoOut.destroy()
@@ -45,6 +50,15 @@ class InferNCS:
         self.dev.close()
 
     def infer(self, img):
+        img_h, img_w, img_c = img.shape
+
+        if img_c != self.input_shape[2]:
+            print('Invalid number of channels')
+            return None
+
+        if img_w != self.input_cv_sz[0] or img_h != self.input_cv_sz[1]:
+            img = cv2.resize(img, self.input_cv_sz)
+
         if self.fp16:
             img = img.astype(np.float16)
         else:
@@ -57,3 +71,9 @@ class InferNCS:
         ncs_output = ncs_output.reshape(self.output_shape)
 
         return ncs_output
+
+    def predict(self, img_batch):
+        return np.expand_dims(infer(img_batch[0]), axis=0)
+
+    def predict_on_batch(self, img_batch)
+        return np.expand_dims(infer(img_batch[0]), axis=0)

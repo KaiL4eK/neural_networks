@@ -10,8 +10,6 @@ from _common import utils
 import data
 import json
 
-# TODO - Not completed
-
 argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
 argparser.add_argument('-c', '--conf', help='path to configuration file')
 argparser.add_argument('-g', '--graph', help='graph path')
@@ -25,45 +23,43 @@ def _main_():
     graph_fpath = args.graph
     input_path = args.input
 
-    ncs_dev = ncs.InferNCS(graph_fpath, fp16=False)
+    with open(config_path) as config_buffer:    
+        config = json.load(config_buffer)
 
-    image_paths = utils.get_impaths_from_path(input_path)
+    config['model']['labels'] = ['brick', 'forward', 'forward and left', 'forward and right', 'left', 'right']
+
+    makedirs(output_path)
+
+    net_h, net_w = config['model']['infer_shape']
+    obj_thresh, nms_thresh = 0.5, 0.45
+
+    ncs_model = ncs.InferNCS(graph_fpath, fp16=False)
+
+    data_generator = utils.data_generator(input_path)
 
     show_delay = 0
 
     full_time = 0
-    image_cnt = 0
+    processing_cnt = 0
 
-    for image_path in tqdm(image_paths):
-
-        print('Processing: {}'.format(image_path))
-        image_src = cv2.imread(image_path)
-        img_src_h, img_src_w, _ = image_src.shape
-
-        net_input_shape = (config['model']['input_shape'][0],
-                           config['model']['input_shape'][1])
+    for image_src in data_generator:
 
         start = time.time()
 
-        image = cv2.resize(image_src, net_input_shape)
-        image = data.image_preprocess(image)
-
-        ncs_output = ncs_dev.infer(image)
-        ncs_output = ncs_output.astype(np.float32)
+        boxes = get_yolo_boxes(ncs_model, [image_src], net_h, net_w, config['model']['anchors'], obj_thresh, nms_thresh)[0]
 
         full_time += time.time() - start
-        image_cnt += 1
+        processing_cnt += 1
 
-        msk = ncs_output
-        msk = cv2.resize(msk, net_input_shape)
-        color_msk = cv2.cvtColor(msk, cv2.COLOR_GRAY2BGR)
+        image = image_src.copy()
+        draw_boxes(image, boxes, config['model']['labels'], obj_thresh) 
 
-        cv2.imshow('res', np.hstack((image, color_msk)))
+        cv2.imshow('1', image)
         if cv2.waitKey(show_delay) == 27:
             break
 
-    print("Time: %.3f [ms] / FPS: %.1f" % (full_time * 1000, image_cnt / full_time))
-
+    print("Time: %.3f [ms] / FPS: %.1f" % (full_time * 1000, processing_cnt / full_time))
+    cv2.destroyAllWindows()
 
 if __name__ == '__main__':
     _main_()

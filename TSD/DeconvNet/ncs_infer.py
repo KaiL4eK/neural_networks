@@ -39,14 +39,13 @@ def _main_():
 
         print('Processing: {}'.format(image_path))
         image_src = cv2.imread(image_path)
-        img_src_h, img_src_w, _ = image_src.shape
-
+        
         net_input_shape = (config['model']['input_shape'][0],
                            config['model']['input_shape'][1])
 
         start = time.time()
 
-        image = cv2.resize(image_src, net_input_shape)
+        # image = cv2.resize(image_src, net_input_shape)
         image = data.image_preprocess(image)
 
         ncs_output = ncs_dev.infer(image)
