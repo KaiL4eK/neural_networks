@@ -72,7 +72,7 @@ def _main_(args):
             draw_boxes(image, boxes, trt_engine.get_labels(), 0.5) 
             cv2.imshow('result', np.uint8(image))
             
-            if render_mode and cv2.waitKey(0) == 27:
+            if cv2.waitKey(0) == 27:
                 break  # esc to quit
 
     fps = processing_count / sum_time

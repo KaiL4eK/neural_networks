@@ -51,7 +51,7 @@ def _main_():
         full_time += time.time() - start
         processing_cnt += 1
 
-        image = image_src.copy()
+        image = image_src
         draw_boxes(image, boxes, config['model']['labels'], obj_thresh) 
 
         cv2.imshow('1', image)
