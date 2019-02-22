@@ -68,3 +68,33 @@ def parse_voc_annotation(ann_dir, img_dir, cache_name, labels=[]):
             pickle.dump(cache, handle, protocol=pickle.HIGHEST_PROTOCOL)    
 
     return all_insts, seen_labels
+
+
+from sklearn.model_selection import train_test_split
+
+
+def split_by_objects(instances, classes, rate):
+
+    classes = {}
+
+    for inst in instances:
+        for obj in inst['object']:
+            if obj['name'] in classes:
+                classes[obj['name']] += [inst]
+            else:
+                classes[obj['name']] = [inst]
+
+    train_entries = []
+    valid_entries = []
+
+    for _class, _imgs in classes.items():
+        train_, valid_ = train_test_split(_imgs, test_size=rate, random_state=42)
+
+        print('Splitted {} for {}/{}'.format(_class, len(train_), len(valid_)))
+
+        train_entries += train_
+        valid_entries += valid_
+
+    print('Result split {}/{}'.format(len(train_entries), len(valid_entries)))
+
+    return train_entries, valid_entries

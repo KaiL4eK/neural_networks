@@ -4,7 +4,7 @@ import argparse
 import os
 import numpy as np
 import json
-from voc import parse_voc_annotation
+from voc import parse_voc_annotation, split_by_objects
 from yolo import create_model, dummy_loss
 from generator import BatchGenerator
 from utils.utils import normalize, evaluate, makedirs, init_session
@@ -35,13 +35,15 @@ def create_training_instances(
     else:
         print("valid_annot_folder not exists. Spliting the trainining set.")
 
-        train_valid_split = int(0.8*len(train_ints))
-        np.random.seed(0)
-        np.random.shuffle(train_ints)
-        np.random.seed()
+        train_ints, valid_ints = split_by_objects(train_ints, train_labels, 0.2)
 
-        valid_ints = train_ints[train_valid_split:]
-        train_ints = train_ints[:train_valid_split]
+        # train_valid_split = int(0.8*len(train_ints))
+        # np.random.seed(0)
+        # np.random.shuffle(train_ints)
+        # np.random.seed()
+
+        # valid_ints = train_ints[train_valid_split:]
+        # train_ints = train_ints[:train_valid_split]
 
     # compare the seen labels with the given labels in config.json
     if len(labels) > 0:

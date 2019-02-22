@@ -15,9 +15,12 @@ argparser = argparse.ArgumentParser(description='Predict with a trained yolo mod
 argparser.add_argument('-o', '--output', help='path output frozen graph (.pb file)')
 argparser.add_argument('-w', '--weights', help='weights path')
 argparser.add_argument('-c', '--conf', help='path to configuration file')
+argparser.add_argument('-t', '--test', action='store_true', help='path to configuration file')
 args = argparser.parse_args()
 
+
 def _main_():
+    test_perf = args.test
     weights_path = args.weights
     output_pb_fpath = args.output
     config_path = args.conf
@@ -33,11 +36,20 @@ def _main_():
 
     train_sz = config['model']['infer_shape']
 
-    mvnc_model = load_model(weights_path)
-    image_input = Input(shape=(train_sz[0], train_sz[1], 3), name='input_img')
-    mvnc_model_output = mvnc_model(image_input)
+    if weights_path:
+        mvnc_model = load_model(weights_path)
+        image_input = Input(shape=(train_sz[0], train_sz[1], 3), name='input_img')
+        mvnc_model_output = mvnc_model(image_input)
 
-    mvnc_model = Model(image_input, mvnc_model_output)
+        mvnc_model = Model(image_input, mvnc_model_output)
+    else:
+        _, _, mvnc_model, _ = create_model(
+            nb_class=6,
+            anchors=config['model']['anchors'],
+            base=config['model']['base'],
+            load_src_weights=False,
+            train_shape=(train_sz[0], train_sz[1], 3)
+        )
 
     # _, _, mvnc_model, _ = create_model(
     #     nb_class            = 1,
@@ -83,9 +95,10 @@ def _main_():
     graph_fpath = output_pb_fpath + '.graph'
     print('    Writing to {}'.format(graph_fpath))
 
-    process_args = ["mvNCCompile", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12",
-                    "-o", graph_fpath]
-    call(process_args)
+    if weights_path:
+        process_args = ["mvNCCompile", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12",
+                        "-o", graph_fpath]
+        call(process_args)
 
     # print('    Compiled, check performance')
 

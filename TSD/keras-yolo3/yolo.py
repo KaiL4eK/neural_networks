@@ -886,7 +886,7 @@ def create_mobilenetv2_model(
 
     from keras.applications.mobilenetv2 import MobileNetV2
 
-    mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=0.35)
+    mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=0.5)
 
     out13 = mobilenetv2.output
 
