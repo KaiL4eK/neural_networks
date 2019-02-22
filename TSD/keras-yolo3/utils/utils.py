@@ -142,6 +142,7 @@ def evaluate(model,
 
     return average_precisions    
 
+
 def correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w):
     if (float(net_w)/image_w) < (float(net_h)/image_h):
         new_w = net_w
@@ -158,7 +159,8 @@ def correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w):
         boxes[i].xmax = int((boxes[i].xmax - x_offset) / x_scale * image_w)
         boxes[i].ymin = int((boxes[i].ymin - y_offset) / y_scale * image_h)
         boxes[i].ymax = int((boxes[i].ymax - y_offset) / y_scale * image_h)
-        
+
+
 def do_nms(boxes, nms_thresh):
     if len(boxes) > 0:
         nb_class = len(boxes[0].classes)
@@ -178,6 +180,7 @@ def do_nms(boxes, nms_thresh):
 
                 if bbox_iou(boxes[index_i], boxes[index_j]) >= nms_thresh:
                     boxes[index_j].classes[c] = 0
+
 
 def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
     grid_h, grid_w = netout.shape[:2]
@@ -220,8 +223,10 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
 
     return boxes
 
+
 def normalize(image):
     return image/255.  
+
 
 def preprocess_input(image, net_h, net_w):
  
@@ -276,6 +281,7 @@ def preprocess_input(image, net_h, net_w):
     # new_image = np.expand_dims(new_image, 0)
 
     return new_image
+
 
 def get_yolo_boxes(model, images, net_h, net_w, anchors, obj_thresh, nms_thresh):
     # anchors - raw format

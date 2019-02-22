@@ -4,6 +4,7 @@ import numpy as np
 import keras
 from utils.utils import evaluate
 
+
 class MAP_evaluation(keras.callbacks.Callback):
         """ Evaluate a given dataset using a given model.
             code originally from https://github.com/fizyr/keras-retinanet
@@ -97,6 +98,7 @@ class CustomTensorBoard(TensorBoard):
             self.writer.flush()
         
         super(CustomTensorBoard, self).on_batch_end(batch, logs)
+
 
 class CustomModelCheckpoint(ModelCheckpoint):
     """ to save the template model, not the multi-GPU model

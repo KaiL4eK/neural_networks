@@ -2,6 +2,7 @@ import mvnc.mvncapi as fx
 import numpy as np
 import cv2
 
+
 class InferNCS:
     def __init__(self, graph_fpath, fp16=True):
         # fx.global_set_option(fx.GlobalOption.RW_LOG_LEVEL, 0)
@@ -9,11 +10,11 @@ class InferNCS:
         devices = fx.enumerate_devices()
         if len(devices) < 1:
             print("Error - no NCS devices detected, verify an NCS device is connected.")
-            quit() 
+            quit()
 
         self.fp16 = fp16
         self.dev = fx.Device(devices[0])
-        
+
         try:
             self.dev.open()
         except:
@@ -21,7 +22,7 @@ class InferNCS:
             quit()
 
         print("Hello NCS! Device opened normally.")
-        
+
         with open(graph_fpath, mode='rb') as f:
             graph_file_buff = f.read()
 
@@ -31,8 +32,8 @@ class InferNCS:
 
         if self.fp16:
             self.fifoIn, self.fifoOut = self.graph.allocate_with_fifos(self.dev, graph_file_buff,
-                                            input_fifo_data_type=fx.FifoDataType.FP16, 
-                                            output_fifo_data_type=fx.FifoDataType.FP16)
+                                                                       input_fifo_data_type=fx.FifoDataType.FP16,
+                                                                       output_fifo_data_type=fx.FifoDataType.FP16)
         else:
             self.fifoIn, self.fifoOut = self.graph.allocate_with_fifos(self.dev, graph_file_buff)
 
@@ -42,6 +43,9 @@ class InferNCS:
         input_tensor_list = self.graph.get_option(fx.GraphOption.RO_INPUT_TENSOR_DESCRIPTORS)
         self.input_shape = (input_tensor_list[0].h, input_tensor_list[0].w, input_tensor_list[0].c)
         self.input_cv_sz = (input_tensor_list[0].w, input_tensor_list[0].h)
+
+        print('Input shape: {self.output_shape}')
+        print('Output shape: {self.input_shape}')
 
     def __del__(self):
         self.fifoIn.destroy()
@@ -73,7 +77,7 @@ class InferNCS:
         return ncs_output
 
     def predict(self, img_batch):
-        return np.expand_dims(infer(img_batch[0]), axis=0)
+        return np.expand_dims(self.infer(img_batch[0]), axis=0)
 
-    def predict_on_batch(self, img_batch)
-        return np.expand_dims(infer(img_batch[0]), axis=0)
+    def predict_on_batch(self, img_batch):
+        return np.expand_dims(self.infer(img_batch[0]), axis=0)

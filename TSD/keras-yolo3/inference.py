@@ -80,8 +80,8 @@ def _main_():
         frame_w = int(video_reader.get(cv2.CAP_PROP_FRAME_WIDTH))
 
         video_writer = cv2.VideoWriter(video_out,
-                               cv2.VideoWriter_fourcc(*'MPEG'), 
-                               50.0, 
+                               cv2.VideoWriter_fourcc(*'MPEG'),
+                               25.0,
                                (frame_w, frame_h))
         # the main loop
         batch_size  = 1

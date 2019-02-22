@@ -2,13 +2,11 @@ import core
 import time
 import cv2
 import argparse
-import numpy as np
-from tqdm import tqdm
-import os
 from _common import ncs
 from _common import utils
-import data
 import json
+from utils.utils import get_yolo_boxes
+from utils.bbox import draw_boxes
 
 argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
 argparser.add_argument('-c', '--conf', help='path to configuration file')
@@ -28,16 +26,14 @@ def _main_():
 
     config['model']['labels'] = ['brick', 'forward', 'forward and left', 'forward and right', 'left', 'right']
 
-    makedirs(output_path)
-
     net_h, net_w = config['model']['infer_shape']
-    obj_thresh, nms_thresh = 0.5, 0.45
+    obj_thresh, nms_thresh = 0.8, 0.45
 
     ncs_model = ncs.InferNCS(graph_fpath, fp16=False)
 
     data_generator = utils.data_generator(input_path)
 
-    show_delay = 0
+    show_delay = 100
 
     full_time = 0
     processing_cnt = 0
@@ -45,6 +41,9 @@ def _main_():
     for image_src in data_generator:
 
         start = time.time()
+
+        print(image_src.shape)
+        # image = cv2.resize(image_src, (0,0), fx=2, fy=2)
 
         boxes = get_yolo_boxes(ncs_model, [image_src], net_h, net_w, config['model']['anchors'], obj_thresh, nms_thresh)[0]
 
@@ -60,6 +59,7 @@ def _main_():
 
     print("Time: %.3f [ms] / FPS: %.1f" % (full_time * 1000, processing_cnt / full_time))
     cv2.destroyAllWindows()
+
 
 if __name__ == '__main__':
     _main_()
