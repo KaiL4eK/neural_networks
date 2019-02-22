@@ -30,7 +30,9 @@ class YoloLayer(Layer):
         max_grid_h, max_grid_w = max_grid
 
         cell_x = tf.to_float(tf.reshape(tf.tile(tf.range(max_grid_w), [max_grid_h]), (1, max_grid_h, max_grid_w, 1, 1)))
-        cell_y = tf.transpose(cell_x, (0, 2, 1, 3, 4))
+
+        cell_y = tf.to_float(tf.reshape(tf.tile(tf.range(max_grid_h), [max_grid_w]), (1, max_grid_w, max_grid_h, 1, 1)))
+        cell_y = tf.transpose(cell_y, (0, 2, 1, 3, 4))
         self.cell_grid = tf.tile(tf.concat([cell_x, cell_y], -1), [batch_size, 1, 1, 3, 1])
 
         super(YoloLayer, self).__init__(**kwargs)
@@ -884,7 +886,7 @@ def create_mobilenetv2_model(
 
     from keras.applications.mobilenetv2 import MobileNetV2
 
-    mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=0.5)
+    mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=0.35)
 
     out13 = mobilenetv2.output
 

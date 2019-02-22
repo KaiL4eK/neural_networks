@@ -88,6 +88,8 @@ class BatchGenerator(Sequence):
         # yolo_3 = np.zeros((r_bound - l_bound, 4*base_grid_h,  4*base_grid_w, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 3
         # yolos = [yolo_3, yolo_2, yolo_1]
 
+        # print(yolos[0].shape)
+
         instance_count = 0
         true_box_index = 0
 
@@ -184,8 +186,8 @@ class BatchGenerator(Sequence):
                                                                   self.max_net_size[0] / self.downsample + 1)
             self.net_size_w = self.downsample * np.random.randint(self.min_net_size[1] / self.downsample,
                                                                   self.max_net_size[1] / self.downsample + 1)
-        # TODO <<< Fix size!
-        return self.net_size_w, self.net_size_w
+            
+        return self.net_size_h, self.net_size_w
 
     def _aug_image(self, instance, net_h, net_w):
         image_name = instance['filename']
