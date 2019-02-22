@@ -32,10 +32,6 @@ class BatchGenerator(Sequence):
         self.shuffle = shuffle
         self.mem_mode = mem_mode
 
-        if self.mem_mode:
-            for instance in self.instances:
-                instance['img'] = cv2.imread(instance['filename'])
-
         self.min_net_size = (np.array(min_net_size) // self.downsample) * self.downsample
         self.max_net_size = (np.array(max_net_size) // self.downsample) * self.downsample
 
@@ -192,14 +188,10 @@ class BatchGenerator(Sequence):
         return self.net_size_w, self.net_size_w
 
     def _aug_image(self, instance, net_h, net_w):
-        if self.mem_mode:
-            image = instance['img']
-        else:
-            image_name = instance['filename']
-            image = cv2.imread(image_name)  # RGB image
+        image_name = instance['filename']
+        image = cv2.imread(image_name)  # RGB image
 
-            if image is None:
-                print('Cannot find ', image_name)
+        if image is None: print('Cannot find ', image_name)
 
         # image = image[:,:,::-1] # RGB image
         image_h, image_w, _ = image.shape
