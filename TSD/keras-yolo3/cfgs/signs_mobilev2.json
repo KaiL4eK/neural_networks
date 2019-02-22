@@ -5,12 +5,12 @@
         "base":                 "MobileNetv2",
         "anchors":              [51,71, 76,105, 104,152],
         "labels":               [],
-        "infer_shape":          [320, 320]
+        "infer_shape":          [240, 320]
     },
 
     "train": {
-        "train_image_folder":   "../../data_root/__signs/robofest_data/tsd_voc/Images/",
-        "train_annot_folder":   "../../data_root/__signs/robofest_data/tsd_voc/Annotations_train/",
+        "train_image_folder":   "../tsd_voc/Images/",
+        "train_annot_folder":   "../tsd_voc/Annotations_train/",
         "cache_name":           "pkl/sign_train.pkl",
 
         "train_times":          3,
@@ -33,16 +33,16 @@
     },
 
     "valid": {
-        "valid_image_folder":   "../../data_root/__signs/robofest_data/tsd_voc/Images/",
-        "valid_annot_folder":   "../../data_root/__signs/robofest_data/tsd_voc/Annotations_test",
+        "valid_image_folder":   "../tsd_voc/Images/",
+        "valid_annot_folder":   "../tsd_voc/Annotations_test",
         "cache_name":           "pkl/sign_test.pkl",
 
         "valid_times":          1
     },
 
     "eval": {
-        "valid_image_folder":   "../../data_root/__signs/robofest_data/tsd_voc/Images/",
-        "valid_annot_folder":   "../../data_root/__signs/robofest_data/tsd_voc/Annotations_test",
+        "valid_image_folder":   "../tsd_voc/Images/",
+        "valid_annot_folder":   "../tsd_voc/Annotations_test",
         "cache_name":           "pkl/sign_eval.pkl"
     }
 }
