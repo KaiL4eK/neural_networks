@@ -888,21 +888,21 @@ def create_mobilenetv2_model(
     pred_filter_count = (anchors_per_output*(5+nb_class))
 
     ##########################
-    alpha=0.5
+    alpha = 0.35
     if 0:
         from keras.applications.mobilenetv2 import MobileNetV2
         mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=alpha)
         out13 = mobilenetv2.output
     else:
-        x = mnu._conv_block(image_input, 32, (3, 3), strides=(2, 2), alpha=alpha)
-        x = mnu._inverted_residual_block(x, 16, (3, 3), t=1, strides=1, n=1, alpha=alpha)
-        x = mnu._inverted_residual_block(x, 24, (3, 3), t=6, strides=2, n=2, alpha=alpha)
-        x = mnu._inverted_residual_block(x, 32, (3, 3), t=6, strides=2, n=3, alpha=alpha)
-        x = mnu._inverted_residual_block(x, 64, (3, 3), t=6, strides=2, n=4, alpha=alpha)
-        x = mnu._inverted_residual_block(x, 96, (3, 3), t=6, strides=1, n=3, alpha=alpha)
-        x = mnu._inverted_residual_block(x, 160, (3, 3), t=6, strides=2, n=3, alpha=alpha)
-        x = mnu._inverted_residual_block(x, 320, (3, 3), t=6, strides=1, n=1, alpha=alpha)
-        out13 = mnu._conv_block(x, 1280, (1, 1), strides=(1, 1))
+        x = mnu._conv_block(image_input, 32, 3, strides=2, alpha=alpha)
+        x = mnu._inverted_residual_block(x, 16, 3, t=1, strides=1, n=1, alpha=alpha)
+        x = mnu._inverted_residual_block(x, 24, 3, t=6, strides=2, n=2, alpha=alpha)
+        x = mnu._inverted_residual_block(x, 32, 3, t=6, strides=2, n=3, alpha=alpha)
+        x = mnu._inverted_residual_block(x, 64, 3, t=6, strides=2, n=4, alpha=alpha)
+        x = mnu._inverted_residual_block(x, 96, 3, t=6, strides=1, n=3, alpha=alpha)
+        x = mnu._inverted_residual_block(x, 160, 3, t=6, strides=2, n=3, alpha=alpha)
+        x = mnu._inverted_residual_block(x, 320, 3, t=6, strides=1, n=1, alpha=alpha)
+        out13 = mnu._conv_block(x, 1280, 1, strides=1)
     ##########################
 
     pred_yolo_1 = Conv2D(pred_filter_count, 1, padding='same', strides=1, name='DetectionLayer1')(out13)

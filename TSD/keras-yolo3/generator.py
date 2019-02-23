@@ -59,12 +59,12 @@ class BatchGenerator(Sequence):
     def __getitem__(self, idx):
 
         if self.infer_sz:
-            net_h, net_w = self.infer_sz[0], self.infer_sz[1]
+            net_h, net_w = self.infer_sz
         else:
             # get image input size, change every 10 batches
             net_h, net_w = self._get_net_size(idx)
 
-        base_grid_h, base_grid_w = net_h // self.downsample, net_w // self.downsample
+        base_grid_h, base_grid_w = int((net_h + self.downsample / 2) // self.downsample), int((net_w + self.downsample / 2) // self.downsample)
 
         # determine the first and the last indices of the batch
         l_bound = idx * self.batch_size
@@ -88,7 +88,10 @@ class BatchGenerator(Sequence):
         # yolo_3 = np.zeros((r_bound - l_bound, 4*base_grid_h,  4*base_grid_w, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 3
         # yolos = [yolo_3, yolo_2, yolo_1]
 
-        # print(yolos[0].shape)
+        # if self.infer_sz:
+        #     print(net_h, net_w)
+        #     print(base_grid_h, base_grid_w)
+        #     print(yolos[0].shape)
 
         instance_count = 0
         true_box_index = 0
@@ -193,7 +196,8 @@ class BatchGenerator(Sequence):
         image_name = instance['filename']
         image = cv2.imread(image_name)  # RGB image
 
-        if image is None: print('Cannot find ', image_name)
+        if image is None:
+            print('Cannot find ', image_name)
 
         # image = image[:,:,::-1] # RGB image
         image_h, image_w, _ = image.shape

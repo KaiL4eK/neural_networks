@@ -11,20 +11,20 @@ from utils.utils import normalize, evaluate, makedirs, init_session
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
 from keras.optimizers import Adam
 from callbacks import CustomModelCheckpoint, CustomTensorBoard, MAP_evaluation
-
+from keras.utils.layer_utils import print_summary
 
 import keras
 from keras.models import load_model
 
 
 def create_training_instances(
-    train_annot_folder,
-    train_image_folder,
-    train_cache,
-    valid_annot_folder,
-    valid_image_folder,
-    valid_cache,
-    labels,
+        train_annot_folder,
+        train_image_folder,
+        train_cache,
+        valid_annot_folder,
+        valid_image_folder,
+        valid_cache,
+        labels,
 ):
     # parse annotations of the training set
     train_ints, train_labels = parse_voc_annotation(train_annot_folder, train_image_folder, train_cache, labels)
@@ -49,7 +49,7 @@ def create_training_instances(
     if len(labels) > 0:
         overlap_labels = set(labels).intersection(set(train_labels.keys()))
 
-        print('Seen labels: \t'  + str(train_labels) + '\n')
+        print('Seen labels: \t' + str(train_labels) + '\n')
         print('Given labels: \t' + str(labels))
 
         # return None, None, None if some given label is not in the dataset
@@ -70,7 +70,7 @@ def _main_(args):
     config_path = args.conf
     initial_weights = args.weights
 
-    with open(config_path) as config_buffer:    
+    with open(config_path) as config_buffer:
         config = json.loads(config_buffer.read())
 
     init_session(1.0)
@@ -95,28 +95,28 @@ def _main_(args):
     #   Create the generators 
     ###############################    
     train_generator = BatchGenerator(
-        instances           = train_ints, 
-        anchors             = config['model']['anchors'],   
-        labels              = labels,        
-        downsample          = 32, # ratio between network input's size and network output's size, 32 for YOLOv3
-        max_box_per_image   = max_box_per_image,
-        batch_size          = config['train']['batch_size'],
-        min_net_size        = config['model']['min_input_size'],
-        max_net_size        = config['model']['max_input_size'],   
-        shuffle             = True, 
-        jitter              = 0.3, 
-        norm                = normalize
+        instances=train_ints,
+        anchors=config['model']['anchors'],
+        labels=labels,
+        downsample=32,  # ratio between network input's size and network output's size, 32 for YOLOv3
+        max_box_per_image=max_box_per_image,
+        batch_size=config['train']['batch_size'],
+        min_net_size=config['model']['min_input_size'],
+        max_net_size=config['model']['max_input_size'],
+        shuffle=True,
+        jitter=0.3,
+        norm=normalize
     )
-    
+
     valid_generator = BatchGenerator(
-        instances           = valid_ints, 
-        anchors             = config['model']['anchors'],   
-        labels              = labels,        
-        downsample          = 32, # ratio between network input's size and network output's size, 32 for YOLOv3
-        max_box_per_image   = max_box_per_image,
-        batch_size          = config['train']['batch_size'],
-        norm                = normalize,
-        infer_sz            = config['model']['infer_shape']
+        instances=valid_ints,
+        anchors=config['model']['anchors'],
+        labels=labels,
+        downsample=32,  # ratio between network input's size and network output's size, 32 for YOLOv3
+        max_box_per_image=max_box_per_image,
+        batch_size=config['train']['batch_size'],
+        norm=normalize,
+        infer_sz=config['model']['infer_shape']
     )
 
     ###############################
@@ -129,27 +129,28 @@ def _main_(args):
     freezing = True
     config['train']['warmup_epochs'] = 0
 
-    warmup_batches = config['train']['warmup_epochs'] * (config['train']['train_times']*len(train_generator))   
+    warmup_batches = config['train']['warmup_epochs'] * (config['train']['train_times'] * len(train_generator))
 
     train_model, infer_model, _, freeze_num = create_model(
-        nb_class            = len(labels), 
-        anchors             = config['model']['anchors'], 
-        max_box_per_image   = max_box_per_image, 
-        max_input_size      = config['model']['max_input_size'], 
-        batch_size          = config['train']['batch_size'], 
-        warmup_batches      = warmup_batches,
-        ignore_thresh       = config['train']['ignore_thresh'],
-        multi_gpu           = multi_gpu,
-        grid_scales         = config['train']['grid_scales'],
-        obj_scale           = config['train']['obj_scale'],
-        noobj_scale         = config['train']['noobj_scale'],
-        xywh_scale          = config['train']['xywh_scale'],
-        class_scale         = config['train']['class_scale'],
-        base                = config['model']['base']
+        nb_class=len(labels),
+        anchors=config['model']['anchors'],
+        max_box_per_image=max_box_per_image,
+        max_input_size=config['model']['max_input_size'],
+        batch_size=config['train']['batch_size'],
+        warmup_batches=warmup_batches,
+        ignore_thresh=config['train']['ignore_thresh'],
+        multi_gpu=multi_gpu,
+        grid_scales=config['train']['grid_scales'],
+        obj_scale=config['train']['obj_scale'],
+        noobj_scale=config['train']['noobj_scale'],
+        xywh_scale=config['train']['xywh_scale'],
+        class_scale=config['train']['class_scale'],
+        base=config['model']['base']
     )
 
     # from keras.utils import plot_model
     # plot_model(train_model, to_file='model.png')
+    # print_summary(infer_model)
 
     # load the pretrained weight if exists, otherwise load the backend weight only
     if initial_weights and os.path.exists(initial_weights):
@@ -171,15 +172,15 @@ def _main_(args):
             break
 
     makedirs(tensorboard_logdir)
-    
+
     print('Tensorboard dir: {}'.format(tensorboard_logdir))
 
     early_stop = EarlyStopping(
-        monitor     = 'val_loss', 
-        min_delta   = 0.1, 
-        patience    = 3, 
-        mode        = 'min', 
-        verbose     = 1
+        monitor='val_loss',
+        min_delta=0.1,
+        patience=3,
+        mode='min',
+        verbose=1
     )
 
     callbacks = [early_stop]
@@ -192,19 +193,19 @@ def _main_(args):
 
         # optimizer = Adam(lr=1e-3, clipnorm=0.1)
         optimizer = Adam()
-        train_model.compile(loss=dummy_loss, optimizer=optimizer)   
+        train_model.compile(loss=dummy_loss, optimizer=optimizer)
         train_model.fit_generator(
-            generator        = train_generator, 
-            steps_per_epoch  = len(train_generator) * config['train']['train_times'],
+            generator=train_generator,
+            steps_per_epoch=len(train_generator) * config['train']['train_times'],
 
-            validation_data  = valid_generator,
-            validation_steps = len(valid_generator) * config['valid']['valid_times'],
+            validation_data=valid_generator,
+            validation_steps=len(valid_generator) * config['valid']['valid_times'],
 
-            epochs           = config['train']['nb_epochs'] + config['train']['warmup_epochs'], 
-            verbose          = 2 if config['train']['debug'] else 1,
-            callbacks        = callbacks, 
-            workers          = 8,
-            max_queue_size   = 100
+            epochs=config['train']['nb_epochs'] + config['train']['warmup_epochs'],
+            verbose=2 if config['train']['debug'] else 1,
+            callbacks=callbacks,
+            workers=8,
+            max_queue_size=100
         )
 
     # make a GPU version of infer_model for evaluation
@@ -218,44 +219,45 @@ def _main_(args):
 
     root, ext = os.path.splitext(config['train']['saved_weights_name'])
     checkpoint_vloss = CustomModelCheckpoint(
-        model_to_save   = infer_model,
-        filepath        = root+'_ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}'+ext,
-        monitor         = 'val_loss', 
-        verbose         = 1,
-        save_best_only  = True, 
-        mode            = 'min', 
-        period          = 1
+        model_to_save=infer_model,
+        filepath=root + '_ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}' + ext,
+        monitor='val_loss',
+        verbose=1,
+        save_best_only=True,
+        mode='min',
+        period=1
     )
-    reduce_on_plateau = ReduceLROnPlateau(
-        monitor  = 'loss',
-        factor   = 0.5,
-        patience = 5,
-        verbose  = 1,
-        mode     = 'min',
-        min_delta= 0.01,
-        cooldown = 0,
-        min_lr   = 0
-    )  
 
-    tensorboard_cb = TensorBoard(log_dir=tensorboard_logdir, 
-                              histogram_freq=0, 
-                              write_graph=True, 
-                              write_images=False)
+    reduce_on_plateau = ReduceLROnPlateau(
+        monitor='loss',
+        factor=0.5,
+        patience=5,
+        verbose=1,
+        mode='min',
+        min_delta=0.01,
+        cooldown=0,
+        min_lr=0
+    )
+
+    tensorboard_cb = TensorBoard(log_dir=tensorboard_logdir,
+                                 histogram_freq=0,
+                                 write_graph=True,
+                                 write_images=False)
 
     map_evaluator_cb = MAP_evaluation(infer_model=infer_model,
-                                        generator=valid_generator,
-                                        save_best=True,
-                                        save_name=root+'_best_mAP{mAP:.3f}'+ext,
-                                        tensorboard=tensorboard_cb,
-                                        iou_threshold=0.5,
-                                        score_threshold=0.5)
+                                      generator=valid_generator,
+                                      save_best=True,
+                                      save_name=root + '_best_mAP{mAP:.3f}' + ext,
+                                      tensorboard=tensorboard_cb,
+                                      iou_threshold=0.5,
+                                      score_threshold=0.5)
 
     early_stop = EarlyStopping(
-        monitor     = 'val_loss', 
-        min_delta   = 0, 
-        patience    = 20, 
-        mode        = 'min', 
-        verbose     = 1
+        monitor='val_loss',
+        min_delta=0,
+        patience=20,
+        mode='min',
+        verbose=1
     )
 
     from keras.optimizers import SGD
@@ -264,20 +266,20 @@ def _main_(args):
 
     optimizer = Adam(lr=config['train']['learning_rate'], clipnorm=0.001)
     # optimizer = SGD(lr=config['train']['learning_rate'], clipnorm=0.001)
-    
-    train_model.compile(loss=dummy_loss, optimizer=optimizer)   
+
+    train_model.compile(loss=dummy_loss, optimizer=optimizer)
     train_model.fit_generator(
-        generator        = train_generator, 
-        steps_per_epoch  = len(train_generator) * config['train']['train_times'],
+        generator=train_generator,
+        steps_per_epoch=len(train_generator) * config['train']['train_times'],
 
-        validation_data  = valid_generator,
-        validation_steps = len(valid_generator) * config['valid']['valid_times'],
+        validation_data=valid_generator,
+        validation_steps=len(valid_generator) * config['valid']['valid_times'],
 
-        epochs           = config['train']['nb_epochs'] + config['train']['warmup_epochs'], 
-        verbose          = 2 if config['train']['debug'] else 1,
-        callbacks        = callbacks, 
-        workers          = 8,
-        max_queue_size   = 100
+        epochs=config['train']['nb_epochs'] + config['train']['warmup_epochs'],
+        verbose=2 if config['train']['debug'] else 1,
+        callbacks=callbacks,
+        workers=8,
+        max_queue_size=100
     )
 
     ###############################
@@ -289,11 +291,12 @@ def _main_(args):
     # print the score
     for label, average_precision in average_precisions.items():
         print(labels[label] + ': {:.4f}'.format(average_precision))
-    print('Last mAP: {:.4f}'.format(sum(average_precisions.values()) / len(average_precisions)))           
+    print('Last mAP: {:.4f}'.format(sum(average_precisions.values()) / len(average_precisions)))
+
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='train and evaluate YOLO_v3 model on any dataset')
-    argparser.add_argument('-c', '--conf', help='path to configuration file')   
+    argparser.add_argument('-c', '--conf', help='path to configuration file')
     argparser.add_argument('-w', '--weights', help='path to pretrained model', default=None)
 
     args = argparser.parse_args()
