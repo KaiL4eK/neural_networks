@@ -721,7 +721,8 @@ def create_yolov3_model(
     train_model = Model([image_input, true_boxes, true_yolo_1, true_yolo_2, true_yolo_3], [loss_yolo_1, loss_yolo_2, loss_yolo_3])
     infer_model = Model(image_input, [pred_yolo_1, pred_yolo_2, pred_yolo_3])
 
-    return [train_model, infer_model]
+    freeze_layers_cnt = 1
+    return train_model, infer_model, infer_model, freeze_layers_cnt
 
 
 def create_tiny_yolov3_model(
@@ -852,7 +853,8 @@ def create_tiny_yolov3_model(
 
     mvnc_model  = Model(image_input, mvnc_output)
 
-    return [train_model, infer_model, mvnc_model]
+    freeze_layers_cnt = 1
+    return train_model, infer_model, mvnc_model, freeze_layers_cnt
 
 
 import mobilenet_utils as mnu
@@ -887,26 +889,37 @@ def create_mobilenetv2_model(
 
     pred_filter_count = (anchors_per_output*(5+nb_class))
 
+    original_model = False
     ##########################
-    alpha = 0.35
-    if 0:
+    alpha = 0.5
+    if original_model:
         from keras.applications.mobilenetv2 import MobileNetV2
         mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=alpha)
-        out13 = mobilenetv2.output
+        x = mobilenetv2.output
     else:
-        x = mnu._conv_block(image_input, 32, 3, strides=2, alpha=alpha)
-        x = mnu._inverted_residual_block(x, 16, 3, t=1, strides=1, n=1, alpha=alpha)
-        x = mnu._inverted_residual_block(x, 24, 3, t=6, strides=2, n=2, alpha=alpha)
-        x = mnu._inverted_residual_block(x, 32, 3, t=6, strides=2, n=3, alpha=alpha)
-        x = mnu._inverted_residual_block(x, 64, 3, t=6, strides=2, n=4, alpha=alpha)
-        x = mnu._inverted_residual_block(x, 96, 3, t=6, strides=1, n=3, alpha=alpha)
-        x = mnu._inverted_residual_block(x, 160, 3, t=6, strides=2, n=3, alpha=alpha)
-        x = mnu._inverted_residual_block(x, 320, 3, t=6, strides=1, n=1, alpha=alpha)
-        out13 = mnu._conv_block(x, 1280, 1, strides=1)
+        channel_axis = 1 if mnu.K.image_data_format() == 'channels_first' else -1
+
+        first_block_filters = mnu._make_divisible(32 * alpha, 8)
+
+        x = mnu.Conv2D(first_block_filters, 3, padding='same', strides=2, use_bias=False, name='Conv1')(image_input)
+        x = mnu.BatchNormalization(axis=channel_axis, name='bn_Conv1')(x)
+        x = mnu.ReLU(6., name='Conv1_relu')(x)
+
+        x = mnu._inverted_residual_block(x, 16, 3, t=1, strides=1, n=1, alpha=alpha, block_id=0)
+        x = mnu._inverted_residual_block(x, 24, 3, t=6, strides=2, n=2, alpha=alpha, block_id=1)
+        x = mnu._inverted_residual_block(x, 32, 3, t=6, strides=2, n=3, alpha=alpha, block_id=3)
+        x = mnu._inverted_residual_block(x, 64, 3, t=6, strides=2, n=4, alpha=alpha, block_id=6)
+        x = mnu._inverted_residual_block(x, 96, 3, t=6, strides=1, n=3, alpha=alpha, block_id=10)
+        x = mnu._inverted_residual_block(x, 160, 3, t=6, strides=2, n=3, alpha=alpha, block_id=13)
+        x = mnu._inverted_residual_block(x, 320, 3, t=6, strides=1, n=1, alpha=alpha, block_id=16)
+
+        last_block_filters = mnu._make_divisible(1280 * alpha, 8)
+        x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='Conv_1')(x)
+        x = mnu.BatchNormalization(axis=channel_axis, name='Conv_1_bn')(x)
+        x = mnu.ReLU(6., name='out_relu')(x)
     ##########################
-
-    pred_yolo_1 = Conv2D(pred_filter_count, 1, padding='same', strides=1, name='DetectionLayer1')(out13)
-
+    output = x
+    pred_yolo_1 = Conv2D(pred_filter_count, 1, padding='same', strides=1, name='DetectionLayer1')(output)
     loss_yolo_1 = YoloLayer(yolo_anchors[0],
                         [1*num for num in max_grid],
                         batch_size,
@@ -923,7 +936,15 @@ def create_mobilenetv2_model(
 
     mvnc_model  = infer_model
 
-    return [train_model, infer_model, mvnc_model]
+    if not original_model:
+        weights_path = 'src_weights/mobilenet_v2_weights_tf_dim_ordering_tf_kernels_{}_224_no_top.h5'.format(alpha)
+        print('Loading weights {}'.format(weights_path))
+        train_model.load_weights(weights_path, by_name=True, skip_mismatch=True)
+
+    freeze_layers_cnt = len(infer_model.layers) - 4
+    print('Non-freezed layers {}'.format(freeze_layers_cnt))
+
+    return train_model, infer_model, mvnc_model, freeze_layers_cnt
 
 
 def create_model(
@@ -944,16 +965,16 @@ def create_model(
     train_shape         = (None, None, 3),
     load_src_weights    = True
 ):
-    backends = {'Tiny':         (create_tiny_yolov3_model,  "src_weights/yolov3-tiny.h5",   2, 32),
-                'Darknet53':    (create_yolov3_model,       "src_weights/yolov3_exp.h5",    3, 32),
-                'Darknet19':    (create_yolov2_model,       "src_weights/yolov2.h5",        1, 32),
-                'MobileNetv2':  (create_mobilenetv2_model,  "",                             22, 32),
-                'SqueezeNet':   (create_yolo_squeeze_model, "",                             -1, 32),
-                'Xception':     (create_xception_model,     "",                             1, 32)
+    backends = {'Tiny':         (create_tiny_yolov3_model,  "src_weights/yolov3-tiny.h5",   32),
+                'Darknet53':    (create_yolov3_model,       "src_weights/yolov3_exp.h5",    32),
+                'Darknet19':    (create_yolov2_model,       "src_weights/yolov2.h5",        32),
+                'MobileNetv2':  (create_mobilenetv2_model,  "",                             32),
+                'SqueezeNet':   (create_yolo_squeeze_model, "",                             32),
+                'Xception':     (create_xception_model,     "",                             32)
                 }
 
     # h, w
-    max_grid = np.array([max_input_size[0] // backends[base][3], max_input_size[1] // backends[base][3]])
+    max_grid = np.array([max_input_size[0] // backends[base][2], max_input_size[1] // backends[base][2]])
 
     model_args = dict(  nb_class            = nb_class, 
                         anchors             = anchors, 
@@ -973,27 +994,13 @@ def create_model(
 
     print('Loading "{}" model'.format(base))
 
-    # if multi_gpu > 1:
-    #     with tf.device('/cpu:0'):
-    #         template_model, infer_model = backends[base][0](**model_args)
-    # else:
-    
-    template_model, infer_model, mvnc_model = backends[base][0](**model_args)  
+    template_model, infer_model, mvnc_model, freeze_layers_cnt = backends[base][0](**model_args)
 
     orig_weights_name = backends[base][1]
 
-    if load_src_weights and orig_weights_name:
-        print("\nLoading original pretrained (%s)" % orig_weights_name)       
-        template_model.load_weights(orig_weights_name, by_name=True, skip_mismatch=True) 
+    train_model = template_model
 
-    from utils.multi_gpu_model import multi_gpu_model
-
-    if multi_gpu > 1:
-        train_model = multi_gpu_model(template_model, gpus=multi_gpu)
-    else:
-        train_model = template_model      
-
-    return train_model, infer_model, mvnc_model, backends[base][2]
+    return train_model, infer_model, mvnc_model, freeze_layers_cnt
 
 
 def dummy_loss(y_true, y_pred):

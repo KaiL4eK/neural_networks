@@ -66,19 +66,14 @@ def create_training_instances(
     return train_ints, valid_ints, sorted(labels), max_box_per_image
 
 
-def _main_(args):
-    config_path = args.conf
-    initial_weights = args.weights
-
-    with open(config_path) as config_buffer:
-        config = json.loads(config_buffer.read())
+def train(config, initial_weights):
 
     init_session(1.0)
     makedirs(os.path.dirname(config['train']['saved_weights_name']))
     makedirs(os.path.dirname(config['train']['cache_name']))
 
     ###############################
-    #   Parse the annotations 
+    #   Parse the annotations
     ###############################
     train_ints, valid_ints, labels, max_box_per_image = create_training_instances(
         config['train']['train_annot_folder'],
@@ -92,8 +87,8 @@ def _main_(args):
     print('\nTraining on: \t' + str(labels) + '\n')
 
     ###############################
-    #   Create the generators 
-    ###############################    
+    #   Create the generators
+    ###############################
     train_generator = BatchGenerator(
         instances=train_ints,
         anchors=config['model']['anchors'],
@@ -120,7 +115,7 @@ def _main_(args):
     )
 
     ###############################
-    #   Create the model 
+    #   Create the model
     ###############################
 
     os.environ['CUDA_VISIBLE_DEVICES'] = config['train']['gpus']
@@ -148,9 +143,12 @@ def _main_(args):
         base=config['model']['base']
     )
 
-    # from keras.utils import plot_model
-    # plot_model(train_model, to_file='model.png')
-    # print_summary(infer_model)
+    from keras.utils.vis_utils import plot_model
+    model_render_file = 'images/{}.png'.format(config['model']['base'])
+    if not os.path.isdir(os.path.dirname(model_render_file)):
+        os.makedirs(os.path.dirname(model_render_file))
+    plot_model(train_model, to_file=model_render_file, show_shapes=True)
+    print_summary(train_model)
 
     # load the pretrained weight if exists, otherwise load the backend weight only
     if initial_weights and os.path.exists(initial_weights):
@@ -186,7 +184,6 @@ def _main_(args):
     callbacks = [early_stop]
 
     if freezing and freeze_num > 0:
-        freeze_num = len(infer_model.layers) - freeze_num
         print('Freezing %d layers of %d' % (freeze_num, len(infer_model.layers)))
         for l in range(freeze_num):
             infer_model.layers[l].trainable = False
@@ -284,7 +281,7 @@ def _main_(args):
 
     ###############################
     #   Run the evaluation
-    ###############################   
+    ###############################
     # compute mAP for all the classes
     average_precisions = evaluate(infer_model, valid_generator)
 
@@ -294,10 +291,17 @@ def _main_(args):
     print('Last mAP: {:.4f}'.format(sum(average_precisions.values()) / len(average_precisions)))
 
 
-if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(description='train and evaluate YOLO_v3 model on any dataset')
-    argparser.add_argument('-c', '--conf', help='path to configuration file')
-    argparser.add_argument('-w', '--weights', help='path to pretrained model', default=None)
+argparser = argparse.ArgumentParser(description='train and evaluate YOLO_v3 model on any dataset')
+argparser.add_argument('-c', '--conf', help='path to configuration file')
+argparser.add_argument('-w', '--weights', help='path to pretrained model', default=None)
+args = argparser.parse_args()
 
-    args = argparser.parse_args()
-    _main_(args)
+
+if __name__ == '__main__':
+    config_path = args.conf
+    initial_weights = args.weights
+
+    with open(config_path) as config_buffer:
+        config = json.loads(config_buffer.read())
+
+    train(config, initial_weights)
