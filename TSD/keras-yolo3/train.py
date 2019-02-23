@@ -147,8 +147,8 @@ def train(config, initial_weights):
     model_render_file = 'images/{}.png'.format(config['model']['base'])
     if not os.path.isdir(os.path.dirname(model_render_file)):
         os.makedirs(os.path.dirname(model_render_file))
-    plot_model(train_model, to_file=model_render_file, show_shapes=True)
-    print_summary(train_model)
+    plot_model(infer_model, to_file=model_render_file, show_shapes=True)
+    # print_summary(infer_model)
 
     # load the pretrained weight if exists, otherwise load the backend weight only
     if initial_weights and os.path.exists(initial_weights):
