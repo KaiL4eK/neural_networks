@@ -291,13 +291,12 @@ def train(config, initial_weights):
     print('Last mAP: {:.4f}'.format(sum(average_precisions.values()) / len(average_precisions)))
 
 
-argparser = argparse.ArgumentParser(description='train and evaluate YOLO_v3 model on any dataset')
-argparser.add_argument('-c', '--conf', help='path to configuration file')
-argparser.add_argument('-w', '--weights', help='path to pretrained model', default=None)
-args = argparser.parse_args()
-
-
 if __name__ == '__main__':
+    argparser = argparse.ArgumentParser(description='train and evaluate YOLO_v3 model on any dataset')
+    argparser.add_argument('-c', '--conf', help='path to configuration file')
+    argparser.add_argument('-w', '--weights', help='path to pretrained model', default=None)
+    args = argparser.parse_args()
+
     config_path = args.conf
     initial_weights = args.weights
 
