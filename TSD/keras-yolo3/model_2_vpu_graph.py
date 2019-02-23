@@ -51,15 +51,13 @@ def _main_():
             train_shape=(train_sz[0], train_sz[1], 3)
         )
 
-    # _, _, mvnc_model, _ = create_model(
-    #     nb_class            = 1,
-    #     anchors             = config['model']['anchors'],
-    #     base                = config['model']['base'],
-    #     load_src_weights    = False,
-    #     train_shape         = (train_sz[0], train_sz[1], 3)
-    # )
-
     print_summary(mvnc_model)
+    from keras.utils.vis_utils import plot_model
+    model_render_file = 'images/{}.png'.format(config['model']['base'])
+    if not os.path.isdir(os.path.dirname(model_render_file)):
+        os.makedirs(os.path.dirname(model_render_file))
+    plot_model(mvnc_model, to_file=model_render_file, show_shapes=True)
+
     # mvnc_model.load_weights(weights_path)
 
     model_input_names = [mvnc_model.input.name.split(':')[0]]

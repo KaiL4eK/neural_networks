@@ -20,12 +20,14 @@ def init_session(rate):
 def _sigmoid(x):
     return expit(x)
 
+
 def makedirs(path):
     try:
         os.makedirs(path)
     except OSError:
         if not os.path.isdir(path):
             raise
+
 
 def evaluate(model, 
              generator, 
@@ -320,9 +322,7 @@ def get_yolo_boxes(model, images, net_h, net_w, anchors, obj_thresh, nms_thresh)
             boxes += decode_netout(yolos[j], yolo_anchors, obj_thresh, net_h, net_w)
 
         correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w)
-
-        do_nms(boxes, nms_thresh)        
-           
+        do_nms(boxes, nms_thresh)
         batch_boxes[i] = boxes
 
     return batch_boxes        
