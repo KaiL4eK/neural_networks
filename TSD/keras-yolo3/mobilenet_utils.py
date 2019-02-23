@@ -51,7 +51,7 @@ def _bottleneck(inputs, filters, kernel, t, s, r, block_id, alpha=1.0):
     else:
         prefix='expanded_conv_'
 
-    x = DepthwiseConv2D(kernel, strides=(s, s),
+    x = DepthwiseConv2D(kernel, strides=s,
                                 depth_multiplier=1,
                                 padding='same',
                                 use_bias=False,

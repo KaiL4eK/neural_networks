@@ -913,7 +913,8 @@ def create_mobilenetv2_model(
         x = mnu._inverted_residual_block(x, 160, 3, t=6, strides=2, n=3, alpha=alpha, block_id=13)
         x = mnu._inverted_residual_block(x, 320, 3, t=6, strides=1, n=1, alpha=alpha, block_id=16)
 
-        last_block_filters = mnu._make_divisible(1280 * alpha, 8)
+        # last_block_filters = mnu._make_divisible(1280 * alpha, 8)
+        last_block_filters = 1280
         x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='Conv_1')(x)
         x = mnu.BatchNormalization(axis=channel_axis, name='Conv_1_bn')(x)
         x = mnu.ReLU(6., name='out_relu')(x)
