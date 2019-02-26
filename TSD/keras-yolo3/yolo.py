@@ -858,6 +858,7 @@ def create_tiny_yolov3_model(
 
 
 import mobilenet_utils as mnu
+import os
 
 
 def create_mobilenetv2_model(
@@ -891,7 +892,7 @@ def create_mobilenetv2_model(
 
     original_model = False
     ##########################
-    alpha = 0.5
+    alpha = 0.75
     if original_model:
         from keras.applications.mobilenetv2 import MobileNetV2
         mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=alpha)
@@ -938,9 +939,13 @@ def create_mobilenetv2_model(
     mvnc_model  = infer_model
 
     if not original_model:
-        weights_path = 'src_weights/mobilenet_v2_weights_tf_dim_ordering_tf_kernels_{}_224_no_top.h5'.format(alpha)
+        weights_path = 'mobilenet_v2_weights_tf_dim_ordering_tf_kernels_{}_224_no_top.h5'.format(alpha)
         print('Loading weights {}'.format(weights_path))
-        train_model.load_weights(weights_path, by_name=True, skip_mismatch=True)
+
+        os.system('wget -NP src_weights https://github.com/JonathanCMitchell/'
+                  'mobilenet_v2_keras/releases/download/v1.1/%s' % weights_path)
+
+        train_model.load_weights(os.path.join('src_weights', weights_path), by_name=True, skip_mismatch=True)
 
     freeze_layers_cnt = len(infer_model.layers) - 4
     print('Non-freezed layers {}'.format(freeze_layers_cnt))

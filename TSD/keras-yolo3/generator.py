@@ -64,8 +64,9 @@ class BatchGenerator(Sequence):
             # get image input size, change every 10 batches
             net_h, net_w = self._get_net_size(idx)
 
-        base_grid_h, base_grid_w = int((net_h + self.downsample / 2) // self.downsample), int((net_w + self.downsample / 2) // self.downsample)
-        # base_grid_h, base_grid_w = net_h // self.downsample, net_w // self.downsample
+        # base_grid_h, base_grid_w = int((net_h + self.downsample / 2) // self.downsample),
+        #                            int((net_w + self.downsample / 2) // self.downsample)
+        base_grid_h, base_grid_w = net_h // self.downsample, net_w // self.downsample
 
         # determine the first and the last indices of the batch
         l_bound = idx * self.batch_size

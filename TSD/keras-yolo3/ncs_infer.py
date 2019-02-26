@@ -33,7 +33,7 @@ def _main_():
 
     data_generator = utils.data_generator(input_path)
 
-    show_delay = 100
+    show_delay = 1000
 
     full_time = 0
     processing_cnt = 0
