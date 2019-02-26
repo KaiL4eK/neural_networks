@@ -15,3 +15,4 @@ pygraphviz
 tensorflow-gpu==1.11
 # opencv-python
 lxml
+matplotlib

@@ -25,6 +25,8 @@ def _main_():
     output_pb_fpath = args.output
     config_path = args.conf
 
+    
+
     with open(config_path) as config_buffer:    
         config = json.loads(config_buffer.read())
 
