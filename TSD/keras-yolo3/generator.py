@@ -18,7 +18,7 @@ class BatchGenerator(Sequence):
                  max_box_per_image=30,
                  batch_size=1,
                  shuffle=True,
-                 jitter=True,
+                 jitter=0.3,
                  flip=False,
                  norm=None,
                  infer_sz=None,
@@ -189,11 +189,21 @@ class BatchGenerator(Sequence):
 
     def _get_net_size(self, idx):
         if idx % 10 == 0 or self.net_size_w == 0:
+            # rate = float(self.max_net_size[1]) / self.max_net_size[0]
+
+            # new_h = self.downsample * np.random.randint(self.min_net_size[0] / self.downsample - 2,
+            #                                             self.max_net_size[0] / self.downsample + 2 + 1)
+
+            # new_w = new_h * rate
+
             self.net_size_h = self.downsample * np.random.randint(self.min_net_size[0] / self.downsample,
                                                                   self.max_net_size[0] / self.downsample + 1)
             self.net_size_w = self.downsample * np.random.randint(self.min_net_size[1] / self.downsample,
                                                                   self.max_net_size[1] / self.downsample + 1)
-            
+
+            # self.net_size_h = int(new_h)
+            # self.net_size_w = int(new_w)
+
         return self.net_size_h, self.net_size_w
 
     def _aug_image(self, instance, net_h, net_w):
@@ -232,7 +242,7 @@ class BatchGenerator(Sequence):
             dh = self.jitter * image_h;
 
             new_ar = (image_w + np.random.uniform(-dw, dw)) / (image_h + np.random.uniform(-dh, dh));
-            rand_shift = 0.1
+            rand_shift = 0.25
             scale = np.random.uniform(1 - rand_shift, 1 + rand_shift);
 
             if (new_ar < 1):
@@ -249,7 +259,7 @@ class BatchGenerator(Sequence):
             im_sized = apply_random_scale_and_crop(image, new_w, new_h, net_w, net_h, dx, dy)
 
             # randomly distort hsv space
-            im_sized = random_distort_image(im_sized, hue=5, saturation=1.1, exposure=1.1)
+            im_sized = random_distort_image(im_sized, hue=18, saturation=1.1, exposure=1.1)
 
             # randomly flip
             if self.flip:

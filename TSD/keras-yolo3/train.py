@@ -215,7 +215,7 @@ def train(config, initial_weights):
         layer.trainable = True
 
     root, ext = os.path.splitext(config['train']['saved_weights_name'])
-    root = root + '_{}x{}_'.format(config['model']['infer_shape'][0], config['model']['infer_shape'][1])
+    root = root + '_{}x{}'.format(config['model']['infer_shape'][0], config['model']['infer_shape'][1])
     checkpoint_vloss = CustomModelCheckpoint(
         model_to_save=infer_model,
         filepath=root + '_ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}' + ext,
