@@ -170,10 +170,12 @@ class BatchGenerator(Sequence):
                 # plot image and bounding boxes for sanity check
                 for obj in all_objs:
                     cv2.rectangle(img, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), (255, 255, 0), 2)
-                    # cv2.putText(img, obj['name'], 
-                    #             (obj['xmin']+2, obj['ymin']+12), 
-                    #             0, 1.2e-3 * img.shape[0], 
-                    #             (0,255,0), 2)
+                    cv2.putText(img, obj['name'], 
+                                (obj['xmin']+2, obj['ymin']+2), 
+                                0, 3e-3 * img.shape[0], 
+                                (255,0,0), 2)
+
+                    print("{} / {}".format(train_instance['filename'], obj['name']))
 
                 x_batch[instance_count] = img
 
@@ -230,7 +232,8 @@ class BatchGenerator(Sequence):
             dh = self.jitter * image_h;
 
             new_ar = (image_w + np.random.uniform(-dw, dw)) / (image_h + np.random.uniform(-dh, dh));
-            scale = np.random.uniform(0.25, 2);
+            rand_shift = 0.1
+            scale = np.random.uniform(1 - rand_shift, 1 + rand_shift);
 
             if (new_ar < 1):
                 new_h = int(scale * net_h);
@@ -246,7 +249,7 @@ class BatchGenerator(Sequence):
             im_sized = apply_random_scale_and_crop(image, new_w, new_h, net_w, net_h, dx, dy)
 
             # randomly distort hsv space
-            im_sized = random_distort_image(im_sized)
+            im_sized = random_distort_image(im_sized, hue=5, saturation=1.1, exposure=1.1)
 
             # randomly flip
             if self.flip:

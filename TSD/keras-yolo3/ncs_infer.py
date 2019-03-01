@@ -27,13 +27,13 @@ def _main_():
     config['model']['labels'] = ['brick', 'forward', 'forward and left', 'forward and right', 'left', 'right']
 
     net_h, net_w = config['model']['infer_shape']
-    obj_thresh, nms_thresh = 0.8, 0.45
+    obj_thresh, nms_thresh = 0.5, 0.45
 
     ncs_model = ncs.InferNCS(graph_fpath, fp16=False)
 
     data_generator = utils.data_generator(input_path)
 
-    show_delay = 1000
+    show_delay = 0
 
     full_time = 0
     processing_cnt = 0
@@ -54,7 +54,8 @@ def _main_():
         draw_boxes(image, boxes, config['model']['labels'], obj_thresh) 
 
         cv2.imshow('1', image)
-        if cv2.waitKey(show_delay) == 27:
+        key = cv2.waitKey(show_delay)
+        if key == 27:
             break
 
     print("Time: %.3f [ms] / FPS: %.1f" % (full_time * 1000, processing_cnt / full_time))

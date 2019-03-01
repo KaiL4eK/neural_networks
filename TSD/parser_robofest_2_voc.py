@@ -78,11 +78,9 @@ def main():
         # Flipped
         if class_name == 'forward and right':
             class_name = 'forward and left'
-
-        if class_name == 'right':
+        elif class_name == 'right':
             class_name = 'left'
-
-        if class_name == 'left':
+        elif class_name == 'left':
             class_name = 'right'
 
         xmin = img_width - xmax
