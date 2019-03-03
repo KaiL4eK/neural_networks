@@ -246,48 +246,15 @@ def get_embedded_img_sz(image, input_hw):
 
 
 def preprocess_input(image, net_h, net_w):
- 
-    if 1:
-        new_h, new_w = get_embedded_img_sz(image, (net_h, net_w))
 
-        resized = cv2.resize(image, (new_w, new_h))
-        resized = normalize(resized)
+    new_h, new_w = get_embedded_img_sz(image, (net_h, net_w))
 
-        # embed the image into the standard letter box
-        new_image = np.zeros((net_h, net_w, 3))
-        new_image[(net_h-new_h)//2:(net_h+new_h)//2, (net_w-new_w)//2:(net_w+new_w)//2, :] = resized
-        
-    else:   # other imutils method
-        # import imutils
-        # resized = imutils.resize(image, height=net_h, interpolation = cv2.INTER_AREA)
+    resized = cv2.resize(image, (new_w, new_h))
+    resized = normalize(resized)
 
-        desired_size = 416
-        old_size = image.shape[:2] # old_size is in (height, width) format
-
-        ratio = float(desired_size)/max(old_size)
-
-        new_size = tuple([int(x*ratio) for x in old_size])
-
-        # new_size should be in (width, height) format
-        image = cv2.resize(image, (new_size[1], new_size[0]))
-
-        delta_w = desired_size - new_size[1]
-        delta_h = desired_size - new_size[0]
-
-        top, bottom = delta_h//2, delta_h-(delta_h//2)
-        left, right = delta_w//2, delta_w-(delta_w//2)
-
-        color = [0.5, 0.5, 0.5]
-
-        new_im = cv2.copyMakeBorder(image, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
-
-        print(new_im.shape)
-
-    # cv2.imshow('1', image);
-    # cv2.imshow('2', new_image);
-    # cv2.waitKey(0)
-
-    # new_image = np.expand_dims(new_image, 0)
+    # embed the image into the standard letter box
+    new_image = np.zeros((net_h, net_w, 3))
+    new_image[(net_h-new_h)//2:(net_h+new_h)//2, (net_w-new_w)//2:(net_w+new_w)//2, :] = resized
 
     return new_image
 

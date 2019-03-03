@@ -900,7 +900,7 @@ def create_mobilenetv2_model(
 
     original_model = False
     ##########################
-    alpha = 0.5
+    alpha = 0.35
     if original_model:
         from keras.applications.mobilenetv2 import MobileNetV2
         mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=alpha)
