@@ -143,7 +143,8 @@ def _main_():
             a_width  = float(obj['xmax']) - float(obj['xmin'])
             a_height = float(obj["ymax"]) - float(obj['ymin'])
 
-            # print( int(a_width / image['width'] * 416), int(a_height / image['height'] * 416) )
+            print(image['filename'])
+            print( int(a_width / image['width'] * image_sz[1]), int(a_height / image['height'] * image_sz[0]) )
 
             relative_w = a_width/image['width']
             relative_h = a_height/image['height']

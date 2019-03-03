@@ -199,8 +199,7 @@ class YoloLayer(Layer):
             loss = tf.Print(loss, [grid_h, tf.reduce_sum(loss_xy), 
                                            tf.reduce_sum(loss_wh), 
                                            tf.reduce_sum(loss_conf), 
-                                           tf.reduce_sum(loss_class)],  message='loss xy, wh, conf, class: \t',   summarize=1000)   
-
+                                           tf.reduce_sum(loss_class)],  message='loss xy, wh, conf, class: \t', summarize=1000)
 
         return loss*self.grid_scale
 
@@ -901,7 +900,7 @@ def create_mobilenetv2_model(
 
     original_model = False
     ##########################
-    alpha = 0.75
+    alpha = 0.5
     if original_model:
         from keras.applications.mobilenetv2 import MobileNetV2
         mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=alpha)

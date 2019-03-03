@@ -218,26 +218,23 @@ class BatchGenerator(Sequence):
 
         # image = image[:,:,::-1] # RGB image
         image_h, image_w, _ = image.shape
+        flip = 0
 
         if self.infer_sz:
-            new_ar = (image_w) * 1. / (image_h);
-            scale = 1;
+            new_ar = image_w * 1. / image_h
 
-            if (new_ar < 1):
-                new_h = int(scale * net_h);
-                new_w = int(net_h * new_ar);
+            if new_ar < 1:
+                new_h = int(net_h)
+                new_w = int(net_h * new_ar)
             else:
-                new_w = int(scale * net_w);
-                new_h = int(net_w / new_ar);
+                new_w = int(net_w)
+                new_h = int(net_w / new_ar)
 
-            dx = int((net_w - new_w) // 2);
-            dy = int((net_h - new_h) // 2);
+            dx = int((net_w - new_w) // 2)
+            dy = int((net_h - new_h) // 2)
 
             # apply scaling and cropping
             im_sized = apply_random_scale_and_crop(image, new_w, new_h, net_w, net_h, dx, dy)
-
-            # randomly flip
-            flip = 0
 
         else:
             # determine the amount of scaling and cropping
@@ -267,8 +264,6 @@ class BatchGenerator(Sequence):
             if self.flip:
                 flip = np.random.randint(2)
                 im_sized = random_flip(im_sized, flip)
-            else:
-                flip = 0
 
         # correct the size and pos of bounding boxes
         all_objs = correct_bounding_boxes(instance['object'], new_w, new_h, net_w, net_h, dx, dy, flip, image_w,

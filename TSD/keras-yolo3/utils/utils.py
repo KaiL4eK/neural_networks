@@ -230,18 +230,25 @@ def normalize(image):
     return image/255. * 2 - 1
 
 
+def get_embedded_img_sz(image, input_hw):
+    new_h, new_w, _ = image.shape
+    net_h, net_w = input_hw
+
+    # determine the new size of the image
+    if (float(net_w) / new_w) < (float(net_h) / new_h):
+        new_h = (new_h * net_w) // new_w
+        new_w = net_w
+    else:
+        new_w = (new_w * net_h) // new_h
+        new_h = net_h
+
+    return new_h, new_w
+
+
 def preprocess_input(image, net_h, net_w):
  
     if 1:
-        new_h, new_w, _ = image.shape
-
-        # determine the new size of the image
-        if (float(net_w)/new_w) < (float(net_h)/new_h):
-            new_h = (new_h * net_w)//new_w
-            new_w = net_w
-        else:
-            new_w = (new_w * net_h)//new_h
-            new_h = net_h
+        new_h, new_w = get_embedded_img_sz(image, (net_h, net_w))
 
         resized = cv2.resize(image, (new_w, new_h))
         resized = normalize(resized)
@@ -326,6 +333,7 @@ def get_yolo_boxes(model, images, net_h, net_w, anchors, obj_thresh, nms_thresh)
         batch_boxes[i] = boxes
 
     return batch_boxes        
+
 
 def compute_overlap(a, b):
     """
