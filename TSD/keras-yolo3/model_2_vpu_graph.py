@@ -27,7 +27,6 @@ def _main_():
         config = json.loads(config_buffer.read())
 
     output_pb_fpath = utils.get_pb_graph_fpath(config)
-    graph_fpath = utils.get_ncs_graph_fpath(config)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.3, allow_growth=True)
     sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -92,9 +91,10 @@ def _main_():
     #####################################
     from subprocess import call
 
-    print('    Writing to {}'.format(graph_fpath))
-
     if weights_path:
+        graph_fpath = utils.get_ncs_graph_fpath(config)
+        print('    Writing to {}'.format(graph_fpath))
+
         process_args = ["mvNCCompile", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12",
                         "-o", graph_fpath]
         call(process_args)

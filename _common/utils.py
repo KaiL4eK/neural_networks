@@ -17,8 +17,8 @@ def get_impaths_from_path(path):
 
 
 def get_ncs_graph_fpath(config):
-    output_fpath = get_pb_graph_fpath(config)
-    output_fpath = output_fpath + '.ncsg'
+    output_dir = 'ncs_graphs'
+    output_fpath = os.path.join(output_dir, config['model']['base'] + '.ncsg')
 
     makedirs_4_file(output_fpath)
 
@@ -26,7 +26,7 @@ def get_ncs_graph_fpath(config):
 
 
 def get_pb_graph_fpath(config):
-    output_dir = 'ncs_graphs'
+    output_dir = 'pb_graphs'
     output_fpath = os.path.join(output_dir, config['model']['base'] + '.pb')
 
     makedirs_4_file(output_fpath)
