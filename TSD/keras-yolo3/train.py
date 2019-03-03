@@ -70,7 +70,8 @@ def train(config, initial_weights):
 
     init_session(1.0)
     makedirs(os.path.dirname(config['train']['saved_weights_name']))
-    makedirs(os.path.dirname(config['train']['cache_name']))
+    if config['train']['cache_name']:
+        makedirs(os.path.dirname(config['train']['cache_name']))
 
     ###############################
     #   Parse the annotations
