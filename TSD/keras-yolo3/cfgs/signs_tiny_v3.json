@@ -4,7 +4,7 @@
         "max_input_size":       [224, 288],
         "base":                 "TinyV3",
         "anchors":              [47,62, 60,88, 74,103, 89,118, 97,144, 117,165],
-        "labels":               [],
+        "labels":               ["left", "right", "brick", "forward and right", "forward and left", "forward"],
         "infer_shape":          [192, 256]
     },
 

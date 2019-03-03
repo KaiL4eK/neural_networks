@@ -9,6 +9,7 @@ from keras.layers import Concatenate, MaxPooling2D
 from functools import wraps, reduce
 from keras.regularizers import l2
 
+
 class YoloLayer(Layer):
     def __init__(self, anchors, max_grid, batch_size, warmup_batches, ignore_thresh, 
                     grid_scale, obj_scale, noobj_scale, xywh_scale, class_scale, debug=False, 

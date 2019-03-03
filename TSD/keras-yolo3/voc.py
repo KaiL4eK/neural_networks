@@ -3,6 +3,7 @@ import os
 import xml.etree.ElementTree as ET
 import pickle
 
+
 def parse_voc_annotation(ann_dir, img_dir, cache_name, labels=[]):
     # Dirty hack to check 
     if cache_name and len(cache_name) > 1 and os.path.exists(cache_name):
@@ -45,6 +46,7 @@ def parse_voc_annotation(ann_dir, img_dir, cache_name, labels=[]):
                                 seen_labels[obj['name']] = 1
                             
                             if len(labels) > 0 and obj['name'] not in labels:
+                                print('Ignore label: {}'.format(obj['name']))
                                 break
                             else:
                                 img['object'] += [obj]

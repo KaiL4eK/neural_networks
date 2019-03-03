@@ -227,7 +227,7 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
 
 
 def normalize(image):
-    return image/255.  
+    return image/255. * 2 - 1
 
 
 def preprocess_input(image, net_h, net_w):
@@ -247,7 +247,7 @@ def preprocess_input(image, net_h, net_w):
         resized = normalize(resized)
 
         # embed the image into the standard letter box
-        new_image = np.ones((net_h, net_w, 3)) * 0.5
+        new_image = np.zeros((net_h, net_w, 3))
         new_image[(net_h-new_h)//2:(net_h+new_h)//2, (net_w-new_w)//2:(net_w+new_w)//2, :] = resized
         
     else:   # other imutils method
