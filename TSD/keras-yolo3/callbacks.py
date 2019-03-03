@@ -5,7 +5,7 @@ import keras
 from utils.utils import evaluate
 
 
-class MAPEvaluation(keras.callbacks.Callback):
+class MAP_evaluation(keras.callbacks.Callback):
     """ Evaluate a given dataset using a given model.
             code originally from https://github.com/fizyr/keras-retinanet
 
