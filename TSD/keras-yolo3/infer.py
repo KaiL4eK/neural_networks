@@ -7,11 +7,13 @@ from _common import utils
 import json
 from utils.utils import get_yolo_boxes
 from utils.bbox import draw_boxes
+from keras.models import load_model
 
 argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
 argparser.add_argument('-c', '--conf', help='path to configuration file')
 argparser.add_argument('-g', '--graph', help='graph path')
 argparser.add_argument('-i', '--input', help='input image path')
+argparser.add_argument('-w', '--weights', help='weights path')
 
 args = argparser.parse_args()
 
@@ -20,6 +22,7 @@ def _main_():
     config_path = args.conf
     graph_fpath = args.graph
     input_path = args.input
+    weights_path = args.weights
 
     with open(config_path) as config_buffer:    
         config = json.load(config_buffer)
@@ -29,7 +32,10 @@ def _main_():
     net_h, net_w = config['model']['infer_shape']
     obj_thresh, nms_thresh = 0.5, 0.45
 
-    ncs_model = ncs.InferNCS(graph_fpath, fp16=False)
+    if graph_fpath:
+        model = ncs.InferNCS(graph_fpath, fp16=False)
+    elif weights_path:
+        model = load_model(weights_path)
 
     data_generator = utils.data_generator(input_path)
 
@@ -45,7 +51,7 @@ def _main_():
         print(image_src.shape)
         # image = cv2.resize(image_src, (0,0), fx=2, fy=2)
 
-        boxes = get_yolo_boxes(ncs_model, [image_src], net_h, net_w, config['model']['anchors'], obj_thresh, nms_thresh)[0]
+        boxes = get_yolo_boxes(model, [image_src], net_h, net_w, config['model']['anchors'], obj_thresh, nms_thresh)[0]
 
         full_time += time.time() - start
         processing_cnt += 1
