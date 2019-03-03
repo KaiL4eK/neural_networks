@@ -39,12 +39,10 @@ def _main_():
 
     data_generator = utils.data_generator(input_path)
 
-    show_delay = 0
-
     full_time = 0
     processing_cnt = 0
 
-    for image_src in data_generator:
+    for type, image_src in data_generator:
 
         start = time.time()
 
@@ -58,6 +56,11 @@ def _main_():
 
         image = image_src
         draw_boxes(image, boxes, config['model']['labels'], obj_thresh) 
+
+        if type == utils.DATA_GEN_SRC_VIDEO:
+            show_delay = 1
+        else:
+            show_delay = 0
 
         cv2.imshow('1', image)
         key = cv2.waitKey(show_delay)

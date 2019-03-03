@@ -218,7 +218,7 @@ def train(config, initial_weights):
     root = root + '_{}x{}'.format(config['model']['infer_shape'][0], config['model']['infer_shape'][1])
     checkpoint_vloss = CustomModelCheckpoint(
         model_to_save=infer_model,
-        filepath=root + '_ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}' + ext,
+        filepath=root + '_ep{epoch:03d}-val_loss{val_loss:.3f}-loss{loss:.3f}' + ext,
         monitor='val_loss',
         verbose=1,
         save_best_only=True,
@@ -245,7 +245,7 @@ def train(config, initial_weights):
     map_evaluator_cb = MAP_evaluation(infer_model=infer_model,
                                       generator=valid_generator,
                                       save_best=True,
-                                      save_name=root + '_ep{epoch:03d}-best_mAP{mAP:.3f}' + ext,
+                                      save_name=root + '_ep{epoch:03d}-val_loss{val_loss:.3f}-best_mAP{mAP:.3f}' + ext,
                                       tensorboard=tensorboard_cb,
                                       iou_threshold=0.5,
                                       score_threshold=0.5)

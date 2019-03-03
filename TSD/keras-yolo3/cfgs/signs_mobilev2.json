@@ -22,9 +22,9 @@
         "gpus":                 "0",
 
         "grid_scales":          [1,1,1],
-        "obj_scale":            5,
+        "obj_scale":            7,
         "noobj_scale":          1,
-        "xywh_scale":           1,
+        "xywh_scale":           5,
         "class_scale":          1,
 
         "tensorboard_dir":      "logs/TSD_yolo_mbv2",
