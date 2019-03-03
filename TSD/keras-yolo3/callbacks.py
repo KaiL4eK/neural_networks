@@ -5,8 +5,8 @@ import keras
 from utils.utils import evaluate
 
 
-class MAP_evaluation(keras.callbacks.Callback):
-        """ Evaluate a given dataset using a given model.
+class MAPEvaluation(keras.callbacks.Callback):
+    """ Evaluate a given dataset using a given model.
             code originally from https://github.com/fizyr/keras-retinanet
 
             # Arguments
@@ -17,76 +17,78 @@ class MAP_evaluation(keras.callbacks.Callback):
                 save_path       : The path to save images with visualized detections to.
             # Returns
                 A dict mapping class names to mAP scores.
-        """   
-        def __init__(self,
-                    infer_model,
-                    generator, 
-                    iou_threshold=0.3,
-                    score_threshold=0.3,
-                    save_path=None,
-                    period=1,
-                    save_best=False,
-                    save_name=None,
-                    tensorboard=None):
-            
-            self.infer_model = infer_model
-            self.generator = generator
-            self.iou_threshold = iou_threshold
-            self.save_path = save_path
-            self.period = period
-            self.save_best = save_best
-            self.save_name_fmt = save_name
-            self.tensorboard = tensorboard
+        """
 
-            self.bestMap = 0
+    def __init__(self,
+                 infer_model,
+                 generator,
+                 iou_threshold=0.3,
+                 score_threshold=0.3,
+                 save_path=None,
+                 period=1,
+                 save_best=False,
+                 save_name=None,
+                 tensorboard=None):
 
-            if not isinstance(self.tensorboard,keras.callbacks.TensorBoard) and self.tensorboard is not None:
-                raise ValueError("Tensorboard object must be a instance from keras.callbacks.TensorBoard")
+        self.infer_model = infer_model
+        self.generator = generator
+        self.iou_threshold = iou_threshold
+        self.save_path = save_path
+        self.period = period
+        self.save_best = save_best
+        self.save_name_fmt = save_name
+        self.tensorboard = tensorboard
 
+        self.bestMap = 0
 
-        def on_epoch_end(self, epoch, logs={}):
+        if not isinstance(self.tensorboard, keras.callbacks.TensorBoard) and self.tensorboard is not None:
+            raise ValueError("Tensorboard object must be a instance from keras.callbacks.TensorBoard")
 
-            if epoch % self.period == 0 and self.period != 0:
-                average_precisions = evaluate(model=self.infer_model, 
-                                                generator=self.generator, 
-                                                iou_threshold=self.iou_threshold,
-                                                net_h=416,
-                                                net_w=416,
-                                                save_path=None)
-                print('\n')
-                for label, average_precision in average_precisions.items():
-                    print(label, '{:.4f}'.format(average_precision))
-                mAP = sum(average_precisions.values()) / len(average_precisions)
-                print('mAP: {:.4f}'.format(mAP)) 
+    def on_epoch_end(self, epoch, logs=None):
 
-                if self.save_best and self.save_name_fmt is not None and mAP > self.bestMap:
-                    self.save_name = self.save_name_fmt.format(epoch=epoch + 1, mAP=mAP, **logs)
-                    print("\nEpoch %05d: mAP improved from {} to {}, saving model to {}.".format(epoch, self.bestMap,mAP,self.save_name))
-                    self.bestMap = mAP
-                    self.infer_model.save(self.save_name)
-                else:
-                    print("mAP did not improve from {}.".format(self.bestMap))
+        if epoch % self.period == 0 and self.period != 0:
+            average_precisions = evaluate(model=self.infer_model,
+                                          generator=self.generator,
+                                          iou_threshold=self.iou_threshold,
+                                          net_h=416,
+                                          net_w=416,
+                                          save_path=None)
+            print('\n')
+            for label, average_precision in average_precisions.items():
+                print(label, '{:.4f}'.format(average_precision))
+            mAP = sum(average_precisions.values()) / len(average_precisions)
+            print('mAP: {:.4f}'.format(mAP))
 
-                if self.tensorboard is not None and self.tensorboard.writer is not None:
-                    import tensorflow as tf
-                    summary = tf.Summary()
-                    summary_value = summary.value.add()
-                    summary_value.simple_value = mAP
-                    summary_value.tag = "val_mAP"
-                    self.tensorboard.writer.add_summary(summary, epoch)
+            if self.save_best and self.save_name_fmt and mAP > self.bestMap:
+                save_name = self.save_name_fmt.format(epoch=epoch + 1, **logs, mAP=mAP)
+                print("\nEpoch %05d: mAP improved from {} to {}, saving model to {}.".format(epoch, self.bestMap, mAP,
+                                                                                             save_name))
+                self.bestMap = mAP
+                self.infer_model.save(save_name)
+            else:
+                print("mAP did not improve from {}.".format(self.bestMap))
+
+            if self.tensorboard is not None and self.tensorboard.writer is not None:
+                import tensorflow as tf
+                summary = tf.Summary()
+                summary_value = summary.value.add()
+                summary_value.simple_value = mAP
+                summary_value.tag = "val_mAP"
+                self.tensorboard.writer.add_summary(summary, epoch)
 
 
 class CustomTensorBoard(TensorBoard):
     """ to log the loss after each batch
-    """    
+    """
+
     def __init__(self, log_every=1, **kwargs):
         super(CustomTensorBoard, self).__init__(**kwargs)
         self.log_every = log_every
         self.counter = 0
-    
+
     def on_batch_end(self, batch, logs=None):
-        self.counter+=1
-        if self.counter%self.log_every==0:
+        self.counter += 1
+        if self.counter % self.log_every == 0:
             for name, value in logs.items():
                 if name in ['batch', 'size']:
                     continue
@@ -96,13 +98,14 @@ class CustomTensorBoard(TensorBoard):
                 summary_value.tag = name
                 self.writer.add_summary(summary, self.counter)
             self.writer.flush()
-        
+
         super(CustomTensorBoard, self).on_batch_end(batch, logs)
 
 
 class CustomModelCheckpoint(ModelCheckpoint):
     """ to save the template model, not the multi-GPU model
     """
+
     def __init__(self, model_to_save, **kwargs):
         super(CustomModelCheckpoint, self).__init__(**kwargs)
         self.model_to_save = model_to_save
