@@ -66,8 +66,9 @@ def parse_voc_annotation(ann_dir, img_dir, cache_name, labels=[]):
             all_insts += [img]
 
         cache = {'all_insts': all_insts, 'seen_labels': seen_labels}
-        with open(cache_name, 'wb') as handle:
-            pickle.dump(cache, handle, protocol=pickle.HIGHEST_PROTOCOL)    
+        if cache_name:
+            with open(cache_name, 'wb') as handle:
+                pickle.dump(cache, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     return all_insts, seen_labels
 
