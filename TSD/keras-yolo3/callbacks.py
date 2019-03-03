@@ -109,8 +109,8 @@ class MAP_evaluation(keras.callbacks.Callback):
 
             if self.save_best and self.save_name_fmt and mAP > self.bestMap:
                 save_name = self.save_name_fmt.format(epoch=epoch + 1, mAP=mAP)
-                print("\nEpoch %05d: mAP improved from {} to {}, saving model to {}.".format(epoch, self.bestMap, mAP,
-                                                                                             save_name))
+                print('\nEpoch %05d: mAP improved from {} to {}, saving model to {}'.format(epoch, self.bestMap, mAP,
+                                                                                            save_name))
                 self.bestMap = mAP
                 self.infer_model.save(save_name)
             else:
