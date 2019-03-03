@@ -4,7 +4,7 @@
         "max_input_size":       [224, 288],
         "base":                 "MobileNetv2",
         "anchors":              [29,29, 40,44, 61,64],
-        "labels":               ["brick", "forward", "forward and left", "forward and right", "left", "right"],
+        "labels":               [],
         "infer_shape":          [192, 256]
     },
 
