@@ -47,6 +47,7 @@ def _main_():
         _, _, mvnc_model, _ = create_model(
             nb_class=6,
             anchors=config['model']['anchors'],
+            max_input_size=config['model']['max_input_size'],
             base=config['model']['base'],
             load_src_weights=False,
             train_shape=(train_sz[0], train_sz[1], 3)

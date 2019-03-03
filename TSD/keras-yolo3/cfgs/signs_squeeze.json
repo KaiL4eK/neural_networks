@@ -1,10 +1,11 @@
 {
     "model" : {
-        "min_input_size":       288,
-        "max_input_size":       448,
+        "min_input_size":       [160, 224],
+        "max_input_size":       [224, 288],
         "base":                 "SqueezeNet",
         "anchors":              [8,14, 13,23, 24,40],
-        "labels":               ["sign"]
+        "labels":               ["sign"],
+        "infer_shape":          [192, 256]
     },
 
     "train": {

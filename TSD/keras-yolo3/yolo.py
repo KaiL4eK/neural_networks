@@ -1,4 +1,4 @@
-from keras.layers import Conv2D, Input, BatchNormalization, LeakyReLU, ZeroPadding2D, UpSampling2D, Lambda, Conv2DTranspose, Flatten
+from keras.layers import Conv2D, Input, BatchNormalization, LeakyReLU, ZeroPadding2D, UpSampling2D, Lambda, Conv2DTranspose, Flatten, ReLU
 from keras.layers.merge import add, concatenate
 from keras.models import Model
 from keras.engine.topology import Layer
@@ -11,9 +11,9 @@ from keras.regularizers import l2
 
 
 class YoloLayer(Layer):
-    def __init__(self, anchors, max_grid, batch_size, warmup_batches, ignore_thresh, 
-                    grid_scale, obj_scale, noobj_scale, xywh_scale, class_scale, debug=False, 
-                    **kwargs):
+    def __init__(self, anchors, max_grid_hw, batch_size, warmup_batches, ignore_thresh,
+                 grid_scale, obj_scale, noobj_scale, xywh_scale, class_scale, debug=False,
+                 **kwargs):
         # make the model settings persistent
         self.ignore_thresh  = ignore_thresh
         self.warmup_batches = warmup_batches
@@ -24,11 +24,11 @@ class YoloLayer(Layer):
         self.xywh_scale     = xywh_scale
         self.class_scale    = class_scale        
 
-        print('YoloLayer anchors: {} / max_grid: {}'.format(anchors, max_grid))
+        print('YoloLayer anchors: {} / max_grid: {}'.format(anchors, max_grid_hw))
 
         self.debug          = debug
         # make a persistent mesh grid
-        max_grid_h, max_grid_w = max_grid
+        max_grid_h, max_grid_w = max_grid_hw
 
         cell_x = tf.to_float(tf.reshape(tf.tile(tf.range(max_grid_w), [max_grid_h]), (1, max_grid_h, max_grid_w, 1, 1)))
 
@@ -207,7 +207,8 @@ class YoloLayer(Layer):
     def compute_output_shape(self, input_shape):
         return [(None, 1)]
 
-def create_yolo_squeeze_model(
+
+def create_squeeze_model(
     nb_class, 
     anchors, 
     max_box_per_image, 
@@ -227,7 +228,8 @@ def create_yolo_squeeze_model(
 
     image_input = Input(shape=train_shape, name='input_img')
     true_boxes  = Input(shape=(1, 1, 1, max_box_per_image, 4), name='input_true_boxes')
-    true_yolo_1 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x32') # grid_h, grid_w, nb_anchor, 5+nb_class
+    # grid_h, grid_w, nb_anchor, 5+nb_class
+    true_yolo_1 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x32')
 
     yolo_anchors = []
 
@@ -236,8 +238,6 @@ def create_yolo_squeeze_model(
 
     # yolo_anchors = [anchors[12:18], anchors[6:12], anchors[0:6]]
     pred_filter_count = (anchors_per_output*(5+nb_class))
-
-    from keras.layers import MaxPooling2D
 
     sq1x1  = "squeeze1x1"
     exp1x1 = "expand1x1"
@@ -248,35 +248,43 @@ def create_yolo_squeeze_model(
         s_id = 'fire' + str(fire_id) + '/'
 
         x     = Conv2D(squeeze, (1, 1), padding='valid', name=s_id + sq1x1)(x)
-        x     = LeakyReLU(name=s_id + relu + sq1x1)(x)
+        # x     = LeakyReLU(name=s_id + relu + sq1x1)(x)
+        x     = ReLU(6., name=s_id + relu + sq1x1)(x)
 
         left  = Conv2D(expand,  (1, 1), padding='valid', name=s_id + exp1x1)(x)
-        left  = LeakyReLU(name=s_id + relu + exp1x1)(left)
+        # left  = LeakyReLU(name=s_id + relu + exp1x1)(left)
+        left  = ReLU(6., name=s_id + relu + exp1x1)(left)
 
         right = Conv2D(expand,  (3, 3), padding='same',  name=s_id + exp3x3)(x)
-        right = LeakyReLU(name=s_id + relu + exp3x3)(right)
+        # right = LeakyReLU(name=s_id + relu + exp3x3)(right)
+        right = ReLU(6., name=s_id + relu + exp3x3)(right)
 
-        x = concatenate([left, right], axis=3, name=s_id + 'concat')
+        x = add([left, right], name=s_id + 'concat')
 
         return x
 
-    x = Conv2D(64, (3, 3), strides=(2, 2), padding='valid', name='conv1')(image_input)
-    x = LeakyReLU(name='relu_conv1')(x)
-    x = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), name='pool1')(x)
+    x = Conv2D(64, (3, 3), strides=(2, 2), padding='same', name='conv1')(image_input)
+    # x = LeakyReLU(name='relu_conv1')(x)
+    x = ReLU(6., name='relu_conv1')(x)
+
+    x = MaxPooling2D(pool_size=(2, 2), name='pool1')(x)
 
     x = fire_module(x, fire_id=2, squeeze=16, expand=64)
     x = fire_module(x, fire_id=3, squeeze=16, expand=64)
-    x = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), name='pool3')(x)
+
+    x = MaxPooling2D(pool_size=(2, 2), name='pool3')(x)
 
     x = fire_module(x, fire_id=4, squeeze=32, expand=128)
     x = fire_module(x, fire_id=5, squeeze=32, expand=128)
-    x = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), name='pool5')(x)
 
-    x = ZeroPadding2D(padding=(1, 1))(x)
+    x = MaxPooling2D(pool_size=(2, 2), name='pool5')(x)
+
+    # x = ZeroPadding2D(padding=(1, 1))(x)
 
     x = fire_module(x, fire_id=6, squeeze=48, expand=192)
     x = fire_module(x, fire_id=7, squeeze=48, expand=192)
-    x = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), name='pool7')(x)
+
+    x = MaxPooling2D(pool_size=(2, 2), name='pool7')(x)
 
     x = fire_module(x, fire_id=8, squeeze=64, expand=256)
     x = fire_module(x, fire_id=9, squeeze=64, expand=256)
@@ -302,7 +310,7 @@ def create_yolo_squeeze_model(
     train_model = Model([image_input, true_boxes, true_yolo_1], [loss_yolo_1])
     infer_model = Model(image_input, [pred_yolo_1])
 
-    return [train_model, infer_model]
+    return train_model, infer_model, infer_model, 0
 
 
 def create_yolov2_model(
@@ -482,62 +490,6 @@ def create_yolov2_model(
                             noobj_scale,
                             xywh_scale,
                             class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes])
-
-    train_model = Model([image_input, true_boxes, true_yolo_1], [loss_yolo_1])
-    infer_model = Model(image_input, [pred_yolo_1])
-
-    return [train_model, infer_model]
-
-def create_xception_model(
-    nb_class, 
-    anchors, 
-    max_box_per_image, 
-    max_grid, 
-    batch_size, 
-    warmup_batches,
-    ignore_thresh,
-    grid_scales,
-    obj_scale,
-    noobj_scale,
-    xywh_scale,
-    class_scale,
-    train_shape
-):
-    outputs = 1
-    anchors_per_output = len(anchors)//2//outputs
-
-    image_input = Input(shape=train_shape, name='input_img')
-    true_boxes  = Input(shape=(1, 1, 1, max_box_per_image, 4), name='input_true_boxes')
-    true_yolo_1 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x32') # grid_h, grid_w, nb_anchor, 5+nb_class
-
-    yolo_anchors = []
-
-    for i in reversed(range(outputs)):
-        yolo_anchors += [anchors[i*2*anchors_per_output:(i+1)*2*anchors_per_output]]
-
-    # yolo_anchors = [anchors[12:18], anchors[6:12], anchors[0:6]]
-    pred_filter_count = (anchors_per_output*(5+nb_class))
-
-    from keras.applications.xception import Xception
-
-    xception = Xception(input_tensor=image_input, include_top=False, weights='imagenet')
-
-    x = xception.output
-
-
-    pred_yolo_1 = Conv2D(pred_filter_count, 1, padding='same', strides=1, name='DetectionLayer1')(x)
-    loss_yolo_1 = YoloLayer(yolo_anchors[0], 
-                        [1*num for num in max_grid], 
-                        batch_size, 
-                        warmup_batches, 
-                        ignore_thresh, 
-                        grid_scales[0],
-                        obj_scale,
-                        noobj_scale,
-                        xywh_scale,
-                        class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes])
-
-
 
     train_model = Model([image_input, true_boxes, true_yolo_1], [loss_yolo_1])
     infer_model = Model(image_input, [pred_yolo_1])
@@ -855,6 +807,65 @@ def create_tiny_yolov3_model(
     return train_model, infer_model, mvnc_model, freeze_layers_cnt
 
 
+def create_xception_model(
+    nb_class,
+    anchors,
+    max_box_per_image,
+    max_grid,
+    batch_size,
+    warmup_batches,
+    ignore_thresh,
+    grid_scales,
+    obj_scale,
+    noobj_scale,
+    xywh_scale,
+    class_scale,
+    train_shape
+):
+    outputs = 1
+    anchors_per_output = len(anchors)//2//outputs
+
+    image_input = Input(shape=train_shape, name='input_img')
+    true_boxes  = Input(shape=(1, 1, 1, max_box_per_image, 4), name='input_true_boxes')
+    true_yolo_1 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class), name='input_true_yolo_x32') # grid_h, grid_w, nb_anchor, 5+nb_class
+
+    yolo_anchors = []
+
+    for i in reversed(range(outputs)):
+        yolo_anchors += [anchors[i*2*anchors_per_output:(i+1)*2*anchors_per_output]]
+
+    # yolo_anchors = [anchors[12:18], anchors[6:12], anchors[0:6]]
+    pred_filter_count = (anchors_per_output*(5+nb_class))
+
+    from keras.applications.xception import Xception
+
+    xception = Xception(input_tensor=image_input, include_top=False, weights='imagenet')
+
+    x = xception.output
+
+    pred_yolo_1 = Conv2D(pred_filter_count, 1, padding='same', strides=1, name='DetectionLayer1')(x)
+    loss_yolo_1 = YoloLayer(yolo_anchors[0],
+                        [1*num for num in max_grid],
+                        batch_size,
+                        warmup_batches,
+                        ignore_thresh,
+                        grid_scales[0],
+                        obj_scale,
+                        noobj_scale,
+                        xywh_scale,
+                        class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes])
+
+    train_model = Model([image_input, true_boxes, true_yolo_1], [loss_yolo_1])
+    infer_model = Model(image_input, [pred_yolo_1])
+
+    freeze_layers_cnt = len(infer_model.layers) - 4
+    print('Non-freezed layers {}'.format(freeze_layers_cnt))
+
+    mvnc_model = infer_model
+
+    return train_model, infer_model, mvnc_model, freeze_layers_cnt
+
+
 import mobilenet_utils as mnu
 import os
 
@@ -954,7 +965,7 @@ def create_mobilenetv2_model(
 def create_model(
     nb_class, 
     anchors,
-    max_input_size      = [416, 416],
+    max_input_size,
     max_box_per_image   = 1,
     batch_size          = 1, 
     base                = 'Tiny',
@@ -973,7 +984,7 @@ def create_model(
                 'Darknet53':    (create_yolov3_model,       "src_weights/yolov3_exp.h5",    32),
                 'Darknet19':    (create_yolov2_model,       "src_weights/yolov2.h5",        32),
                 'MobileNetv2':  (create_mobilenetv2_model,  "",                             32),
-                'SqueezeNet':   (create_yolo_squeeze_model, "",                             32),
+                'SqueezeNet':   (create_squeeze_model,      "",                             32),
                 'Xception':     (create_xception_model,     "",                             32)
                 }
 
