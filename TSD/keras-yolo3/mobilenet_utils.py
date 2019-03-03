@@ -4,7 +4,7 @@ from keras import backend as K
 
 
 def _make_divisible(v, divisor, min_value=None):
-    divisor = int(v)
+    divisor = int(divisor)
     if min_value is None:
         min_value = divisor
     new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
