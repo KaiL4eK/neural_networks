@@ -16,6 +16,24 @@ def get_impaths_from_path(path):
     return image_paths
 
 
+def get_ncs_graph_fpath(config):
+    output_fpath = get_pb_graph_fpath(config)
+    output_fpath = output_fpath + '.ncsg'
+
+    makedirs_4_file(output_fpath)
+
+    return output_fpath
+
+
+def get_pb_graph_fpath(config):
+    output_dir = 'ncs_graphs'
+    output_fpath = os.path.join(output_dir, config['model']['base'] + '.pb')
+
+    makedirs_4_file(output_fpath)
+
+    return output_fpath
+
+
 DATA_GEN_SRC_VIDEO = 0
 DATA_GEN_SRC_IMAGE = 1
 

@@ -19,6 +19,7 @@ class BatchGenerator(Sequence):
                  batch_size=1,
                  shuffle=True,
                  jitter=0.3,
+                 scale_distr=0.25,
                  flip=False,
                  norm=None,
                  infer_sz=None,
@@ -35,6 +36,7 @@ class BatchGenerator(Sequence):
         self.min_net_size = (np.array(min_net_size) // self.downsample) * self.downsample
         self.max_net_size = (np.array(max_net_size) // self.downsample) * self.downsample
 
+        self.scale_distr = scale_distr
         self.jitter = jitter
         self.flip = flip
         self.norm = norm
@@ -175,7 +177,8 @@ class BatchGenerator(Sequence):
                                 0, 3e-3 * img.shape[0], 
                                 (255,0,0), 2)
 
-                    print("{} / {}".format(train_instance['filename'], obj['name']))
+                    print(train_instance['filename'])
+                    print(obj['name'])
 
                 x_batch[instance_count] = img
 
@@ -238,22 +241,21 @@ class BatchGenerator(Sequence):
 
         else:
             # determine the amount of scaling and cropping
-            dw = self.jitter * image_w;
-            dh = self.jitter * image_h;
+            dw = self.jitter * image_w
+            dh = self.jitter * image_h
 
             new_ar = (image_w + np.random.uniform(-dw, dw)) / (image_h + np.random.uniform(-dh, dh));
-            rand_shift = 0.25
-            scale = np.random.uniform(1 - rand_shift, 1 + rand_shift);
+            scale = np.random.uniform(1 - self.scale_distr, 1 + self.scale_distr);
 
-            if (new_ar < 1):
-                new_h = int(scale * net_h);
-                new_w = int(net_h * new_ar);
+            if new_ar < 1:
+                new_h = int(scale * net_h)
+                new_w = int(net_h * new_ar)
             else:
-                new_w = int(scale * net_w);
-                new_h = int(net_w / new_ar);
+                new_w = int(scale * net_w)
+                new_h = int(net_w / new_ar)
 
-            dx = int(np.random.uniform(0, net_w - new_w));
-            dy = int(np.random.uniform(0, net_h - new_h));
+            dx = int(np.random.uniform(0, net_w - new_w))
+            dy = int(np.random.uniform(0, net_h - new_h))
 
             # apply scaling and cropping
             im_sized = apply_random_scale_and_crop(image, new_w, new_h, net_w, net_h, dx, dy)
@@ -263,7 +265,7 @@ class BatchGenerator(Sequence):
 
             # randomly flip
             if self.flip:
-                flip = np.random.randint(self.flip)
+                flip = np.random.randint(2)
                 im_sized = random_flip(im_sized, flip)
             else:
                 flip = 0

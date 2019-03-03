@@ -24,6 +24,7 @@ def IOU(ann, centroids):
 
     return np.array(similarities)
 
+
 def avg_IOU(anns, centroids):
     n,d = anns.shape
     sum = 0.
@@ -32,6 +33,7 @@ def avg_IOU(anns, centroids):
         sum+= max(IOU(anns[i], centroids))
 
     return sum/n
+
 
 def print_anchors(centroids, img_size):
     out_string = ''
@@ -43,9 +45,11 @@ def print_anchors(centroids, img_size):
 
     r = "anchors: ["
     for i in sorted_indices:
-        out_string += str(int(anchors[i,0]*img_size)) + ',' + str(int(anchors[i,1]*img_size)) + ', '
+        # w, h
+        out_string += str(int(anchors[i, 0]*img_size[1])) + ',' + str(int(anchors[i, 1]*img_size[0])) + ', '
             
     print(out_string[:-2])
+
 
 def run_kmeans(ann_dims, anchor_num):
     ann_num = ann_dims.shape[0]
@@ -99,13 +103,31 @@ def run_kmeans(ann_dims, anchor_num):
         prev_assignments = assignments.copy()
         old_distances = distances.copy()
 
-def _main_(argv):
+
+argparser = argparse.ArgumentParser()
+
+argparser.add_argument(
+    '-c',
+    '--conf',
+    default='config.json',
+    help='path to configuration file')
+argparser.add_argument(
+    '-a',
+    '--anchors',
+    default=9,
+    help='number of anchors to use')
+
+args = argparser.parse_args()
+
+
+def _main_():
     config_path = args.conf
-    image_sz    = args.image_size
     num_anchors = int(args.anchors)
 
     with open(config_path) as config_buffer:
         config = json.loads(config_buffer.read())
+
+    image_sz = config['model']['infer_shape']
 
     train_imgs, train_labels = parse_voc_annotation(
         config['train']['train_annot_folder'],
@@ -124,8 +146,8 @@ def _main_(argv):
             # print( int(a_width / image['width'] * 416), int(a_height / image['height'] * 416) )
 
             relative_w = a_width/image['width']
-            relatice_h = a_height/image['height']
-            annotation_dims.append(tuple(map(float, (relative_w,relatice_h))))
+            relative_h = a_height/image['height']
+            annotation_dims.append(tuple(map(float, (relative_w, relative_h))))
 
     annotation_dims = np.array(annotation_dims)
     centroids = run_kmeans(annotation_dims, num_anchors)
@@ -134,25 +156,6 @@ def _main_(argv):
     print('\naverage IOU for', num_anchors, 'anchors:', '%0.2f' % avg_IOU(annotation_dims, centroids))
     print_anchors(centroids, image_sz)
 
+
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser()
-
-    argparser.add_argument(
-        '-c',
-        '--conf',
-        default='config.json',
-        help='path to configuration file')
-    argparser.add_argument(
-        '-a',
-        '--anchors',
-        default=9,
-        help='number of anchors to use')
-    argparser.add_argument(
-        '-i',
-        '--image_size',
-        default=416,
-        help='imput image side size')
-
-
-    args = argparser.parse_args()
-    _main_(args)
+    _main_()

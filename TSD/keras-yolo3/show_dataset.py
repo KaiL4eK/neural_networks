@@ -30,7 +30,7 @@ def _main_(args):
 
     print(list(labels.keys()))
 
-    valid_generator = BatchGenerator(
+    train_generator = BatchGenerator(
         instances           = instances,
         anchors             = config['model']['anchors'],   
         labels              = list(labels.keys()),
@@ -38,19 +38,32 @@ def _main_(args):
         max_box_per_image   = max_box_per_image,
         batch_size          = 1,
         min_net_size        = config['model']['min_input_size'],
-        max_net_size        = config['model']['max_input_size'],   
-        shuffle             = True, 
-        jitter              = 0.0, 
+        max_net_size        = config['model']['max_input_size'],
         norm                = None
     )
 
+    valid_generator = BatchGenerator(
+        instances           = instances,
+        anchors             = config['model']['anchors'],
+        labels              = list(labels.keys()),
+        downsample          = 32, # ratio between network input's size and network output's size, 32 for YOLOv3
+        max_box_per_image   = max_box_per_image,
+        batch_size          = 1,
+        min_net_size        = config['model']['min_input_size'],
+        max_net_size        = config['model']['max_input_size'],
+        norm                = None,
+        infer_sz            = config['model']['infer_shape']
+    )
+
     for i in range(len(instances)):
-        img_batch = valid_generator[i]
-        img = img_batch[0]
 
-        img = cv2.resize(img, (640, 480))
+        timg = train_generator[i][0]
+        vimg = valid_generator[i][0]
 
-        cv2.imshow('1', img.astype(np.uint8))
+        timg = cv2.resize(timg, (640, 480))
+        vimg = cv2.resize(vimg, (640, 480))
+
+        cv2.imshow('1', np.vstack((timg.astype(np.uint8), vimg.astype(np.uint8))))
         if cv2.waitKey(0) == 27:
             break
 

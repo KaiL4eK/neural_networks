@@ -1,21 +1,22 @@
 {
     "model" : {
-        "min_input_size":       288,
-        "max_input_size":       448,
-        "base":                 "Tiny",
-        "anchors":              [7,11, 9,16, 13,22, 16,28, 22,36, 32,52],
-        "labels":               ["sign"]
+        "min_input_size":       [160, 224],
+        "max_input_size":       [224, 288],
+        "base":                 "TinyV3",
+        "anchors":              [47,62, 60,88, 74,103, 89,118, 97,144, 117,165],
+        "labels":               [],
+        "infer_shape":          [192, 256]
     },
 
     "train": {
-        "train_image_folder":   "../data/GTSDB_voc/Images/",
-        "train_annot_folder":   "../data/GTSDB_voc/annots_train/",
+        "train_image_folder":   "../rf_tsd_voc/Images/",
+        "train_annot_folder":   "../rf_tsd_voc/Annotations_train/",
         "cache_name":           "pkl/sign_train.pkl",
 
-        "train_times":          3,
+        "train_times":          5,
         "batch_size":           4,
         "learning_rate":        1e-4,
-        "nb_epochs":            300,
+        "nb_epochs":            1000,
         "warmup_epochs":        0,
         "ignore_thresh":        0.5,
         "gpus":                 "0",
@@ -32,16 +33,16 @@
     },
 
     "valid": {
-        "valid_image_folder":   "../data/GTSDB_voc/Images/",
-        "valid_annot_folder":   "../data/GTSDB_voc/annots_test/",
+        "valid_image_folder":   "../rf_tsd_voc/Images/",
+        "valid_annot_folder":   "../rf_tsd_voc/Annotations_test",
         "cache_name":           "pkl/sign_test.pkl",
 
         "valid_times":          1
     },
 
     "eval": {
-        "valid_image_folder":   "../data/GTSDB_voc/Images/",
-        "valid_annot_folder":   "../data/GTSDB_voc/annots_test/",
+        "valid_image_folder":   "../rf_tsd_voc/Images/",
+        "valid_annot_folder":   "../rf_tsd_voc/Annotations_test",
         "cache_name":           "pkl/sign_eval.pkl"
     },
 

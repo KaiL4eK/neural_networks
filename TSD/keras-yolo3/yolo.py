@@ -756,7 +756,6 @@ def create_tiny_yolov3_model(
     # yolo_anchors = [anchors[12:18], anchors[6:12], anchors[0:6]]
     pred_filter_count = (anchors_per_output*(5+nb_class))
 
-
     @wraps(Conv2D)
     def DarknetConv2D(*args, **kwargs):
         """Wrapper to set Darknet parameters for Convolution2D."""
@@ -784,7 +783,6 @@ def create_tiny_yolov3_model(
             return reduce(lambda f, g: lambda *a, **kw: g(f(*a, **kw)), funcs)
         else:
             raise ValueError('Composition of empty sequence not supported.')
-
 
     x1 = compose(
             DarknetConv2D_BN_Leaky(16, (3,3)),
@@ -830,7 +828,6 @@ def create_tiny_yolov3_model(
             Concatenate(),
             DarknetConv2D_BN_Leaky(256, (3,3)),
             DarknetConv2D(pred_filter_count, (1,1)))([x2,x1])
-
 
     loss_yolo_2 = YoloLayer(yolo_anchors[1], 
                             [2*num for num in max_grid], 

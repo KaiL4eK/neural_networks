@@ -9,26 +9,25 @@ from keras.models import load_model
 import shutil
 from keras.layers import Input
 from keras.models import Model
+import core
+from _common import utils
 
 import argparse
 argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
-argparser.add_argument('-o', '--output', help='path output frozen graph (.pb file)')
 argparser.add_argument('-w', '--weights', help='weights path')
 argparser.add_argument('-c', '--conf', help='path to configuration file')
-argparser.add_argument('-t', '--test', action='store_true', help='path to configuration file')
 args = argparser.parse_args()
 
 
 def _main_():
-    test_perf = args.test
     weights_path = args.weights
-    output_pb_fpath = args.output
     config_path = args.conf
-
-    
 
     with open(config_path) as config_buffer:    
         config = json.loads(config_buffer.read())
+
+    output_pb_fpath = utils.get_pb_graph_fpath(config)
+    graph_fpath = utils.get_ncs_graph_fpath(config)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.3, allow_growth=True)
     sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -92,7 +91,6 @@ def _main_():
     #####################################
     from subprocess import call
 
-    graph_fpath = output_pb_fpath + '.graph'
     print('    Writing to {}'.format(graph_fpath))
 
     if weights_path:
