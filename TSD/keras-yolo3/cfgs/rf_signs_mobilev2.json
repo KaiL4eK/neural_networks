@@ -1,11 +1,11 @@
 {
     "model" : {
-        "min_input_size":       [192, 256],
-        "max_input_size":       [352, 416],
+        "min_input_size":       [160, 192],
+        "max_input_size":       [256, 288],
         "base":                 "MobileNetv2",
         "anchors":              [44,44, 61,66, 91,96],
         "labels":               [],
-        "infer_shape":          [320, 384]
+        "infer_shape":          [224, 256]
     },
 
     "train": {
