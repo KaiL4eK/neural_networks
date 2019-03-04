@@ -1,9 +1,9 @@
 {
     "model" : {
-        "min_input_size":       [288, 384],
-        "max_input_size":       [288, 384],
+        "min_input_size":       [160, 256],
+        "max_input_size":       [320, 416],
         "base":                 "MobileNetv2",
-        "anchors":              [29,29, 40,44, 61,64],
+        "anchors":              [44,44, 61,66, 91,96],
         "labels":               [],
         "infer_shape":          [288, 384]
     },
