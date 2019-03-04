@@ -3,7 +3,7 @@
         "min_input_size":       [160, 192],
         "max_input_size":       [256, 288],
         "base":                 "MobileNetv2",
-        "anchors":              [44,44, 61,66, 91,96],
+        "anchors":              [29,29, 40,44, 61,64],
         "labels":               [],
         "infer_shape":          [224, 256]
     },
