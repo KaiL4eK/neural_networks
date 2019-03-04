@@ -287,7 +287,11 @@ def train(config, initial_weights):
     #   Run the evaluation
     ###############################
     # compute mAP for all the classes
-    average_precisions = evaluate(infer_model, valid_generator)
+    average_precisions = evaluate(model=infer_model,
+                                  generator=valid_generator,
+                                  iou_threshold=0.5,
+                                  net_h=config['model']['infer_shape'][0],
+                                  net_w=config['model']['infer_shape'][1] )
 
     # print the score
     for label, average_precision in average_precisions.items():

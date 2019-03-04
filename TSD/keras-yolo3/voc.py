@@ -38,7 +38,7 @@ def parse_voc_annotation(ann_dir, img_dir, cache_name, labels=[]):
                     
                     for attr in list(elem):
                         if 'name' in attr.tag:
-                            obj['name'] = 'sign'#attr.text
+                            obj['name'] = attr.text
 
                             if obj['name'] in seen_labels:
                                 seen_labels[obj['name']] += 1
