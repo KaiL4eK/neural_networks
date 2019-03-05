@@ -41,6 +41,7 @@ def _main_():
 
     full_time = 0
     processing_cnt = 0
+    skip = 0
 
     for type, image_src in data_generator:
 
@@ -57,7 +58,7 @@ def _main_():
         image = image_src
         draw_boxes(image, boxes, config['model']['labels'], obj_thresh) 
 
-        if type == utils.DATA_GEN_SRC_VIDEO:
+        if skip or type == utils.DATA_GEN_SRC_VIDEO:
             show_delay = 1
         else:
             show_delay = 0
@@ -66,6 +67,8 @@ def _main_():
         key = cv2.waitKey(show_delay)
         if key == 27:
             break
+        elif key == ord(' '):
+            skip = 1
 
     print("Time: %.3f [ms] / FPS: %.1f" % (full_time * 1000, processing_cnt / full_time))
     cv2.destroyAllWindows()
