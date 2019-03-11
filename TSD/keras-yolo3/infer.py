@@ -45,25 +45,31 @@ def _main_():
 
     for type, image_src in data_generator:
 
+        image = image_src.copy()
+
         start = time.time()
 
-        print(image_src.shape)
+        # print(image_src.shape)
         # image = cv2.resize(image_src, (0,0), fx=2, fy=2)
 
-        boxes = get_yolo_boxes(model, [image_src], net_h, net_w, config['model']['anchors'], obj_thresh, nms_thresh)[0]
+        n_image = utils.normalize_ycrcb(image)
+        boxes = get_yolo_boxes(model, [n_image], net_h, net_w, config['model']['anchors'], obj_thresh, nms_thresh)[0]
+
+        boxes = get_yolo_boxes(model, [image], net_h, net_w, config['model']['anchors'], obj_thresh, nms_thresh)[0]
 
         full_time += time.time() - start
         processing_cnt += 1
 
-        image = image_src
         draw_boxes(image, boxes, config['model']['labels'], obj_thresh) 
+        draw_boxes(n_image, boxes, config['model']['labels'], obj_thresh) 
 
         if skip or type == utils.DATA_GEN_SRC_VIDEO:
             show_delay = 1
         else:
             show_delay = 0
 
-        cv2.imshow('1', image)
+        cv2.imshow('1', n_image)
+        cv2.imshow('2', image)
         key = cv2.waitKey(show_delay)
         if key == 27:
             break
