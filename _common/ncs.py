@@ -6,6 +6,10 @@ import cv2
 class InferNCS:
     def __init__(self, graph_fpath, device_idx=0, fp16=True):
         # fx.global_set_option(fx.GlobalOption.RW_LOG_LEVEL, 0)
+        self.dev = None
+        self.graph = None
+        self.fifoIn = None
+        self.fifoOut = None
 
         devices = fx.enumerate_devices()
         if len(devices) < 1:
@@ -52,12 +56,25 @@ class InferNCS:
         print('Output shape: {}'.format(self.input_shape))
 
     def __del__(self):
-        self.fifoIn.destroy()
-        self.fifoOut.destroy()
-        self.graph.destroy()
-        self.dev.close()
+        if self.fifoIn:
+            self.fifoIn.destroy()
+
+        if self.fifoOut:
+            self.fifoOut.destroy()
+
+        if self.graph:
+            self.graph.destroy()
+
+        if self.dev:
+            self.dev.close()
 
         print("Close NCS")
+
+    def is_opened(self):
+        if self.dev is None:
+            return False
+        else:
+            return True
 
     def infer(self, img):
         img_h, img_w, img_c = img.shape

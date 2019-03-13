@@ -1,6 +1,6 @@
 import os
 import cv2
-
+import numpy as np
 
 def get_impaths_from_path(path):
 
@@ -83,4 +83,3 @@ def makedirs(dirpath):
 def makedirs_4_file(filepath):
     dirpath = os.path.dirname(filepath)
     makedirs(dirpath)
-

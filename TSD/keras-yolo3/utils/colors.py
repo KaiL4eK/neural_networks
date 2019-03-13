@@ -12,6 +12,7 @@ def get_color(label):
         print('Label {} has no color, returning default.'.format(label))
         return (0, 255, 0)
 
+
 colors = [
     [31  , 0   , 255] ,
     [0   , 159 , 255] ,
