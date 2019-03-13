@@ -1,7 +1,6 @@
 /opt/movidius/NCSDK/ncsdk-x86_64/api
 catkin-pkg
 pyyaml
-empy
 rospkg
 tqdm 
 pandas
