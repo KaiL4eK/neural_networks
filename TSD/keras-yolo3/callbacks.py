@@ -111,11 +111,13 @@ class MAP_evaluation(keras.callbacks.Callback):
             if not self.bestVloss:
                 self.bestVloss = logs['val_loss']
 
-            if self.save_best and self.save_name_fmt and (mAP > self.bestMap or logs['val_loss'] < self.bestVloss):
+            if self.save_best and self.save_name_fmt and mAP > self.bestMap and logs['val_loss'] < self.bestVloss:
+                self.bestVloss = logs['val_loss']
+                self.bestMap = mAP
+
                 save_name = self.save_name_fmt.format(epoch=epoch + 1, mAP=mAP, **logs)
                 print('\nEpoch %05d: mAP improved from %g to %g, saving model to %s' % (epoch, self.bestMap, mAP,
                                                                                         save_name))
-                self.bestMap = mAP
                 self.infer_model.save(save_name)
             else:
                 print("mAP did not improve from {}.".format(self.bestMap))
