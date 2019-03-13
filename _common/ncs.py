@@ -44,8 +44,8 @@ class InferNCS:
         self.input_shape = (input_tensor_list[0].h, input_tensor_list[0].w, input_tensor_list[0].c)
         self.input_cv_sz = (input_tensor_list[0].w, input_tensor_list[0].h)
 
-        print('Input shape: {self.output_shape}')
-        print('Output shape: {self.input_shape}')
+        print('Input shape: {}'.format(self.output_shape))
+        print('Output shape: {}'.format(self.input_shape))
 
     def __del__(self):
         self.fifoIn.destroy()
