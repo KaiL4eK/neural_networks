@@ -87,6 +87,7 @@ class MAP_evaluation(keras.callbacks.Callback):
         self.tensorboard = tensorboard
         self.infer_sz = infer_sz
 
+        self.bestVloss = None
         self.bestMap = 0
 
         if not isinstance(self.tensorboard, keras.callbacks.TensorBoard) and self.tensorboard is not None:
@@ -107,7 +108,10 @@ class MAP_evaluation(keras.callbacks.Callback):
             mAP = sum(average_precisions.values()) / len(average_precisions)
             print('mAP: {:.4f}'.format(mAP))
 
-            if self.save_best and self.save_name_fmt and mAP > self.bestMap:
+            if not self.bestVloss:
+                self.bestVloss = logs['val_loss']
+
+            if self.save_best and self.save_name_fmt and (mAP > self.bestMap or logs['val_loss'] < self.bestVloss):
                 save_name = self.save_name_fmt.format(epoch=epoch + 1, mAP=mAP, **logs)
                 print('\nEpoch %05d: mAP improved from %g to %g, saving model to %s' % (epoch, self.bestMap, mAP,
                                                                                         save_name))
