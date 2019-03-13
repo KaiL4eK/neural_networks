@@ -15,6 +15,13 @@ def get_impaths_from_path(path):
 
     return image_paths
 
+def normalize_ycrcb(img):
+    ycrcb = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+    ycrcb[:,:,0] = cv2.equalizeHist(ycrcb[:,:,0])
+
+    img = cv2.cvtColor(ycrcb, cv2.COLOR_YCrCb2BGR)
+    return img
+
 
 def get_ncs_graph_fpath(config):
     output_dir = 'ncs_graphs'

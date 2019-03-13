@@ -1,7 +1,5 @@
 /opt/movidius/NCSDK/ncsdk-x86_64/api
-catkin-pkg
 pyyaml
-rospkg
 tqdm 
 pandas
 pydot
