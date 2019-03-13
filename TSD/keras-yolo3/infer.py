@@ -27,7 +27,8 @@ def _main_():
     with open(config_path) as config_buffer:    
         config = json.load(config_buffer)
 
-    config['model']['labels'] = ['brick', 'forward', 'forward and left', 'forward and right', 'left', 'right']
+    labels = ['brick', 'forward', 'forward and left', 'forward and right', 'left', 'right']
+    anchors = config['model']['anchors']
 
     net_h, net_w = config['model']['infer_shape']
     obj_thresh, nms_thresh = 0.5, 0.45
@@ -53,15 +54,15 @@ def _main_():
         # image = cv2.resize(image_src, (0,0), fx=2, fy=2)
 
         n_image = utils.normalize_ycrcb(image)
-        boxes = get_yolo_boxes(model, [n_image], net_h, net_w, config['model']['anchors'], obj_thresh, nms_thresh)[0]
+        boxes = get_yolo_boxes(model, [n_image], net_h, net_w, anchors, obj_thresh, nms_thresh)[0]
 
-        boxes = get_yolo_boxes(model, [image], net_h, net_w, config['model']['anchors'], obj_thresh, nms_thresh)[0]
+        boxes = get_yolo_boxes(model, [image], net_h, net_w, anchors, obj_thresh, nms_thresh)[0]
 
         full_time += time.time() - start
         processing_cnt += 1
 
-        draw_boxes(image, boxes, config['model']['labels'], obj_thresh) 
-        draw_boxes(n_image, boxes, config['model']['labels'], obj_thresh) 
+        draw_boxes(image, boxes, labels, obj_thresh) 
+        draw_boxes(n_image, boxes, labels, obj_thresh) 
 
         if skip or type == utils.DATA_GEN_SRC_VIDEO:
             show_delay = 1
