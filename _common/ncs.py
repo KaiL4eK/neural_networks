@@ -4,16 +4,20 @@ import cv2
 
 
 class InferNCS:
-    def __init__(self, graph_fpath, fp16=True):
+    def __init__(self, graph_fpath, device_idx=0, fp16=True):
         # fx.global_set_option(fx.GlobalOption.RW_LOG_LEVEL, 0)
 
         devices = fx.enumerate_devices()
         if len(devices) < 1:
             print("Error - no NCS devices detected, verify an NCS device is connected.")
-            quit()
+            return
+
+        if device_idx > len(devices):
+            print("Error - device NCS idx is out of range.")
+            return
 
         self.fp16 = fp16
-        self.dev = fx.Device(devices[0])
+        self.dev = fx.Device(devices[device_idx])
 
         try:
             self.dev.open()
@@ -52,6 +56,8 @@ class InferNCS:
         self.fifoOut.destroy()
         self.graph.destroy()
         self.dev.close()
+
+        print("Close NCS")
 
     def infer(self, img):
         img_h, img_w, img_c = img.shape
