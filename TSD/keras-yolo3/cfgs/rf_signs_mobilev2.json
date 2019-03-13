@@ -2,7 +2,7 @@
     "model" : {
         "min_input_size":       [160, 192],
         "max_input_size":       [256, 288],
-        "base":                 "MobileNetv2",
+        "base":                 "MobileNetv2_35",
         "anchors":              [29,29, 40,44, 61,64],
         "labels":               [],
         "infer_shape":          [224, 256]
@@ -28,7 +28,7 @@
         "class_scale":          1,
 
         "tensorboard_dir":      "logs/TSD_yolo_mbv2",
-        "saved_weights_name":   "chk/TSD_yolo_mbv2.h5",
+        "saved_weights_name":   "chk/TSD_yolo.h5",
         "debug":                false
     },
 

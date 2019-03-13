@@ -882,7 +882,8 @@ def create_mobilenetv2_model(
     noobj_scale,
     xywh_scale,
     class_scale,
-    train_shape
+    train_shape,
+    mbn_alpha = 1
 ):
     outputs = 1
     anchors_per_output = len(anchors)//2//outputs
@@ -900,7 +901,7 @@ def create_mobilenetv2_model(
 
     original_model = False
     ##########################
-    alpha = 0.5
+    alpha = mbn_alpha
     if original_model:
         from keras.applications.mobilenetv2 import MobileNetV2
         mobilenetv2 = MobileNetV2(input_tensor=image_input, include_top=False, weights='imagenet', alpha=alpha)
@@ -977,18 +978,22 @@ def create_model(
     xywh_scale          = 1,
     class_scale         = 1,
     train_shape         = (None, None, 3),
-    load_src_weights    = True
+    load_src_weights    = True,
+    downgrade           = 32
 ):
-    backends = {'Tiny':         (create_tiny_yolov3_model,  "src_weights/yolov3-tiny.h5",   32),
-                'Darknet53':    (create_yolov3_model,       "src_weights/yolov3_exp.h5",    32),
-                'Darknet19':    (create_yolov2_model,       "src_weights/yolov2.h5",        32),
-                'MobileNetv2':  (create_mobilenetv2_model,  "",                             32),
-                'SqueezeNet':   (create_squeeze_model,      "",                             32),
-                'Xception':     (create_xception_model,     "",                             32)
-                }
-
     # h, w
-    max_grid = np.array([max_input_size[0] // backends[base][2], max_input_size[1] // backends[base][2]])
+    max_grid = np.array([max_input_size[0] // downgrade, max_input_size[1] // downgrade])
+
+    backends = {'Tiny':             (create_tiny_yolov3_model,  "src_weights/yolov3-tiny.h5",   1),
+                'Darknet53':        (create_yolov3_model,       "src_weights/yolov3_exp.h5",    1),
+                'Darknet19':        (create_yolov2_model,       "src_weights/yolov2.h5",        1),
+                'MobileNetv2_35':   (create_mobilenetv2_model,  "",                             0.35),
+                'MobileNetv2_50':   (create_mobilenetv2_model,  "",                             0.5),
+                'MobileNetv2_75':   (create_mobilenetv2_model,  "",                             0.75),
+                'MobileNetv2_100':  (create_mobilenetv2_model,  "",                             1.0),
+                'SqueezeNet':       (create_squeeze_model,      "",                             1),
+                'Xception':         (create_xception_model,     "",                             1)
+                }
 
     model_args = dict(  nb_class            = nb_class, 
                         anchors             = anchors, 
@@ -1002,15 +1007,14 @@ def create_model(
                         noobj_scale         = noobj_scale,
                         xywh_scale          = xywh_scale,
                         class_scale         = class_scale,
-                        train_shape         = train_shape )
+                        train_shape         = train_shape,
+                        mbn_alpha           = backends[base][2] )
 
     anchor_count = len(anchors) // 2
 
     print('Loading "{}" model'.format(base))
 
     template_model, infer_model, mvnc_model, freeze_layers_cnt = backends[base][0](**model_args)
-
-    orig_weights_name = backends[base][1]
 
     train_model = template_model
 
