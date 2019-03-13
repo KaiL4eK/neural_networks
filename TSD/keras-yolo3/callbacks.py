@@ -112,7 +112,7 @@ class MAP_evaluation(keras.callbacks.Callback):
                 self.bestVloss = logs['val_loss']
 
             if self.save_best and self.save_name_fmt:
-                if mAP >= self.bestMap and logs['val_loss'] =< self.bestVloss:
+                if mAP >= self.bestMap and logs['val_loss'] <= self.bestVloss:
                     self.bestVloss = logs['val_loss']
                     self.bestMap = mAP
 
