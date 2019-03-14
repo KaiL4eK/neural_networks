@@ -15,6 +15,8 @@ from keras.utils.layer_utils import print_summary
 
 import keras
 from keras.models import load_model
+import core
+from _common import utils
 
 
 def create_training_instances(
@@ -69,7 +71,7 @@ def create_training_instances(
 def train(config, initial_weights):
 
     init_session(1.0)
-    makedirs(os.path.dirname(config['train']['saved_weights_name']))
+
     if config['train']['cache_name']:
         makedirs(os.path.dirname(config['train']['cache_name']))
 
@@ -215,14 +217,14 @@ def train(config, initial_weights):
     for layer in infer_model.layers:
         layer.trainable = True
 
-    root, ext = os.path.splitext(config['train']['saved_weights_name'])
-    root = root + '_{}_{}x{}'.format(config['model']['base'], \
-                                     config['model']['infer_shape'][0], \
-                                     config['model']['infer_shape'][1])
+    checkpoint_name = utils.get_checkpoint_name(config)
+    mAP_checkpoint_name = utils.get_mAP_checkpoint_name(config)
+    utils.makedirs_4_file(checkpoint_name)
+    utils.makedirs_4_file(mAP_checkpoint_name)
 
     checkpoint_vloss = CustomModelCheckpoint(
         model_to_save=infer_model,
-        filepath=root + '_ep{epoch:03d}-val_loss{val_loss:.3f}-loss{loss:.3f}' + ext,
+        filepath=checkpoint_name,
         monitor='val_loss',
         verbose=1,
         save_best_only=True,
@@ -249,7 +251,7 @@ def train(config, initial_weights):
     map_evaluator_cb = MAP_evaluation(infer_model=infer_model,
                                       generator=valid_generator,
                                       save_best=True,
-                                      save_name=root + '_ep{epoch:03d}-val_loss{val_loss:.3f}-best_mAP{mAP:.3f}' + ext,
+                                      save_name=mAP_checkpoint_name,
                                       tensorboard=tensorboard_cb,
                                       iou_threshold=0.5,
                                       score_threshold=0.5,

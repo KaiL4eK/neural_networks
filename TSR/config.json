@@ -1,8 +1,10 @@
 {
     "model" : {
-        "base":                 "MobileNet2",
+        "main_name":            "TSR",
+        "base":                 "CustomMobileNetv2",
 
-        "input_side_sz":        32
+        "input_side_sz":        32,
+        "infer_shape":          [32, 32]
     },
 
     "train": {
@@ -15,7 +17,6 @@
         "nb_epochs":            300,
 
         "tensorboard_dir":      "logs/mobilenet_v2",
-        "saved_weights_name":   "chk/mobilenet_v2.h5",
 
         "debug":                false
     },

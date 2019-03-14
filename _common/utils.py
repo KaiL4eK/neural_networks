@@ -41,6 +41,24 @@ def get_pb_graph_fpath(config):
     return output_fpath
 
 
+def get_checkpoint_name(config):
+    root = 'chk/{}_{}_{}x{}'.format(config['model']['main_name'], \
+                                    config['model']['base'], \
+                                    config['model']['infer_shape'][0], \
+                                    config['model']['infer_shape'][1])
+    name = root + '_ep{epoch:03d}-val_loss{val_loss:.3f}-loss{loss:.3f}' + '.h5'
+    return name
+
+
+def get_mAP_checkpoint_name(config):
+    root = 'chk/{}_{}_{}x{}'.format(config['model']['main_name'], \
+                                    config['model']['base'], \
+                                    config['model']['infer_shape'][0], \
+                                    config['model']['infer_shape'][1])
+    name = root + '_ep{epoch:03d}-val_loss{val_loss:.3f}-best_mAP{mAP:.3f}' + '.h5'
+    return name
+
+
 DATA_GEN_SRC_VIDEO = 0
 DATA_GEN_SRC_IMAGE = 1
 

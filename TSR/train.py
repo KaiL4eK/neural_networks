@@ -11,7 +11,13 @@ from keras.utils.layer_utils import print_summary
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from callbacks import CustomModelCheckpoint
 
+import multiprocessing
+
+import core
+from _common import utils
+
 import argparse
+
 argparser = argparse.ArgumentParser(description='train and evaluate YOLOv3 model on any dataset')
 argparser.add_argument('-c', '--conf', help='path to configuration file')
 argparser.add_argument('-w', '--weights', help='path to trained model', default=None)
@@ -34,41 +40,41 @@ def main():
     print('Readed {} classes: {}'.format(num_classes, classes))
 
     train_generator = gen.BatchGenerator(
-        instances           = train_set,
-        labels              = classes,
-        batch_size          = config['train']['batch_size'],
-        input_sz            = config['model']['input_side_sz'],
-        shuffle             = True,
-        jitter              = 0.3,
-        norm                = data.normalize
+        instances=train_set,
+        labels=classes,
+        batch_size=config['train']['batch_size'],
+        input_sz=config['model']['input_side_sz'],
+        shuffle=True,
+        jitter=0.3,
+        norm=data.normalize
     )
 
     valid_generator = gen.BatchGenerator(
-        instances           = valid_set,
-        labels              = classes,
-        batch_size          = config['train']['batch_size'],
-        input_sz            = config['model']['input_side_sz'],
-        norm                = data.normalize,
-        infer               = True
+        instances=valid_set,
+        labels=classes,
+        batch_size=config['train']['batch_size'],
+        input_sz=config['model']['input_side_sz'],
+        norm=data.normalize,
+        infer=True
     )
 
     early_stop = EarlyStopping(
-        monitor     = 'val_loss',
-        min_delta   = 0,
-        patience    = 10,
-        mode        = 'min',
-        verbose     = 1
+        monitor='val_loss',
+        min_delta=0,
+        patience=10,
+        mode='min',
+        verbose=1
     )
 
     reduce_on_plateau = ReduceLROnPlateau(
-        monitor  = 'loss',
-        factor   = 0.5,
-        patience = 5,
-        verbose  = 1,
-        mode     = 'min',
-        min_delta= 0.01,
-        cooldown = 0,
-        min_lr   = 0
+        monitor='loss',
+        factor=0.5,
+        patience=5,
+        verbose=1,
+        mode='min',
+        min_delta=0.01,
+        cooldown=0,
+        min_lr=0
     )
 
     net_input_shape = (config['model']['input_side_sz'],
@@ -76,9 +82,9 @@ def main():
                        3)
 
     train_model = models.create(
-        base            = config['model']['base'],
-        num_classes     = num_classes,
-        input_shape     = net_input_shape)
+        base=config['model']['base'],
+        num_classes=num_classes,
+        input_shape=net_input_shape)
 
     print_summary(train_model)
     plot_model(train_model, to_file='images/MobileNetv2.png', show_shapes=True)
@@ -88,21 +94,18 @@ def main():
 
     train_model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
-    chk_name = config['train']['saved_weights_name']
-    chk_root, chk_ext = os.path.splitext(chk_name)
-    checkpoint_vloss = CustomModelCheckpoint(
-        model_to_save   = train_model,
-        filepath        = chk_root+'_ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}'+chk_ext,
-        monitor         = 'val_loss',
-        verbose         = 1,
-        save_best_only  = True,
-        mode            = 'min',
-        period          = 1
-    )
+    checkpoint_name = utils.get_checkpoint_name(config)
+    utils.makedirs_4_file(checkpoint_name)
 
-    if chk_name:
-        if not os.path.isdir(os.path.dirname(chk_name)):
-            os.makedirs(os.path.dirname(chk_name))
+    checkpoint_vloss = CustomModelCheckpoint(
+        model_to_save=train_model,
+        filepath=checkpoint_name,
+        monitor='val_loss',
+        verbose=1,
+        save_best_only=True,
+        mode='min',
+        period=1
+    )
 
     callbacks = [early_stop, reduce_on_plateau, checkpoint_vloss]
 
@@ -116,7 +119,7 @@ def main():
         epochs=config['train']['nb_epochs'],
         verbose=2 if config['train']['debug'] else 1,
         callbacks=callbacks,
-        workers=os.cpu_count(),
+        workers=multiprocessing.cpu_count(),
         max_queue_size=100
     )
 

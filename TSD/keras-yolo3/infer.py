@@ -1,7 +1,7 @@
-import core
 import time
 import cv2
 import argparse
+import core
 from _common import ncs
 from _common import utils
 import json

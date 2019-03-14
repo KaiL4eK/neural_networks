@@ -5,24 +5,23 @@ from keras.utils import to_categorical, Sequence
 import imgaug as ia
 from imgaug import augmenters as iaa
 
-print(cv2.useOptimized())
 
 class BatchGenerator(Sequence):
-    def __init__(self, 
-        instances,
-        labels,
-        input_sz,
-        batch_size=1,
-        shuffle=True, 
-        jitter=True, 
-        norm=None,
-        infer=None
-    ):
-        self.batch_size         = batch_size
-        self.labels             = labels
+    def __init__(self,
+                 instances,
+                 labels,
+                 input_sz,
+                 batch_size=1,
+                 shuffle=True,
+                 jitter=True,
+                 norm=None,
+                 infer=None
+                 ):
+        self.batch_size = batch_size
+        self.labels = labels
 
         # Convert instances to pairs
-        self.instances          = []
+        self.instances = []
         for c_name, img_fpaths in instances.items():
             for img_fpath in img_fpaths:
                 c_index = labels.index(c_name)
@@ -33,32 +32,32 @@ class BatchGenerator(Sequence):
         else:
             print('Size of inference dataset: {}'.format(len(self.instances)))
 
-        self.input_sz           = input_sz
-        self.infer              = infer
+        self.input_sz = input_sz
+        self.infer = infer
 
-        self.shuffle            = shuffle
-        self.jitter             = jitter
-        self.norm               = norm
+        self.shuffle = shuffle
+        self.jitter = jitter
+        self.norm = norm
 
-        if shuffle: 
+        if shuffle:
             np.random.shuffle(self.instances)
-            
+
     def __len__(self):
-        return int(np.ceil(float(len(self.instances))/self.batch_size))
+        return int(np.ceil(float(len(self.instances)) / self.batch_size))
 
     def __getitem__(self, idx):
         net_h, net_w = self._get_net_size()
 
         # determine the first and the last indices of the batch
-        l_bound = idx*self.batch_size
-        r_bound = (idx+1)*self.batch_size
+        l_bound = idx * self.batch_size
+        r_bound = (idx + 1) * self.batch_size
 
         if r_bound > len(self.instances):
             r_bound = len(self.instances)
             l_bound = r_bound - self.batch_size
 
-        x_batch = np.zeros((r_bound - l_bound, net_h, net_w, 3))    # input images
-        y_batch = np.zeros((r_bound - l_bound, len(self.labels)))   # list of groundtruth
+        x_batch = np.zeros((r_bound - l_bound, net_h, net_w, 3))  # input images
+        y_batch = np.zeros((r_bound - l_bound, len(self.labels)))  # list of groundtruth
 
         instance_count = 0
 
@@ -75,8 +74,8 @@ class BatchGenerator(Sequence):
             y_batch[instance_count] = to_categorical(c_idx, len(self.labels))
 
             # increase instance counter in the current batch
-            instance_count += 1                 
-        
+            instance_count += 1
+
         if self.norm is not None:
             return x_batch, y_batch
         else:
@@ -86,11 +85,11 @@ class BatchGenerator(Sequence):
         return self.input_sz, self.input_sz
 
     def _aug_image(self, img_fpath, net_h, net_w):
-        image = cv2.imread(img_fpath) # RGB image
-        
+        image = cv2.imread(img_fpath)  # RGB image
+
         if image is None:
             print('Cannot find ', img_fpath)
-        
+
         # image = image[:,:,::-1] # RGB image
         image_h, image_w, _ = image.shape
 
@@ -105,12 +104,12 @@ class BatchGenerator(Sequence):
 
     def on_epoch_end(self):
         if self.shuffle: np.random.shuffle(self.instances)
-        
+
     def num_classes(self):
         return len(self.labels)
 
     def size(self):
-        return len(self.instances)    
+        return len(self.instances)
 
     def get_anchors(self):
         anchors = []
