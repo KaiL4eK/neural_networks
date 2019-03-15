@@ -10,13 +10,13 @@ from generator import BatchGenerator
 from utils.utils import normalize, evaluate, makedirs, init_session
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
 from keras.optimizers import Adam
-from callbacks import CustomModelCheckpoint, CustomTensorBoard, MAP_evaluation
 from keras.utils.layer_utils import print_summary
 
 import keras
 from keras.models import load_model
 import core
 from _common import utils
+from _common.callbacks import CustomModelCheckpoint, CustomTensorBoard, MAP_evaluation
 
 
 def create_training_instances(
@@ -163,18 +163,15 @@ def train(config, initial_weights):
     ###############################
     #   Kick off the training
     ###############################
-    tensorboard_logdir_idx = 0
-
-    while True:
-        tensorboard_logdir = "%s-%d" % (config['train']['tensorboard_dir'], tensorboard_logdir_idx)
-        if os.path.exists(tensorboard_logdir):
-            tensorboard_logdir_idx += 1
-        else:
-            break
-
-    makedirs(tensorboard_logdir)
+    tensorboard_logdir = utils.get_tensorboard_name(config)
+    checkpoint_name = utils.get_checkpoint_name(config)
+    mAP_checkpoint_name = utils.get_mAP_checkpoint_name(config)
+    utils.makedirs(tensorboard_logdir)
+    utils.makedirs_4_file(checkpoint_name)
+    utils.makedirs_4_file(mAP_checkpoint_name)
 
     print('Tensorboard dir: {}'.format(tensorboard_logdir))
+
 
     early_stop = EarlyStopping(
         monitor='val_loss',
@@ -217,11 +214,6 @@ def train(config, initial_weights):
     for layer in infer_model.layers:
         layer.trainable = True
 
-    checkpoint_name = utils.get_checkpoint_name(config)
-    mAP_checkpoint_name = utils.get_mAP_checkpoint_name(config)
-    utils.makedirs_4_file(checkpoint_name)
-    utils.makedirs_4_file(mAP_checkpoint_name)
-
     checkpoint_vloss = CustomModelCheckpoint(
         model_to_save=infer_model,
         filepath=checkpoint_name,
@@ -255,7 +247,8 @@ def train(config, initial_weights):
                                       tensorboard=tensorboard_cb,
                                       iou_threshold=0.5,
                                       score_threshold=0.5,
-                                      infer_sz=config['model']['infer_shape'])
+                                      infer_sz=config['model']['infer_shape'],
+                                      evaluate=evaluate)
 
     early_stop = EarlyStopping(
         monitor='val_loss',

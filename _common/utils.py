@@ -58,6 +58,22 @@ def get_mAP_checkpoint_name(config):
     name = root + '_ep{epoch:03d}-val_loss{val_loss:.3f}-best_mAP{mAP:.3f}' + '.h5'
     return name
 
+def get_tensorboard_name(config):
+    tensorboard_logdir_idx = 0
+    root = 'logs/{}_{}_{}x{}'.format(config['model']['main_name'], \
+                                     config['model']['base'], \
+                                     config['model']['infer_shape'][0], \
+                                     config['model']['infer_shape'][1])
+
+    while True:
+        name = "%s-%d" % (root, tensorboard_logdir_idx)
+        if os.path.exists(name):
+            tensorboard_logdir_idx += 1
+        else:
+            break
+
+    return name
+
 
 DATA_GEN_SRC_VIDEO = 0
 DATA_GEN_SRC_IMAGE = 1

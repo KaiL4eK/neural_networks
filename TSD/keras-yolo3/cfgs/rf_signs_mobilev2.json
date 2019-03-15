@@ -28,7 +28,6 @@
         "xywh_scale":           1,
         "class_scale":          1,
 
-        "tensorboard_dir":      "logs/TSD_yolo_mbv2",
         "debug":                false
     },
 

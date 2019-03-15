@@ -2,8 +2,30 @@ from keras.callbacks import TensorBoard, ModelCheckpoint
 import tensorflow as tf
 import numpy as np
 import keras
-from utils.utils import evaluate
 
+class CustomTensorBoard(TensorBoard):
+    """ to log the loss after each batch
+    """
+
+    def __init__(self, log_every=1, **kwargs):
+        super(CustomTensorBoard, self).__init__(**kwargs)
+        self.log_every = log_every
+        self.counter = 0
+
+    def on_batch_end(self, batch, logs=None):
+        self.counter += 1
+        if self.counter % self.log_every == 0:
+            for name, value in logs.items():
+                if name in ['batch', 'size']:
+                    continue
+                summary = tf.Summary()
+                summary_value = summary.value.add()
+                summary_value.simple_value = value.item()
+                summary_value.tag = name
+                self.writer.add_summary(summary, self.counter)
+            self.writer.flush()
+
+        super(CustomTensorBoard, self).on_batch_end(batch, logs)
 
 class CustomModelCheckpoint(ModelCheckpoint):
     """ to save the template model, not the multi-GPU model
@@ -75,7 +97,8 @@ class MAP_evaluation(keras.callbacks.Callback):
                  save_best=False,
                  save_name=None,
                  tensorboard=None,
-                 infer_sz=[416, 416]):
+                 infer_sz=[416, 416],
+                 evaluate=None):
 
         self.infer_model = infer_model
         self.generator = generator
@@ -86,6 +109,7 @@ class MAP_evaluation(keras.callbacks.Callback):
         self.save_name_fmt = save_name
         self.tensorboard = tensorboard
         self.infer_sz = infer_sz
+        self.evaluate = evaluate
 
         self.bestVloss = None
         self.bestMap = 0
@@ -94,14 +118,14 @@ class MAP_evaluation(keras.callbacks.Callback):
             raise ValueError("Tensorboard object must be a instance from keras.callbacks.TensorBoard")
 
     def on_epoch_end(self, epoch, logs={}):
-
+    
         if epoch % self.period == 0 and self.period != 0:
-            average_precisions = evaluate(model=self.infer_model,
-                                          generator=self.generator,
-                                          iou_threshold=self.iou_threshold,
-                                          net_h=self.infer_sz[0],
-                                          net_w=self.infer_sz[1],
-                                          save_path=None)
+            average_precisions = self.evaluate(model=self.infer_model,
+                                               generator=self.generator,
+                                               iou_threshold=self.iou_threshold,
+                                               net_h=self.infer_sz[0],
+                                               net_w=self.infer_sz[1],
+                                               save_path=None)
             print('\n')
             for label, average_precision in average_precisions.items():
                 print(label, '{:.4f}'.format(average_precision))
@@ -132,26 +156,3 @@ class MAP_evaluation(keras.callbacks.Callback):
                 self.tensorboard.writer.add_summary(summary, epoch)
 
 
-class CustomTensorBoard(TensorBoard):
-    """ to log the loss after each batch
-    """
-
-    def __init__(self, log_every=1, **kwargs):
-        super(CustomTensorBoard, self).__init__(**kwargs)
-        self.log_every = log_every
-        self.counter = 0
-
-    def on_batch_end(self, batch, logs=None):
-        self.counter += 1
-        if self.counter % self.log_every == 0:
-            for name, value in logs.items():
-                if name in ['batch', 'size']:
-                    continue
-                summary = tf.Summary()
-                summary_value = summary.value.add()
-                summary_value.simple_value = value.item()
-                summary_value.tag = name
-                self.writer.add_summary(summary, self.counter)
-            self.writer.flush()
-
-        super(CustomTensorBoard, self).on_batch_end(batch, logs)

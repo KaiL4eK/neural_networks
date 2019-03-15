@@ -9,12 +9,12 @@ from keras.utils.vis_utils import plot_model
 from keras.utils.layer_utils import print_summary
 
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
-from callbacks import CustomModelCheckpoint
 
 import multiprocessing
 
 import core
 from _common import utils
+from _common.callbacks import CustomModelCheckpoint
 
 import argparse
 

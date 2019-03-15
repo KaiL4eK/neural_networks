@@ -15,9 +15,7 @@
         "batch_size":           4,
         "learning_rate":        1e-4,
         "nb_epochs":            300,
-
-        "tensorboard_dir":      "logs/mobilenet_v2",
-
+        
         "debug":                false
     },
 
