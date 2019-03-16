@@ -86,7 +86,7 @@ def create_training_instances(
         with open(cache_name, 'wb') as handle:
             pickle.dump(cache, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    return train_entries, valid_entries, classes
+    return train_entries, valid_entries, sorted(classes)
 
 
 if __name__ == '__main__':

@@ -93,7 +93,11 @@ class InferNCS:
 
         self.graph.queue_inference_with_fifo_elem(self.fifoIn, self.fifoOut, img, None)
 
-        ncs_output, _ = self.fifoOut.read_elem()
+        try:
+            ncs_output, _ = self.fifoOut.read_elem()
+        except:
+            print('Failed to read FIFO')
+            ncs_output = np.zeros(self.output_shape)
 
         ncs_output = ncs_output.reshape(self.output_shape)
 

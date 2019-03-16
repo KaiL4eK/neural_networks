@@ -82,7 +82,7 @@ class BatchGenerator(Sequence):
             return x_batch
 
     def _get_net_size(self):
-        return self.input_sz, self.input_sz
+        return self.input_sz[0], self.input_sz[1]
 
     def _aug_image(self, img_fpath, net_h, net_w):
         image = cv2.imread(img_fpath)  # RGB image

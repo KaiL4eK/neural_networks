@@ -43,7 +43,7 @@ def main():
         instances=train_set,
         labels=classes,
         batch_size=config['train']['batch_size'],
-        input_sz=config['model']['input_side_sz'],
+        input_sz=config['model']['infer_shape'],
         shuffle=True,
         jitter=0.3,
         norm=data.normalize
@@ -53,7 +53,7 @@ def main():
         instances=valid_set,
         labels=classes,
         batch_size=config['train']['batch_size'],
-        input_sz=config['model']['input_side_sz'],
+        input_sz=config['model']['infer_shape'],
         norm=data.normalize,
         infer=True
     )
@@ -77,8 +77,8 @@ def main():
         min_lr=0
     )
 
-    net_input_shape = (config['model']['input_side_sz'],
-                       config['model']['input_side_sz'],
+    net_input_shape = (config['model']['infer_shape'][0],
+                       config['model']['infer_shape'][1],
                        3)
 
     train_model = models.create(
