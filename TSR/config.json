@@ -7,7 +7,7 @@
     },
 
     "train": {
-        "train_folder":         "../data_root/__signs/robofest_data/signs_only",
+        "train_folder":         "signs_ds",
         "cache_name":           "pkl/sign_train.pkl",
 
         "train_times":          3,
@@ -19,15 +19,14 @@
     },
 
     "valid": {
-        "valid_folder":         "../data_root/__signs/robofest_data/signs_only",
+        "valid_folder":         "signs_ds",
         "cache_name":           "pkl/sign_test.pkl",
 
         "valid_times":          1
     },
 
     "eval": {
-        "valid_image_folder":   "../data/GTSDB_voc/Images/",
-        "valid_annot_folder":   "../data/GTSDB_voc/annots_test/",
+        "valid_image_folder":   ".signs_ds",
         "cache_name":           "pkl/sign_eval.pkl"
     },
 
