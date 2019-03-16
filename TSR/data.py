@@ -24,7 +24,8 @@ def get_classes(cache_name):
 def create_training_instances(
     train_folder,
     valid_folder,
-    cache_name
+    cache_name,
+    labels=None
 ):
     train_entries = {}
     valid_entries = {}
@@ -40,7 +41,10 @@ def create_training_instances(
         print('Train folder is not set - exit')
         return train_entries, valid_entries, classes
 
-    classes = [f for f in os.listdir(train_folder) if isdir(join(train_folder, f))]
+    if labels is not None:
+        classes = [f for f in os.listdir(train_folder) if isdir(join(train_folder, f)) and f in labels]
+    else:
+        classes = [f for f in os.listdir(train_folder) if isdir(join(train_folder, f))]
 
     print(classes)
 
