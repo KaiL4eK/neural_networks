@@ -87,8 +87,11 @@ def main():
         num_classes=num_classes,
         input_shape=net_input_shape)
 
+    if initial_weights:
+        train_model.load_weights(initial_weights)
+
     print_summary(train_model)
-    plot_model(train_model, to_file='images/MobileNetv2.png', show_shapes=True)
+    # plot_model(train_model, to_file='images/MobileNetv2.png', show_shapes=True)
 
     optimizer = Adam(lr=config['train']['learning_rate'], clipnorm=0.001)
     # optimizer = SGD(lr=config['train']['learning_rate'], clipnorm=0.001)
