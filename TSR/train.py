@@ -35,7 +35,7 @@ def main():
     train_set, valid_set, classes = data.create_training_instances(config['train']['train_folder'],
                                                                    None,
                                                                    config['train']['cache_name'],
-                                                                   ['brick', 'forward', 'forward_left', 'forward_right', 'left', 'right', 'negative'])
+                                                                   config['model']['labels'])
 
     num_classes = len(classes)
     print('Readed {} classes: {}'.format(num_classes, classes))

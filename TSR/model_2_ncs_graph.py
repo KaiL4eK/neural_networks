@@ -7,11 +7,12 @@ from keras.models import load_model
 import os
 import json
 from keras.utils.layer_utils import print_summary
+import core
+from _common import utils
 
 import shutil
 
 argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
-argparser.add_argument('-o', '--output', help='path output frozen graph (.pb file)')
 argparser.add_argument('-w', '--weights', help='weights path')
 argparser.add_argument('-c', '--conf', help='path to configuration file')
 args = argparser.parse_args()
@@ -19,33 +20,29 @@ args = argparser.parse_args()
 def _main_():
     config_path = args.conf
     weights_path = args.weights
-    output_pb_fpath = args.output
-    config_path = args.conf
-
-    output_dpath = os.path.dirname(output_pb_fpath)
-    if not os.path.isdir(output_dpath):
-        os.makedirs(output_dpath)
 
     with open(config_path) as config_buffer:    
         config = json.loads(config_buffer.read())
+    
+    output_pb_fpath = utils.get_pb_graph_fpath(config)
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2, allow_growth=True)
     sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
     K.set_session(sess)
     K.set_learning_phase(0)
 
-    net_input_shape = (config['model']['input_side_sz'],
-                       config['model']['input_side_sz'],
+    net_input_shape = (config['model']['infer_shape'][0],
+                       config['model']['infer_shape'][1],
                        3)
-
-    classes = data.get_classes(config['train']['cache_name'])
-
-    if not classes:
-        print('Failed to get classes list')
 
     if weights_path:
         mvnc_model = load_model(weights_path)
     else:
+        classes = data.get_classes(config['train']['cache_name'])
+
+        if not classes:
+            print('Failed to get classes list')
+
         mvnc_model = models.create(
             base=config['model']['base'],
             num_classes=len(classes),
@@ -58,7 +55,8 @@ def _main_():
     model_output_names = [mvnc_model.output.name.split(':')[0]]
     model_outputs = [mvnc_model.output]
 
-    print('Outputs: {}'.format(model_outputs))
+    print('Inputs: {}'.format(mvnc_model.input))
+    print('Outputs: {}'.format(mvnc_model.output))
     # print('Output shapes: {}'.format(model_output_shapes))
 
     with K.get_session() as sess:
@@ -91,12 +89,13 @@ def _main_():
     #####################################
     from subprocess import call
 
-    graph_fpath = output_pb_fpath + '.graph'
-    print('    Writing to {}'.format(graph_fpath))
+    if weights_path:
+        graph_fpath = utils.get_ncs_graph_fpath(config)
+        print('    Writing to {}'.format(graph_fpath))
 
-    process_args = ["mvNCCompile", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12",
-                    "-o", graph_fpath]
-    call(process_args)
+        process_args = ["mvNCCompile", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12",
+                        "-o", graph_fpath]
+        call(process_args)
 
     print('    Compiled, check performance')
 

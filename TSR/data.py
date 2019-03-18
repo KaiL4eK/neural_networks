@@ -42,7 +42,7 @@ def create_training_instances(
         return train_entries, valid_entries, classes
 
     if labels is not None:
-        classes = [f for f in os.listdir(train_folder) if isdir(join(train_folder, f)) and f in labels]
+        classes = [f for f in labels if isdir(join(train_folder, f))]
     else:
         classes = [f for f in os.listdir(train_folder) if isdir(join(train_folder, f))]
 
@@ -90,7 +90,7 @@ def create_training_instances(
         with open(cache_name, 'wb') as handle:
             pickle.dump(cache, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    return train_entries, valid_entries, sorted(classes)
+    return train_entries, valid_entries, classes
 
 
 if __name__ == '__main__':
