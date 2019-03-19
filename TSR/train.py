@@ -46,7 +46,6 @@ def main():
         batch_size=config['train']['batch_size'],
         input_sz=config['model']['infer_shape'],
         shuffle=True,
-        jitter=0.3,
         norm=data.normalize
     )
 
@@ -62,7 +61,7 @@ def main():
     early_stop = EarlyStopping(
         monitor='val_loss',
         min_delta=0,
-        patience=10,
+        patience=20,
         mode='min',
         verbose=1
     )

@@ -3,7 +3,7 @@
         "main_name":            "TSR",
         "base":                 "CustomMobileNetv2",
         "labels":               ["brick", "forward", "forward_left", "forward_right", "left", "right", "negative"],
-        "infer_shape":          [32, 32]
+        "infer_shape":          [48, 48]
     },
 
     "train": {
@@ -11,8 +11,8 @@
         "cache_name":           "pkl/sign_train.pkl",
 
         "train_times":          3,
-        "batch_size":           4,
-        "learning_rate":        1e-4,
+        "batch_size":           64,
+        "learning_rate":        1e-3,
         "nb_epochs":            300,
         
         "debug":                false

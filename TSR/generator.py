@@ -13,7 +13,6 @@ class BatchGenerator(Sequence):
                  input_sz,
                  batch_size=1,
                  shuffle=True,
-                 jitter=True,
                  norm=None,
                  infer=None
                  ):
@@ -36,8 +35,9 @@ class BatchGenerator(Sequence):
         self.infer = infer
 
         self.shuffle = shuffle
-        self.jitter = jitter
         self.norm = norm
+
+        self.augment_init()
 
         if shuffle:
             np.random.shuffle(self.instances)
@@ -64,7 +64,7 @@ class BatchGenerator(Sequence):
         # do the logic to fill in the inputs and the output
         for c_idx, img_fpath in self.instances[l_bound:r_bound]:
             # augment input image and fix object's position and size
-            img = self._aug_image(img_fpath, net_h, net_w)
+            img = self._process_image(img_fpath, net_h, net_w)
 
             if self.norm is not None:
                 x_batch[instance_count] = self.norm(img)
@@ -84,7 +84,7 @@ class BatchGenerator(Sequence):
     def _get_net_size(self):
         return self.input_sz[0], self.input_sz[1]
 
-    def _aug_image(self, img_fpath, net_h, net_w):
+    def _process_image(self, img_fpath, net_h, net_w):
         image = cv2.imread(img_fpath)  # RGB image
 
         if image is None:
@@ -96,9 +96,9 @@ class BatchGenerator(Sequence):
         im_sized = cv2.resize(image, (net_w, net_h), interpolation=cv2.INTER_LINEAR)
 
         if self.infer:
-            return im_sized
+            im_sized = im_sized
         else:
-            pass
+            im_sized = self.augment_image(im_sized)
 
         return im_sized
 
@@ -132,3 +132,42 @@ class BatchGenerator(Sequence):
 
     def load_image(self, i):
         return cv2.imread(self.instances[i]['filename'])
+
+    def augment_init(self):
+        from imgaug import augmenters as iaa
+
+        sometimes = lambda aug: iaa.Sometimes(0.5, aug)
+
+        self.aug = iaa.Sequential([
+            # iaa.Fliplr(0.5), # horizontal flips
+            iaa.Crop(percent=(0, 0.1)), # random crops
+            # Small gaussian blur with random sigma between 0 and 0.5.
+            # But we only blur about 50% of all images.
+            sometimes(
+                iaa.GaussianBlur(sigma=(0, 0.5))
+            ),
+            # Strengthen or weaken the contrast in each image.
+            iaa.ContrastNormalization((0.75, 1.5)),
+            # Add gaussian noise.
+            # For 50% of all images, we sample the noise once per pixel.
+            # For the other 50% of all images, we sample the noise per pixel AND
+            # channel. This can change the color (not only brightness) of the
+            # pixels.
+            iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05*255), per_channel=0.5),
+            # Make some images brighter and some darker.
+            # In 20% of all cases, we sample the multiplier once per channel,
+            # which can end up changing the color of the images.
+            iaa.Multiply((0.8, 1.2), per_channel=0.2),
+            # Apply affine transformations to each image.
+            # Scale/zoom them, translate/move them, rotate them and shear them.
+            iaa.Affine(
+                scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+                translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)},
+                rotate=(-25, 25),
+                shear=(-8, 8)
+            )
+        ], random_order=True) # apply augmenters in random order
+
+
+    def augment_image(self, img):
+        return self.aug.augment_image(img)
