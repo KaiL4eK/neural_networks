@@ -44,7 +44,15 @@ class YOLO:
                 boxes += decode_netout(yolos[j], yolo_anchors, self.obj_thresh, self.net_sz[0], self.net_sz[1])
 
             correct_yolo_boxes(boxes, image_h, image_w, self.net_sz[0], self.net_sz[1])
+
+            # for yolo_bbox in boxes:
+                # print("Before NMS: {}",format(yolo_bbox.get_str()))
+
             do_nms(boxes, self.nms_thresh)
+
+            # for yolo_bbox in boxes:
+                # print("After NMS: {}",format(yolo_bbox.get_str()))
+
             batch_boxes[i] = boxes
 
         return batch_boxes

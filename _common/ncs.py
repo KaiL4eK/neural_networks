@@ -31,6 +31,7 @@ class InferNCS:
 
         print("Hello NCS! Device opened normally.")
 
+        print("Opening graph: {}".format(graph_fpath))
         with open(graph_fpath, mode='rb') as f:
             graph_file_buff = f.read()
 
@@ -52,8 +53,8 @@ class InferNCS:
         self.input_shape = (input_tensor_list[0].h, input_tensor_list[0].w, input_tensor_list[0].c)
         self.input_cv_sz = (input_tensor_list[0].w, input_tensor_list[0].h)
 
-        print('Input shape: {}'.format(self.output_shape))
-        print('Output shape: {}'.format(self.input_shape))
+        print('Input shape: {}'.format(self.input_shape))
+        print('Output shape: {}'.format(self.output_shape))
 
     def __del__(self):
         if self.fifoIn:

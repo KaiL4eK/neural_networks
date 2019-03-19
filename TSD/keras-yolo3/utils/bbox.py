@@ -28,6 +28,9 @@ class BoundBox:
 
         return self.score
 
+    def get_str(self):
+        return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.c, self.classes)
+
 
 def _interval_overlap(interval_a, interval_b):
     x1, x2 = interval_a

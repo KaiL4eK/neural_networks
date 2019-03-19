@@ -162,6 +162,10 @@ def correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w):
         boxes[i].ymin = int((boxes[i].ymin - y_offset) / y_scale * image_h)
         boxes[i].ymax = int((boxes[i].ymax - y_offset) / y_scale * image_h)
 
+        boxes[i].xmin, boxes[i].xmax = np.clip([boxes[i].xmin, boxes[i].xmax], 0, image_w)
+        boxes[i].ymin, boxes[i].ymax = np.clip([boxes[i].ymin, boxes[i].ymax], 0, image_h)
+
+
 
 def do_nms(boxes, nms_thresh):
     if len(boxes) > 0:
