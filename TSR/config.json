@@ -3,7 +3,7 @@
         "main_name":            "TSR",
         "base":                 "CustomMobileNetv2",
         "labels":               ["brick", "forward", "forward_left", "forward_right", "left", "right", "negative"],
-        "infer_shape":          [32, 32]
+        "infer_shape":          [48, 48]
     },
 
     "train": {

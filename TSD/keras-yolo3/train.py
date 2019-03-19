@@ -4,7 +4,6 @@ import argparse
 import os
 import numpy as np
 import json
-from voc import parse_voc_annotation, split_by_objects
 from yolo import create_model, dummy_loss
 from generator import BatchGenerator
 from utils.utils import normalize, evaluate, makedirs, init_session
@@ -17,7 +16,7 @@ from keras.models import load_model
 import core
 from _common import utils
 from _common.callbacks import CustomModelCheckpoint, CustomTensorBoard, MAP_evaluation
-
+from _common.voc import parse_voc_annotation, split_by_objects
 
 def create_training_instances(
         train_annot_folder,
