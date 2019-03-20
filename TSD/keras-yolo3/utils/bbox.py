@@ -105,7 +105,7 @@ def draw_boxes(image, boxes, labels, obj_thresh, quiet=True):
 def draw_ros_boxes(image, boxes, labels, obj_thresh, quiet=True):
     for box in boxes:
         label_str = box.Class
-        label = -1
+        label = 0
 
         # for i in range(len(labels)):
         #     if box.classes[i] > obj_thresh:
