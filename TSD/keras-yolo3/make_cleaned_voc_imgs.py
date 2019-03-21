@@ -13,6 +13,13 @@ train_image_folder = ['/home/alex/catkin_ws/src/AutoNetChallenge/wr8_ai/neural_n
 					  '/home/alex/catkin_ws/src/AutoNetChallenge/wr8_ai/neural_networks/TSD/rf_tsd_voc/RF19/traffic_light/']
 train_annot_folder = ['/home/alex/catkin_ws/src/AutoNetChallenge/wr8_ai/neural_networks/TSD/rf_tsd_voc/RF19/Annotations_train/']
 
+
+train_annot_folder = ['/home/alex/Dev/NN_Data/NN_rf_data/rf_tsd_voc/RF19/Images.src/lena_ann_signs/']
+train_image_folder = ['/home/alex/Dev/NN_Data/NN_rf_data/rf_tsd_voc/RF19/Images.src/lena_img_signs/']
+
+train_annot_folder = ['/home/alex/Dev/NN_Data/NN_rf_data/rf_tsd_voc/RF19/Images.src/dm/signs/annot_tl/']
+train_image_folder = ['/home/alex/Dev/NN_Data/NN_rf_data/rf_tsd_voc/RF19/Images.src/dm/signs/test/']
+
 train_ints, train_labels = parse_voc_annotation(train_annot_folder, train_image_folder, None, [])
 
 from shutil import copyfile

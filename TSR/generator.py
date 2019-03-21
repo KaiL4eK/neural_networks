@@ -4,7 +4,7 @@ from keras.utils import to_categorical, Sequence
 
 import imgaug as ia
 from imgaug import augmenters as iaa
-
+import random
 
 class BatchGenerator(Sequence):
     def __init__(self,
@@ -64,7 +64,7 @@ class BatchGenerator(Sequence):
         # do the logic to fill in the inputs and the output
         for c_idx, img_fpath in self.instances[l_bound:r_bound]:
             # augment input image and fix object's position and size
-            img = self._process_image(img_fpath, net_h, net_w)
+            img = self._process_image(img_fpath, net_h, net_w, is_neg=(c_idx == len(self.labels)-1))
 
             if self.norm is not None:
                 x_batch[instance_count] = self.norm(img)
@@ -84,7 +84,7 @@ class BatchGenerator(Sequence):
     def _get_net_size(self):
         return self.input_sz[0], self.input_sz[1]
 
-    def _process_image(self, img_fpath, net_h, net_w):
+    def _process_image(self, img_fpath, net_h, net_w, is_neg=False):
         image = cv2.imread(img_fpath)  # RGB image
 
         if image is None:
@@ -92,6 +92,18 @@ class BatchGenerator(Sequence):
 
         # image = image[:,:,::-1] # RGB image
         image_h, image_w, _ = image.shape
+
+        if is_neg:
+            rand_w = random.randint(16, image_w-1)
+            rand_h = random.randint(16, image_h-1)
+            rand_y = random.randint(0, image_h-rand_h-1)
+            rand_x = random.randint(0, image_w-rand_w-1)
+
+            cropped_img = image[rand_y:rand_y+rand_h, rand_x:rand_x+rand_w]
+
+            print(rand_x, rand_y, rand_w, rand_h)
+            cv2.imshow('1', cropped_img)
+            cv2.waitKey(0)
 
         im_sized = cv2.resize(image, (net_w, net_h), interpolation=cv2.INTER_LINEAR)
 

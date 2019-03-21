@@ -122,7 +122,7 @@ def main():
         epochs=config['train']['nb_epochs'],
         verbose=2 if config['train']['debug'] else 1,
         callbacks=callbacks,
-        workers=multiprocessing.cpu_count(),
+        workers=1, #multiprocessing.cpu_count(),
         max_queue_size=100
     )
 
