@@ -8,6 +8,7 @@
 
     "train": {
         "train_folder":         "signs_ds",
+        "negatives_folder":     "signs_neg",
         "cache_name":           "pkl/sign_train.pkl",
 
         "train_times":          3,
