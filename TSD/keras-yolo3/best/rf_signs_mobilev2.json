@@ -1,16 +1,17 @@
 {
     "model" : {
+        "main_name":            "TSD_YOLO",
         "min_input_size":       [160, 192],
         "max_input_size":       [256, 288],
         "base":                 "MobileNetv2_35",
         "anchors":              [29,29, 40,44, 61,64],
-        "labels":               [],
+        "labels":               ["brick", "forward", "forward_left", "forward_right", "left", "right", "traffic_light"],
         "infer_shape":          [224, 256]
     },
 
     "train": {
-        "train_image_folder":   "../rf_tsd_voc/Images/",
-        "train_annot_folder":   "../rf_tsd_voc/Annotations_train/",
+        "train_image_folder":   ["../rf_tsd_voc/RF19/Images/", "../rf_tsd_voc/RF17/Images/", "../rf_tsd_voc/Uni/Images/"],
+        "train_annot_folder":   ["../rf_tsd_voc/RF19/Annotations_train/", "../rf_tsd_voc/RF17/Annotations_train/", "../rf_tsd_voc/Uni/Annotations_train"],
         "cache_name":           "",
 
         "train_times":          5,
@@ -27,8 +28,6 @@
         "xywh_scale":           1,
         "class_scale":          1,
 
-        "tensorboard_dir":      "logs/TSD_yolo_mbv2",
-        "saved_weights_name":   "chk/TSD_yolo.h5",
         "debug":                false
     },
 
