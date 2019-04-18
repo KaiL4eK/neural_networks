@@ -2,7 +2,10 @@ from keras.callbacks import ModelCheckpoint
 
 
 class CustomModelCheckpoint(ModelCheckpoint):
-    """ to save the template model, not the multi-GPU model
+    """
+        Save model with custom name
+        model_to_save - Keras model of NN
+        kwargs - arguments for ModelCheckpoint
     """
     def __init__(self, model_to_save, **kwargs):
         super(CustomModelCheckpoint, self).__init__(**kwargs)

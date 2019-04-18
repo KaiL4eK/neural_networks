@@ -1,30 +1,23 @@
 import argparse
 import tensorflow as tf
-import keras.backend as K
-from keras.models import load_model
 from utils import makedirs
 import os
-import json
 
 import shutil
 
 from net import *
 
 from keras.layers import *
-from keras.models import Model
-from keras.optimizers import Adam
-from keras.losses import binary_crossentropy
-
-import numpy as np
 import config
 
 argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
 argparser.add_argument('-w', '--weights', help='weights path')
 
+
 def _main_(args):
     weights_path = args.weights
 
-    output_pb_fpath = config.NCS_GRAPH
+    output_pb_fpath = config.TF_GRAPH
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.4, allow_growth=True)
     sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -69,6 +62,7 @@ def _main_(args):
 
     process_args = ["mvNCCheck", output_pb_fpath, "-in", model_inputs[0], "-on", model_outputs[0], "-s", "12"]
     # call(process_args)
+
 
 if __name__ == '__main__':
     args = argparser.parse_args()

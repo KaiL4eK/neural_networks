@@ -1,1 +1,0 @@
-../common_scripts/start_train.sh

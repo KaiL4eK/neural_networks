@@ -1,9 +1,0 @@
-*.caffemodel
-*.solverstate
-*.png
-*.jpg
-*lmdb
-*.binaryproto
-*.log
-*.zip
-*.csv

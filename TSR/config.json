@@ -20,14 +20,14 @@
     },
 
     "valid": {
-        "valid_folder":         "signs_ds",
+        "valid_folder":         "signs_valid",
         "cache_name":           "pkl/sign_test.pkl",
 
         "valid_times":          1
     },
 
     "eval": {
-        "valid_image_folder":   "signs_ds",
+        "valid_image_folder":   "signs_eval",
         "cache_name":           "pkl/sign_eval.pkl"
     },
 

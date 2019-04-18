@@ -1,7 +1,0 @@
-#!/bin/bash
-
-add to ~/.*rc:
-  export PYTHONPATH=/usr/local/python:$PYTHONPATH
-
-https://github.com/BVLC/caffe/issues/5324
-https://github.com/BVLC/caffe/commit/db6cf0a728cad63c93b345f2203f3ad1f5d5c2f4

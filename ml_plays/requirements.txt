@@ -1,5 +1,0 @@
-numpy
-jupyter
-scikit-learn
-plotly
-opencv-python

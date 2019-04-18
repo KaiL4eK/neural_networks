@@ -61,7 +61,7 @@ def _main_(args):
         mask = cv2.resize(lane_mask, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
         mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
 
-        show_delay = 0
+        show_delay = 1
 
         if write_mode:
             

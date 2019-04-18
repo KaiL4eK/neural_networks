@@ -15,13 +15,14 @@ K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 nn_img_side = 240
 nn_out_size = 120
 
+
 # https://www.kaggle.com/c/data-science-bowl-2018/discussion/51553
 def iou_coef(y_true, y_pred, smooth=1):
     """
     IoU = (|X &amp; Y|)/ (|X or Y|)
     """
     intersection = K.sum(K.abs(y_true * y_pred), axis=-1)
-    union = K.sum(y_true,-1) + K.sum(y_pred,-1) - intersection
+    union = K.sum(y_true, -1) + K.sum(y_pred, -1) - intersection
     return (intersection + smooth) / (union + smooth)
 
 
@@ -33,23 +34,27 @@ def intersect_over_union(y_true, y_pred):
     union = K.sum(y_true_f) + K.sum(y_pred_f) - intersection
 
     # return K.switch( K.equal(union, 0), K.variable(1), intersection / union) 
-    
+
     return (intersection + 1) / (union + 1)
+
 
 def iou_loss(y_true, y_pred):
     return 1 - intersect_over_union(y_true, y_pred)
 
+
 def iou_metrics(y_true, y_pred):
     return intersect_over_union(y_true, y_pred)
 
+
 def bin_ce_n_iou(y_true, y_pred):
     return iou_loss(y_true, y_pred) + binary_crossentropy(y_true, y_pred)
+
 
 ### Image preprocessing ###
 
 # Output is resized, BGR, mean subtracted, [0, 1.] scaled by values
 def preprocess_img(img):
-    img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation = cv2.INTER_CUBIC)
+    img = cv2.resize(img, (nn_img_side, nn_img_side), interpolation=cv2.INTER_CUBIC)
 
     # img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
     # img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
@@ -63,8 +68,9 @@ def preprocess_img(img):
 
     return img
 
+
 def preprocess_mask(img):
-    img = cv2.resize(img, (nn_out_size, nn_out_size), interpolation = cv2.INTER_NEAREST)
+    img = cv2.resize(img, (nn_out_size, nn_out_size), interpolation=cv2.INTER_NEAREST)
     img = img.astype('float32', copy=False)
     img /= 255.
 
@@ -76,6 +82,7 @@ def preprocess_mask(img):
 def relu6(x):
     return K.relu(x, max_value=6)
 
+
 def _make_divisible(v, divisor=8, min_value=8):
     if min_value is None:
         min_value = divisor
@@ -86,9 +93,9 @@ def _make_divisible(v, divisor=8, min_value=8):
         new_v += divisor
     return new_v
 
-def _deconv_block(inputs, filters, alpha, kernel=(3, 3), strides=(1, 1), bn_epsilon=1e-3,
-                bn_momentum=0.99, block_id=1):
 
+def _deconv_block(inputs, filters, alpha, kernel=(3, 3), strides=(1, 1), bn_epsilon=1e-3,
+                  bn_momentum=0.99, block_id=1):
     channel_axis = 1 if K.image_data_format() == 'channels_first' else -1
     filters = filters * alpha
     filters = _make_divisible(filters)
@@ -159,6 +166,7 @@ def _conv_block(inputs, filters, alpha, kernel=(3, 3), strides=(1, 1), bn_epsilo
     x = BatchNormalization(axis=channel_axis, momentum=bn_momentum, epsilon=bn_epsilon,
                            name='conv%d_bn' % block_id)(x)
     return Activation(relu6, name='conv%d_relu' % block_id)(x)
+
 
 def _depthwise_conv_block_v2(inputs, pointwise_conv_filters, alpha, expansion_factor,
                              depth_multiplier=1, strides=(1, 1), bn_epsilon=1e-3,
@@ -254,19 +262,21 @@ def _depthwise_conv_block_v2(inputs, pointwise_conv_filters, alpha, expansion_fa
         return x
     else:
         if input_shape[channel_axis] == pointwise_conv_filters:
-
             x = add([inputs, x])
 
     return x
 
+
 global_blk_idx = 0
+
+
 def get_block_idx():
     global global_blk_idx
     global_blk_idx += 1
     return global_blk_idx
 
-def mobilenetv2(input_shape, lr, alpha=0.5, expansion_factor=6, depth_multiplier=1):
 
+def mobilenetv2(input_shape, lr, alpha=0.5, expansion_factor=6, depth_multiplier=1):
     input = Input(input_shape, name=config.INPUT_TENSOR_NAMES[0])
 
     x = _conv_block(input, 32, alpha, bn_epsilon=1e-3, strides=(2, 2))
@@ -349,8 +359,9 @@ def mobilenetv2(input_shape, lr, alpha=0.5, expansion_factor=6, depth_multiplier
 
     x = _deconv_block(x, 8, alpha, kernel=2, strides=2, bn_epsilon=1e-3, bn_momentum=0.999, block_id=get_block_idx())
 
-    output_lin = Conv2D(filters=1, kernel_size=1, padding='same', use_bias=False, name=config.OUTPUT_TENSOR_NAMES[0], kernel_initializer='glorot_normal')(x)
-    output_sig = Activation(activation = 'sigmoid')(output_lin)
+    output_lin = Conv2D(filters=1, kernel_size=1, padding='same', use_bias=False, name=config.OUTPUT_TENSOR_NAMES[0],
+                        kernel_initializer='glorot_normal')(x)
+    output_sig = Activation(activation='sigmoid')(output_lin)
 
     train_model = Model(input, output_sig)
     infer_model = Model(input, output_lin)
@@ -361,9 +372,6 @@ def mobilenetv2(input_shape, lr, alpha=0.5, expansion_factor=6, depth_multiplier
 
 
 def create_model(input_shape=(160, 320, 3), lr=1e-3):
-
     # return get_unet(input_shape=input_shape, lr=lr)
     # return get_unet_simple(input_shape=input_shape, lr=lr)
     return mobilenetv2(input_shape=input_shape, lr=lr)
-
-

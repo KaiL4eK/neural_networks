@@ -5,4 +5,4 @@ REMOTE_PORT=22
 
 DST="~/laneseg"
 
-. ./sync_common.sh
+. sync_common.sh

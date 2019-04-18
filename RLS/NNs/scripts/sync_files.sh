@@ -5,4 +5,4 @@ REMOTE_PORT=$UNIQ_PORT
 
 DST="~/laneseg"
 
-. ./sync_common.sh
+. sync_common.sh

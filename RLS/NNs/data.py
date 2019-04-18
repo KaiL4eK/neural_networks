@@ -1,6 +1,3 @@
-import os
-import cv2
-import numpy as np
 from utils import *
 from tqdm import tqdm
 
@@ -12,10 +9,6 @@ def get_samples(rootdir):
     png_fpaths = []
 
     for root, subdirs, files in os.walk(rootdir):
-        # print('Root:', root)
-        # print('Subdirs:', subdirs)
-        # print('Files:', files)
-
         png_fpaths += [os.path.join(root, file) for file in files if file.endswith('.png')]
 
     annotation_pairs = [(file, file.replace('.png', '_color_mask.png')) for file in png_fpaths if os.path.exists(file.replace('.png', '_color_mask.png'))]
@@ -49,13 +42,6 @@ def get_samples(rootdir):
 
         orig_imgs += [orig_img]
         lane_imgs += [lane_layer]
-
-        # print(src_file)
-
-        # cv2.imshow('src', orig_img)
-        # cv2.imshow('mask', lane_layer)
-        # cv2.waitKey()
-
 
     orig_imgs = np.array(orig_imgs)
     # Extend to 4 dims
@@ -107,33 +93,3 @@ def robofest_data_get_samples_preprocessed(input_shp, output_shp):
     valid_imgs, valid_masks = preprocess_data(valid_imgs, valid_masks, input_shp, output_shp)
 
     return train_imgs, train_masks, valid_imgs, valid_masks
-
-def test_robofest_data():
-    pass
-    # robofest_data_get_samples_preprocessed()
-
-    # orig_imgs, lane_imgs = robofest_data_get_samples()
-
-    # for i, lane_im in enumerate(lane_imgs):
-    #     lane_imgs[i] = cv2.resize(lane_im, (orig_imgs.shape[2], orig_imgs.shape[1]))
-
-    #     print(lane_im.shape)
-
-    # print(orig_imgs.shape, lane_imgs.shape)
-
-    # for i in range(len(orig_imgs)):
-
-    #     msk_clr_image = np.zeros_like(orig_imgs[i], np.uint8)
-    #     msk_clr_image[:] = (255, 0, 0)
-
-    #     img1_bg = cv2.bitwise_and(orig_imgs[i], orig_imgs[i], mask=cv2.bitwise_not(lane_imgs[i]))
-    #     img2_fg = cv2.bitwise_and(msk_clr_image, msk_clr_image, mask=lane_imgs[i])
-
-    #     full_img = cv2.add(img1_bg,img2_fg)
-
-    #     cv2.imshow('1', full_img)
-    #     cv2.waitKey(0)
-
-if __name__ == '__main__':
-    test_robofest_data()
-

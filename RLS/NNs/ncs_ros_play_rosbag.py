@@ -10,7 +10,7 @@ import ncs
 from utils import *
 import config
 
-argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
+argparser = argparse.ArgumentParser(description='Predict with a trained model')
 argparser.add_argument('-b', '--bag', help='bag file')
 args = argparser.parse_args()
 

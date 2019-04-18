@@ -1,1 +1,0 @@
-../common_scripts/upload_files.sh

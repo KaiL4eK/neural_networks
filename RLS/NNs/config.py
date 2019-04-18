@@ -8,3 +8,4 @@ OUTPUT_TENSOR_NAMES = ['output_mask']
 NET_BASENAME='laneseg'
 
 NCS_GRAPH='output/laneseg.graph'
+TF_GRAPH='output/laneseg.pb'
