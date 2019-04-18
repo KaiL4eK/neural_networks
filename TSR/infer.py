@@ -1,7 +1,5 @@
 #! /usr/bin/env python
 
-import core
-import os
 import json
 import cv2
 import time

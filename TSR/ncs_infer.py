@@ -4,7 +4,7 @@ import cv2
 import argparse
 import numpy as np
 from tqdm import tqdm
-import os
+
 from _common import ncs
 from _common import utils
 import data

@@ -32,7 +32,7 @@ def create_training_instances(
     classes = []
 
     if cache_name and os.path.exists(cache_name):
-        print('Loading data from .pkl file')
+        print('Loading data from cache file')
         with open(cache_name, 'rb') as handle:
             cache = pickle.load(handle)
         return cache['train'], cache['valid'], cache['classes']
@@ -91,9 +91,3 @@ def create_training_instances(
             pickle.dump(cache, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     return train_entries, valid_entries, classes
-
-
-if __name__ == '__main__':
-    train = '../data_root/__signs/robofest_data/signs_only'
-    # valid = '../data_root/__signs/robofest_data/signs_only'
-    create_training_instances(train, None, None)

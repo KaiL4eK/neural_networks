@@ -12,9 +12,9 @@ from _common import utils
 
 import shutil
 
-argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
-argparser.add_argument('-w', '--weights', help='weights path')
-argparser.add_argument('-c', '--conf', help='path to configuration file')
+argparser = argparse.ArgumentParser(description='Generate graph for NCS Movidius')
+argparser.add_argument('-w', '--weights', help='Weights path')
+argparser.add_argument('-c', '--conf', help='Path to configuration file')
 args = argparser.parse_args()
 
 def _main_():
@@ -44,11 +44,9 @@ def _main_():
             print('Failed to get classes list')
 
         mvnc_model = models.create(
-            base=config['model']['base'],
+            base_name=config['model']['base'],
             num_classes=len(classes),
             input_shape=net_input_shape)
-
-    # print_summary(mvnc_model)
 
     model_input_names = [mvnc_model.input.name.split(':')[0]]
 
@@ -103,7 +101,7 @@ def _main_():
     call(process_args)
 
     process_args = ["mvNCCheck", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12"]
-    # call(process_args)
+    call(process_args)
 
 
 if __name__ == '__main__':

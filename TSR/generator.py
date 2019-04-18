@@ -101,11 +101,6 @@ class BatchGenerator(Sequence):
 
             cropped_img = image[rand_y:rand_y+rand_h, rand_x:rand_x+rand_w]
 
-            # if self.infer:
-            #     print(rand_x, rand_y, rand_w, rand_h)
-            #     cv2.imshow('1', cropped_img)
-            #     cv2.waitKey(0)
-
         im_sized = cv2.resize(image, (net_w, net_h), interpolation=cv2.INTER_LINEAR)
 
         if self.infer:
@@ -180,7 +175,6 @@ class BatchGenerator(Sequence):
                 shear=(-8, 8)
             )
         ], random_order=True) # apply augmenters in random order
-
 
     def augment_image(self, img):
         return self.aug.augment_image(img)

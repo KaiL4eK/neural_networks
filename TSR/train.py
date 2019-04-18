@@ -82,7 +82,7 @@ def main():
                        3)
 
     train_model = models.create(
-        base=config['model']['base'],
+        base_name=config['model']['base'],
         num_classes=num_classes,
         input_shape=net_input_shape)
 
@@ -90,10 +90,9 @@ def main():
         train_model.load_weights(initial_weights)
 
     print_summary(train_model)
-    # plot_model(train_model, to_file='images/MobileNetv2.png', show_shapes=True)
+    plot_model(train_model, to_file='images/MobileNetv2.png', show_shapes=True)
 
     optimizer = Adam(lr=config['train']['learning_rate'], clipnorm=0.001)
-    # optimizer = SGD(lr=config['train']['learning_rate'], clipnorm=0.001)
 
     train_model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
@@ -122,7 +121,7 @@ def main():
         epochs=config['train']['nb_epochs'],
         verbose=2 if config['train']['debug'] else 1,
         callbacks=callbacks,
-        workers=1, #multiprocessing.cpu_count(),
+        workers=multiprocessing.cpu_count(),
         max_queue_size=100
     )
 
