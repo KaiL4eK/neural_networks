@@ -1,0 +1,1 @@
+/opt/movidius/NCSDK/ncsdk-x86_64/api
