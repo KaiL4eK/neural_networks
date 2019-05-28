@@ -7,14 +7,18 @@ import glob
 from lxml import etree as ET
 from shutil import copyfile
 
-data_root_path = 'GTSDB'
+import argparse
+argparser = argparse.ArgumentParser(description='Help =)')
+argparser.add_argument('-o', '--output', help='path to output dir')
+argparser.add_argument('-i', '--input', help='path to input folder with images')
+args = argparser.parse_args()
 
-imgs_path = data_root_path
-annots_fpath = data_root_path + '/gt.txt'
+imgs_path = args.input
+annots_fpath = os.path.join(imgs_path, 'gt.txt')
 
-dst_data_dir = 'data/GTSDB_voc'
-annotation_fldr = dst_data_dir + '/Annotations'
-images_fldr = dst_data_dir + '/Images'
+dst_data_dir = args.output
+annotation_fldr = os.path.join(dst_data_dir, 'Annotations')
+images_fldr = os.path.join(dst_data_dir, 'Images')
 
 class_dict = {
     0: 'speed limit 20 (prohibitory)',
