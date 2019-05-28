@@ -1,15 +1,17 @@
 {
     "model" : {
-        "min_input_size":       288,
-        "max_input_size":       448,
+        "main_name":            "TSD_YOLOv2",
+        "min_input_size":       [288, 288],
+        "max_input_size":       [448, 448],
         "base":                 "Darknet19",
         "anchors":              [8,13, 13,23, 25,41],
-        "labels":               ["sign"]
+        "labels":               [],
+        "infer_shape":          [416, 416]
     },
 
     "train": {
-        "train_image_folder":   "../data/GTSDB_voc/Images/",
-        "train_annot_folder":   "../data/GTSDB_voc/annots_train/",
+        "train_image_folder":   ["../data/GTSDB_voc_train/Images/"],
+        "train_annot_folder":   ["../data/GTSDB_voc_train/Annotations/"],
         "cache_name":           "pkl/sign_train.pkl",
 
         "train_times":          3,
@@ -32,16 +34,16 @@
     },
 
     "valid": {
-        "valid_image_folder":   "../data/GTSDB_voc/Images/",
-        "valid_annot_folder":   "../data/GTSDB_voc/annots_test/",
+        "valid_image_folder":   [],
+        "valid_annot_folder":   [],
         "cache_name":           "pkl/sign_test.pkl",
 
         "valid_times":          1
     },
 
     "eval": {
-        "valid_image_folder":   "../data/GTSDB_voc/Images/",
-        "valid_annot_folder":   "../data/GTSDB_voc/annots_test/",
+        "valid_image_folder":   ["../data/GTSDB_voc_test/Images/"],
+        "valid_annot_folder":   ["../data/GTSDB_voc_test/Annotations/"],
         "cache_name":           "pkl/sign_eval.pkl"
     },
 

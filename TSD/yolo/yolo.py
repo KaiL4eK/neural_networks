@@ -325,7 +325,8 @@ def create_yolov2_model(
     noobj_scale,
     xywh_scale,
     class_scale,
-    train_shape
+    train_shape,
+    **kwargs
 ):
     outputs = 1
     anchors_per_output = len(anchors)//2//outputs
@@ -492,8 +493,11 @@ def create_yolov2_model(
 
     train_model = Model([image_input, true_boxes, true_yolo_1], [loss_yolo_1])
     infer_model = Model(image_input, [pred_yolo_1])
-
-    return [train_model, infer_model]
+    
+    mvnc_model = infer_model
+    freeze_layers_cnt = len(infer_model.layers) - 4
+    
+    return train_model, infer_model, mvnc_model, freeze_layers_cnt
 
 def create_yolov3_model(
     nb_class, 
@@ -819,7 +823,8 @@ def create_xception_model(
     noobj_scale,
     xywh_scale,
     class_scale,
-    train_shape
+    train_shape,
+    **kwargs
 ):
     outputs = 1
     anchors_per_output = len(anchors)//2//outputs

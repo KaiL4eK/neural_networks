@@ -1,6 +1,6 @@
 {
     "model" : {
-        "main_name":            "TSD_YOLO",
+        "main_name":            "TSD_YOLO_MN2",
         "min_input_size":       [160, 192],
         "max_input_size":       [256, 288],
         "base":                 "MobileNetv2_35",

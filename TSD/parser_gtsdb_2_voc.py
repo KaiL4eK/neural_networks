@@ -122,8 +122,8 @@ for fpath in tqdm.tqdm(glob.glob(imgs_path + '/*.ppm')):
 
             xml_object = ET.SubElement(xml_root, "object")
             xml_name = ET.SubElement(xml_object, "name")
-            # xml_name.text = str(classId)
-            xml_name.text = 'sign'
+            xml_name.text = class_dict[classId]
+#             xml_name.text = 'sign'
 
             xml_bndbox = ET.SubElement(xml_object, "bndbox")
 
