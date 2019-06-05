@@ -13,12 +13,18 @@ def get_img_path(img_dirs, filename):
     return None
 
 def parse_voc_annotation(ann_dirs, img_dirs, cache_name, labels=[]):
-    # Dirty hack to check 
+    # Dirty hack to check
     if cache_name and len(cache_name) > 1 and os.path.exists(cache_name):
         with open(cache_name, 'rb') as handle:
             cache = pickle.load(handle)
         all_insts, seen_labels = cache['all_insts'], cache['seen_labels']
     else:
+        if not isinstance(ann_dirs, list):
+            ann_dirs = [ann_dirs]
+        
+        if not isinstance(ann_dirs, list):
+            img_dirs = [img_dirs]
+        
         all_insts = []
         seen_labels = {}
         

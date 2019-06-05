@@ -1023,7 +1023,7 @@ def create_model(
 
     train_model = template_model
 
-    return train_model, infer_model, mvnc_model, freeze_layers_cnt
+    return train_model, infer_model, mvnc_model, 0
 
 
 def dummy_loss(y_true, y_pred):
