@@ -989,15 +989,15 @@ def create_model(
     # h, w
     max_grid = np.array([max_input_size[0] // downgrade, max_input_size[1] // downgrade])
 
-    backends = {'Tiny':             (create_tiny_yolov3_model,  "src_weights/yolov3-tiny.h5",   1),
-                'Darknet53':        (create_yolov3_model,       "src_weights/yolov3_exp.h5",    1),
-                'Darknet19':        (create_yolov2_model,       "src_weights/yolov2.h5",        1),
-                'MobileNetv2_35':   (create_mobilenetv2_model,  "",                             0.35),
-                'MobileNetv2_50':   (create_mobilenetv2_model,  "",                             0.5),
-                'MobileNetv2_75':   (create_mobilenetv2_model,  "",                             0.75),
-                'MobileNetv2_100':  (create_mobilenetv2_model,  "",                             1.0),
-                'SqueezeNet':       (create_squeeze_model,      "",                             1),
-                'Xception':         (create_xception_model,     "",                             1)
+    backends = {'Tiny':             (create_tiny_yolov3_model,  "yolov3-tiny.h5",   1),
+                'Darknet53':        (create_yolov3_model,       "yolov3_exp.h5",    1),
+                'Darknet19':        (create_yolov2_model,       "yolov2.h5",        1),
+                'MobileNetv2_35':   (create_mobilenetv2_model,  "",                 0.35),
+                'MobileNetv2_50':   (create_mobilenetv2_model,  "",                 0.5),
+                'MobileNetv2_75':   (create_mobilenetv2_model,  "",                 0.75),
+                'MobileNetv2_100':  (create_mobilenetv2_model,  "",                 1.0),
+                'SqueezeNet':       (create_squeeze_model,      "",                 1),
+                'Xception':         (create_xception_model,     "",                 1)
                 }
 
     model_args = dict(  nb_class            = nb_class, 
@@ -1019,11 +1019,13 @@ def create_model(
 
     print('Loading "{}" model'.format(base))
 
-    template_model, infer_model, mvnc_model, freeze_layers_cnt = backends[base][0](**model_args)
+    train_model, infer_model, mvnc_model, freeze_layers_cnt = backends[base][0](**model_args)
 
-    train_model = template_model
-
-    return train_model, infer_model, mvnc_model, 0
+    if backends[base][1]:
+        print('Laoding {}'.format(backends[base][1]))
+        train_model.load_weights(os.path.join('src_weights', backends[base][1]), by_name=True, skip_mismatch=True)
+    
+    return train_model, infer_model, mvnc_model, freeze_layers_cnt
 
 
 def dummy_loss(y_true, y_pred):

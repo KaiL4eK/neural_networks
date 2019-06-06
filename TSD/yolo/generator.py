@@ -266,8 +266,7 @@ class BatchGenerator(Sequence):
                 im_sized = random_flip(im_sized, flip)
 
         # correct the size and pos of bounding boxes
-        all_objs = correct_bounding_boxes(instance['object'], new_w, new_h, net_w, net_h, dx, dy, flip, image_w,
-                                          image_h)
+        all_objs = correct_bounding_boxes(instance['object'], new_w, new_h, net_w, net_h, dx, dy, flip, image_w, image_h)
 
         return im_sized, all_objs
 
@@ -295,7 +294,8 @@ class BatchGenerator(Sequence):
             annot = [obj['xmin'], obj['ymin'], obj['xmax'], obj['ymax'], self.labels.index(obj['name'])]
             annots += [annot]
 
-        if len(annots) == 0: annots = [[]]
+        if len(annots) == 0: 
+            annots = [[]]
 
         return np.array(annots)
 

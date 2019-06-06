@@ -80,11 +80,16 @@ def evaluate(model,
             all_detections[i][label] = pred_boxes[pred_labels == label, :]
 
         annotations = generator.load_annotation(i)
+    
+        try:
+            for label in range(generator.num_classes()):
+                all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()            
+        except:
+            # IndexError - generator returned empty annotations
+            for label in range(generator.num_classes()):
+                all_annotations[i][label] = np.array([])
         
-        # copy detections to all_annotations
-        for label in range(generator.num_classes()):
-            all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()
-
+        
     # compute mAP by comparing all detections and all annotations
     average_precisions = {}
     

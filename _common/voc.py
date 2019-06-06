@@ -22,7 +22,7 @@ def parse_voc_annotation(ann_dirs, img_dirs, cache_name, labels=[]):
         if not isinstance(ann_dirs, list):
             ann_dirs = [ann_dirs]
         
-        if not isinstance(ann_dirs, list):
+        if not isinstance(img_dirs, list):
             img_dirs = [img_dirs]
         
         all_insts = []
@@ -84,7 +84,9 @@ def parse_voc_annotation(ann_dirs, img_dirs, cache_name, labels=[]):
                                     if 'ymax' in dim.tag:
                                         obj['ymax'] = int(round(float(dim.text)))
 
-                # if len(img['object']) > 0:
+#                 if len(img['object']) == 0:
+#                     print('Warning! Zero objects on image {}'.format(img['filename']))
+                
                 if img is not None:
                     all_insts += [img]
 
@@ -99,6 +101,19 @@ def parse_voc_annotation(ann_dirs, img_dirs, cache_name, labels=[]):
 from sklearn.model_selection import train_test_split
 
 
+def replace_all_labels_2_one(instances, new_label):
+    
+    labels = { new_label: 0 }
+    
+    for inst in instances:
+        for obj in inst['object']:
+            obj['name'] = new_label
+    
+            labels[new_label] += 1
+    
+    return instances, labels
+
+            
 def split_by_objects(instances, classes, rate):
 
     classes = {}
