@@ -512,7 +512,8 @@ def create_yolov3_model(
     noobj_scale,
     xywh_scale,
     class_scale,
-    train_shape
+    train_shape,
+    **kwargs
 ):
     outputs = 3
     anchors_per_output = len(anchors)//2//outputs
@@ -677,7 +678,7 @@ def create_yolov3_model(
     train_model = Model([image_input, true_boxes, true_yolo_1, true_yolo_2, true_yolo_3], [loss_yolo_1, loss_yolo_2, loss_yolo_3])
     infer_model = Model(image_input, [pred_yolo_1, pred_yolo_2, pred_yolo_3])
 
-    freeze_layers_cnt = len(infer_model.layers) - 4
+    freeze_layers_cnt = len(infer_model.layers) - 3
     
     return train_model, infer_model, infer_model, freeze_layers_cnt
 
@@ -775,13 +776,13 @@ def create_tiny_yolov3_model(
 
     x2 = compose(
             DarknetConv2D_BN_Leaky(128, (1,1)),
-            # UpSampling2D(2))(x2)
-            Conv2DTranspose(filters=128, 
-                            kernel_size=2, 
-                            strides=2, 
-                            padding='same', 
-                            use_bias=False, 
-                            kernel_regularizer=l2(5e-4)))(x2)
+            UpSampling2D(2))(x2)
+#             Conv2DTranspose(filters=128, 
+#                             kernel_size=2, 
+#                             strides=2, 
+#                             padding='same', 
+#                             use_bias=False, 
+#                             kernel_regularizer=l2(5e-4)))(x2)
     pred_yolo_2 = compose(
             Concatenate(),
             DarknetConv2D_BN_Leaky(256, (3,3)),
@@ -808,7 +809,7 @@ def create_tiny_yolov3_model(
 
     mvnc_model  = infer_model
 
-    freeze_layers_cnt = len(infer_model.layers) - 4
+    freeze_layers_cnt = len(infer_model.layers) - 2
     return train_model, infer_model, mvnc_model, freeze_layers_cnt
 
 
@@ -890,7 +891,8 @@ def create_mobilenetv2_model(
     xywh_scale,
     class_scale,
     train_shape,
-    mbn_alpha = 1
+    mbn_alpha = 1,
+    **kwargs
 ):
     outputs = 1
     anchors_per_output = len(anchors)//2//outputs
@@ -1026,7 +1028,7 @@ def create_model(
     if backends[base][1]:
         print('Laoding {}'.format(backends[base][1]))
         train_model.load_weights(os.path.join('src_weights', backends[base][1]), by_name=True, skip_mismatch=True)
-    
+
     return train_model, infer_model, mvnc_model, freeze_layers_cnt
 
 

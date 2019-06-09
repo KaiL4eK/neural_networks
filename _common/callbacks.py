@@ -2,6 +2,7 @@ from keras.callbacks import TensorBoard, ModelCheckpoint
 import tensorflow as tf
 import numpy as np
 import keras
+from keras import backend as K
 
 class CustomTensorBoard(TensorBoard):
     """ to log the loss after each batch
@@ -36,6 +37,7 @@ class CustomModelCheckpoint(ModelCheckpoint):
         self.model_to_save = model_to_save
 
     def on_epoch_end(self, epoch, logs={}):
+#         print(K.eval(self.model.optimizer.lr))
 
         self.epochs_since_last_save += 1
         if self.epochs_since_last_save >= self.period:
@@ -136,7 +138,7 @@ class MAP_evaluation(keras.callbacks.Callback):
                 self.bestVloss = logs['val_loss']
 
             if self.save_best and self.save_name_fmt:
-                if mAP >= self.bestMap and logs['val_loss'] <= self.bestVloss:
+                if mAP >= self.bestMap: # and logs['val_loss'] <= self.bestVloss:
                     self.bestVloss = logs['val_loss']
                     self.bestMap = mAP
 

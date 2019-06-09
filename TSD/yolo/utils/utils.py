@@ -236,7 +236,7 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
 
 
 def normalize(image):
-    return image/255. * 2 - 1
+    return image/255. # * 2 - 1
 
 
 def get_embedded_img_sz(image, input_hw):

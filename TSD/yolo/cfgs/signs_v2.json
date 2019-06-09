@@ -1,31 +1,34 @@
 {
     "model" : {
         "main_name":            "TSD_YOLOv2",
-        "min_input_size":       [288, 288],
-        "max_input_size":       [448, 448],
+        "min_input_size":       [416, 416],
+        "max_input_size":       [416, 416],
         "base":                 "Darknet19",
-        "anchors":              [8,13, 13,23, 25,41],
+        "anchors":              [8,8, 14,14, 26,25],
         "labels":               [],
         "infer_shape":          [416, 416]
     },
 
     "train": {
-        "train_image_folder":   ["../data/GTSDB_voc_train/Images/"],
-        "train_annot_folder":   ["../data/GTSDB_voc_train/Annotations/"],
-        "cache_name":           "pkl/sign_train.pkl",
+        "train_image_folder":   ["../data/GTSDB_voc_train/Images/", "../data/GTSDB_voc_test/Images/"],
+        "train_annot_folder":   ["../data/GTSDB_voc_train/Annotations/", "../data/GTSDB_voc_test/Annotations/"],
+        "cache_name":           "",
 
-        "train_times":          3,
+        "train_times":          1,
         "batch_size":           4,
         "learning_rate":        1e-4,
-        "nb_epochs":            300,
+        "nb_epochs":            1000,
         "warmup_epochs":        0,
         "ignore_thresh":        0.5,
         "gpus":                 "0",
 
+        "optimizer":            "Adam",
+        "clipnorm":             0.001,
+        
         "grid_scales":          [1,1,1],
         "obj_scale":            5,
         "noobj_scale":          1,
-        "xywh_scale":           3,
+        "xywh_scale":           1,
         "class_scale":          1,
 
         "tensorboard_dir":      "logs/sign_v2",
@@ -34,9 +37,9 @@
     },
 
     "valid": {
-        "valid_image_folder":   ["../data/GTSDB_voc_test/Images/"],
-        "valid_annot_folder":   ["../data/GTSDB_voc_test/Annotations/"],
-        "cache_name":           "pkl/sign_test.pkl",
+        "valid_image_folder":   [],
+        "valid_annot_folder":   [],
+        "cache_name":           "",
 
         "valid_times":          1
     },
@@ -45,9 +48,5 @@
         "valid_image_folder":   ["../data/GTSDB_voc_test/Images/"],
         "valid_annot_folder":   ["../data/GTSDB_voc_test/Annotations/"],
         "cache_name":           "pkl/sign_eval.pkl"
-    },
-
-    "infer": {
-        "input_sz":             416
     }
 }

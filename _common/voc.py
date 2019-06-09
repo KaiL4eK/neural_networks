@@ -114,7 +114,7 @@ def replace_all_labels_2_one(instances, new_label):
     return instances, labels
 
             
-def split_by_objects(instances, classes, rate):
+def split_by_objects(instances, labels, rate):
 
     classes = {}
 
@@ -128,6 +128,9 @@ def split_by_objects(instances, classes, rate):
     train_entries = []
     valid_entries = []
 
+    train_lbls = {}
+    valid_lbls = {}
+    
     for _class, _imgs in classes.items():
         train_, valid_ = train_test_split(_imgs, test_size=rate, random_state=42)
 
@@ -136,6 +139,9 @@ def split_by_objects(instances, classes, rate):
         train_entries += train_
         valid_entries += valid_
 
+        train_lbls[_class] = len(train_)
+        valid_lbls[_class] = len(valid_)
+        
     print('Result split {}/{}'.format(len(train_entries), len(valid_entries)))
 
-    return train_entries, valid_entries
+    return train_entries, train_lbls, valid_entries, valid_lbls

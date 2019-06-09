@@ -35,22 +35,6 @@ def avg_IOU(anns, centroids):
     return sum/n
 
 
-def print_anchors(centroids, img_size):
-    out_string = ''
-
-    anchors = centroids.copy()
-
-    widths = anchors[:, 0]
-    sorted_indices = np.argsort(widths)
-
-    r = "anchors: ["
-    for i in sorted_indices:
-        # w, h
-        out_string += str(int(anchors[i, 0]*img_size[1])) + ',' + str(int(anchors[i, 1]*img_size[0])) + ', '
-            
-    print(out_string[:-2])
-
-
 def run_kmeans(ann_dims, anchor_num):
     ann_num = ann_dims.shape[0]
     iterations = 0
@@ -104,6 +88,22 @@ def run_kmeans(ann_dims, anchor_num):
         old_distances = distances.copy()
 
 
+def print_anchors(centroids, img_size=(1, 1)):
+    out_string = ''
+
+    anchors = centroids.copy()
+
+    widths = anchors[:, 0]
+    sorted_indices = np.argsort(widths)
+
+    r = "anchors: ["
+    for i in sorted_indices:
+        # w, h
+        out_string += str(int(anchors[i, 0]*img_size[1])) + ',' + str(int(anchors[i, 1]*img_size[0])) + ', '
+            
+    print(out_string[:-2])
+        
+
 argparser = argparse.ArgumentParser()
 
 argparser.add_argument(
@@ -143,19 +143,32 @@ def _main_():
             a_width  = float(obj['xmax']) - float(obj['xmin'])
             a_height = float(obj["ymax"]) - float(obj['ymin'])
 
-            print(image['filename'])
-            print( int(a_width / image['width'] * image_sz[1]), int(a_height / image['height'] * image_sz[0]) )
+            new_width = 0
+            new_height = 0
+            
+            new_ar = image['width'] * 1. / image['height']
+            if new_ar > 1.:
+                scale_rate = image_sz[1] * 1. / image['width']
+            else:
+                scale_rate = image_sz[0] * 1. / image['height']
+            
+            new_width = a_width * scale_rate
+            new_height = a_height * scale_rate
+            
+#             print(image['filename'])
+#             print( int(a_width / image['width'] * image_sz[1]), int(a_height / image['height'] * image_sz[0]) )
 
-            relative_w = a_width/image['width']
-            relative_h = a_height/image['height']
-            annotation_dims.append(tuple(map(float, (relative_w, relative_h))))
+#             relative_w = a_width/image['width']
+#             relative_h = a_height/image['height']
+            
+            annotation_dims.append(tuple(map(float, (new_width, new_height))))
 
     annotation_dims = np.array(annotation_dims)
     centroids = run_kmeans(annotation_dims, num_anchors)
 
     # write anchors to file
     print('\naverage IOU for', num_anchors, 'anchors:', '%0.2f' % avg_IOU(annotation_dims, centroids))
-    print_anchors(centroids, image_sz)
+    print_anchors(centroids)
 
 
 if __name__ == '__main__':

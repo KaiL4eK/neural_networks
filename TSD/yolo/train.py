@@ -8,7 +8,7 @@ from yolo import create_model, dummy_loss
 from generator import BatchGenerator
 from utils.utils import normalize, evaluate, makedirs, init_session
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
-from keras.optimizers import Adam
+from keras.optimizers import Adam, SGD
 from keras.utils.layer_utils import print_summary
 
 import keras
@@ -16,9 +16,6 @@ from keras.models import load_model
 from _common import utils
 from _common.callbacks import CustomModelCheckpoint, CustomTensorBoard, MAP_evaluation
 from _common.voc import parse_voc_annotation, split_by_objects, replace_all_labels_2_one
-
-import tensorflow as tf
-
 
 def create_training_instances(
         train_annot_folder,
@@ -33,19 +30,22 @@ def create_training_instances(
     train_ints, train_labels = parse_voc_annotation(
         train_annot_folder, train_image_folder, train_cache, labels)
 
+    # Hack - replace full dataset to only one class
+    train_ints, train_labels = replace_all_labels_2_one(train_ints, 'sign')
+
     # parse annotations of the validation set, if any, otherwise split the training set
     if valid_annot_folder:
         valid_ints, valid_labels = parse_voc_annotation(
             valid_annot_folder, valid_image_folder, valid_cache, labels)
+        
+        valid_ints, valid_labels = replace_all_labels_2_one(valid_ints, 'sign')
+        
     else:
         print("valid_annot_folder not exists. Spliting the trainining set.")
 
-        train_ints, valid_ints = split_by_objects(
+        train_ints, train_labels, valid_ints, valid_labels = split_by_objects(
             train_ints, train_labels, 0.2)
-
-    # Hack - replace full dataset to only one class
-    train_ints, train_labels = replace_all_labels_2_one(train_ints, 'sign')
-    valid_ints, valid_labels = replace_all_labels_2_one(valid_ints, 'sign')
+#         valid_labels = train_labels
 
     # compare the seen labels with the given labels in config.json
     if len(labels) > 0:
@@ -55,7 +55,7 @@ def create_training_instances(
         print('Given labels: \t' + str(labels))
 
         # return None, None, None if some given label is not in the dataset
-        if len(overlap_labels) < len(labels):
+        if len(overlap_labels) != len(labels):
             print(
                 'Some labels have no annotations! Please revise the list of labels in the config.json.')
             return None, None, None
@@ -166,14 +166,6 @@ def train(config, initial_weights):
     ###############################
     #   Kick off the training
     ###############################
-    tensorboard_logdir = utils.get_tensorboard_name(config)
-    checkpoint_name = utils.get_checkpoint_name(config)
-    mAP_checkpoint_name = utils.get_mAP_checkpoint_name(config)
-    utils.makedirs(tensorboard_logdir)
-    utils.makedirs_4_file(checkpoint_name)
-    utils.makedirs_4_file(mAP_checkpoint_name)
-
-    print('Tensorboard dir: {}'.format(tensorboard_logdir))
 
     early_stop = EarlyStopping(
         monitor='val_loss',
@@ -190,6 +182,7 @@ def train(config, initial_weights):
               (freeze_num, len(infer_model.layers)))
         for l in range(freeze_num):
             infer_model.layers[l].trainable = False
+#             print('Freeze: {}'.format(infer_model.layers[l].name))
 
         # optimizer = Adam(lr=1e-3, clipnorm=0.1)
         optimizer = Adam()
@@ -220,6 +213,9 @@ def train(config, initial_weights):
     for layer in infer_model.layers:
         layer.trainable = True
 
+    checkpoint_name = utils.get_checkpoint_name(config)
+    utils.makedirs_4_file(checkpoint_name)
+            
     checkpoint_vloss = CustomModelCheckpoint(
         model_to_save=infer_model,
         filepath=checkpoint_name,
@@ -233,19 +229,26 @@ def train(config, initial_weights):
     reduce_on_plateau = ReduceLROnPlateau(
         monitor='loss',
         factor=0.5,
-        patience=5,
+        patience=10,
         verbose=1,
         mode='min',
         min_delta=0.01,
         cooldown=0,
         min_lr=0
     )
-
+    
+    tensorboard_logdir = utils.get_tensorboard_name(config)
+    utils.makedirs(tensorboard_logdir)       
+    print('Tensorboard dir: {}'.format(tensorboard_logdir))
+ 
     tensorboard_cb = TensorBoard(log_dir=tensorboard_logdir,
                                  histogram_freq=0,
                                  write_graph=True,
-                                 write_images=False)
+                                 write_images=True)
 
+    mAP_checkpoint_name = utils.get_mAP_checkpoint_name(config)
+    utils.makedirs_4_file(mAP_checkpoint_name)
+    
     map_evaluator_cb = MAP_evaluation(infer_model=infer_model,
                                       generator=valid_generator,
                                       save_best=True,
@@ -263,14 +266,27 @@ def train(config, initial_weights):
         mode='min',
         verbose=1
     )
+    
+    ###############################
+    #   Optimizers
+    ###############################
+    
+    optimizers = {
+        'SGD': SGD(lr=config['train']['learning_rate'], momentum=0.9, decay=0.0005),
+        'Adam': Adam(lr=config['train']['learning_rate'])
+    }
 
-    from keras.optimizers import SGD
-
+    optimizer = optimizers[config['train']['optimizer']]
+    
+    if config['train']['clipnorm'] > 0:
+        optimizer.clipnorm = config['train']['clipnorm']
+    
     callbacks = [checkpoint_vloss, tensorboard_cb, map_evaluator_cb]
 
-    optimizer = Adam(lr=config['train']['learning_rate'], clipnorm=0.001)
-    # optimizer = SGD(lr=config['train']['learning_rate'], clipnorm=0.001)
-
+    ###############################
+    #   Prepare fit
+    ###############################
+    
     train_model.compile(loss=dummy_loss, optimizer=optimizer)
     train_model.fit_generator(
         generator=train_generator,
