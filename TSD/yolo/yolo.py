@@ -677,7 +677,8 @@ def create_yolov3_model(
     train_model = Model([image_input, true_boxes, true_yolo_1, true_yolo_2, true_yolo_3], [loss_yolo_1, loss_yolo_2, loss_yolo_3])
     infer_model = Model(image_input, [pred_yolo_1, pred_yolo_2, pred_yolo_3])
 
-    freeze_layers_cnt = 1
+    freeze_layers_cnt = len(infer_model.layers) - 4
+    
     return train_model, infer_model, infer_model, freeze_layers_cnt
 
 
@@ -694,7 +695,8 @@ def create_tiny_yolov3_model(
     noobj_scale,
     xywh_scale,
     class_scale,
-    train_shape
+    train_shape,
+    **kwargs
 ):
     outputs = 2
     anchors_per_output = len(anchors)//2//outputs
@@ -799,14 +801,14 @@ def create_tiny_yolov3_model(
     train_model = Model([image_input, true_boxes, true_yolo_1, true_yolo_2], [loss_yolo_1, loss_yolo_2])
     infer_model = Model(image_input, [pred_yolo_1, pred_yolo_2])
 
-    yolo1_flat = Flatten()(pred_yolo_1)
-    yolo2_flat = Flatten()(pred_yolo_2)
+#     yolo1_flat = Flatten()(pred_yolo_1)
+#     yolo2_flat = Flatten()(pred_yolo_2)
 
-    mvnc_output = Concatenate()([yolo1_flat, yolo2_flat])
+#     mvnc_output = Concatenate()([yolo1_flat, yolo2_flat])
 
-    mvnc_model  = Model(image_input, mvnc_output)
+    mvnc_model  = infer_model
 
-    freeze_layers_cnt = 1
+    freeze_layers_cnt = len(infer_model.layers) - 4
     return train_model, infer_model, mvnc_model, freeze_layers_cnt
 
 
@@ -989,7 +991,7 @@ def create_model(
     # h, w
     max_grid = np.array([max_input_size[0] // downgrade, max_input_size[1] // downgrade])
 
-    backends = {'Tiny':             (create_tiny_yolov3_model,  "yolov3-tiny.h5",   1),
+    backends = {'TinyV3':           (create_tiny_yolov3_model,  "yolov3-tiny.h5",   1),
                 'Darknet53':        (create_yolov3_model,       "yolov3_exp.h5",    1),
                 'Darknet19':        (create_yolov2_model,       "yolov2.h5",        1),
                 'MobileNetv2_35':   (create_mobilenetv2_model,  "",                 0.35),

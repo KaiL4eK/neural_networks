@@ -13,10 +13,12 @@ from keras.utils.layer_utils import print_summary
 
 import keras
 from keras.models import load_model
-import core
 from _common import utils
 from _common.callbacks import CustomModelCheckpoint, CustomTensorBoard, MAP_evaluation
-from _common.voc import parse_voc_annotation, split_by_objects
+from _common.voc import parse_voc_annotation, split_by_objects, replace_all_labels_2_one
+
+import tensorflow as tf
+
 
 def create_training_instances(
         train_annot_folder,
@@ -28,23 +30,22 @@ def create_training_instances(
         labels,
 ):
     # parse annotations of the training set
-    train_ints, train_labels = parse_voc_annotation(train_annot_folder, train_image_folder, train_cache, labels)
+    train_ints, train_labels = parse_voc_annotation(
+        train_annot_folder, train_image_folder, train_cache, labels)
 
     # parse annotations of the validation set, if any, otherwise split the training set
     if valid_annot_folder:
-        valid_ints, valid_labels = parse_voc_annotation(valid_annot_folder, valid_image_folder, valid_cache, labels)
+        valid_ints, valid_labels = parse_voc_annotation(
+            valid_annot_folder, valid_image_folder, valid_cache, labels)
     else:
         print("valid_annot_folder not exists. Spliting the trainining set.")
 
-        train_ints, valid_ints = split_by_objects(train_ints, train_labels, 0.2)
+        train_ints, valid_ints = split_by_objects(
+            train_ints, train_labels, 0.2)
 
-        # train_valid_split = int(0.8*len(train_ints))
-        # np.random.seed(0)
-        # np.random.shuffle(train_ints)
-        # np.random.seed()
-
-        # valid_ints = train_ints[train_valid_split:]
-        # train_ints = train_ints[:train_valid_split]
+    # Hack - replace full dataset to only one class
+    train_ints, train_labels = replace_all_labels_2_one(train_ints, 'sign')
+    valid_ints, valid_labels = replace_all_labels_2_one(valid_ints, 'sign')
 
     # compare the seen labels with the given labels in config.json
     if len(labels) > 0:
@@ -55,21 +56,22 @@ def create_training_instances(
 
         # return None, None, None if some given label is not in the dataset
         if len(overlap_labels) < len(labels):
-            print('Some labels have no annotations! Please revise the list of labels in the config.json.')
+            print(
+                'Some labels have no annotations! Please revise the list of labels in the config.json.')
             return None, None, None
     else:
         print('No labels are provided. Train on all seen labels.')
         print(train_labels)
+        print(valid_labels)
         labels = train_labels.keys()
 
-    max_box_per_image = max([len(inst['object']) for inst in (train_ints + valid_ints)])
+    max_box_per_image = max([len(inst['object'])
+                             for inst in (train_ints + valid_ints)])
 
     return train_ints, valid_ints, sorted(labels), max_box_per_image
 
 
 def train(config, initial_weights):
-
-    init_session(1.0)
 
     if config['train']['cache_name']:
         makedirs(os.path.dirname(config['train']['cache_name']))
@@ -126,7 +128,8 @@ def train(config, initial_weights):
     freezing = True
     config['train']['warmup_epochs'] = 0
 
-    warmup_batches = config['train']['warmup_epochs'] * (config['train']['train_times'] * len(train_generator))
+    warmup_batches = config['train']['warmup_epochs'] * \
+        (config['train']['train_times'] * len(train_generator))
 
     train_model, infer_model, _, freeze_num = create_model(
         nb_class=len(labels),
@@ -155,7 +158,8 @@ def train(config, initial_weights):
     # load the pretrained weight if exists, otherwise load the backend weight only
     if initial_weights and os.path.exists(initial_weights):
         print("\nLoading pretrained weights {}".format(initial_weights))
-        train_model.load_weights(initial_weights, by_name=True, skip_mismatch=True)
+        train_model.load_weights(
+            initial_weights, by_name=True, skip_mismatch=True)
 
         freezing = False
 
@@ -171,7 +175,6 @@ def train(config, initial_weights):
 
     print('Tensorboard dir: {}'.format(tensorboard_logdir))
 
-
     early_stop = EarlyStopping(
         monitor='val_loss',
         min_delta=0.1,
@@ -183,7 +186,8 @@ def train(config, initial_weights):
     callbacks = [early_stop]
 
     if freezing and freeze_num > 0:
-        print('Freezing %d layers of %d' % (freeze_num, len(infer_model.layers)))
+        print('Freezing %d layers of %d' %
+              (freeze_num, len(infer_model.layers)))
         for l in range(freeze_num):
             infer_model.layers[l].trainable = False
 
@@ -192,12 +196,15 @@ def train(config, initial_weights):
         train_model.compile(loss=dummy_loss, optimizer=optimizer)
         train_model.fit_generator(
             generator=train_generator,
-            steps_per_epoch=len(train_generator) * config['train']['train_times'],
+            steps_per_epoch=len(train_generator) *
+            config['train']['train_times'],
 
             validation_data=valid_generator,
-            validation_steps=len(valid_generator) * config['valid']['valid_times'],
+            validation_steps=len(valid_generator) *
+            config['valid']['valid_times'],
 
-            epochs=config['train']['nb_epochs'] + config['train']['warmup_epochs'],
+            epochs=config['train']['nb_epochs'] +
+            config['train']['warmup_epochs'],
             verbose=2 if config['train']['debug'] else 1,
             callbacks=callbacks,
             workers=8,
@@ -287,19 +294,24 @@ def train(config, initial_weights):
                                   generator=valid_generator,
                                   iou_threshold=0.5,
                                   net_h=config['model']['infer_shape'][0],
-                                  net_w=config['model']['infer_shape'][1] )
+                                  net_w=config['model']['infer_shape'][1])
 
     # print the score
     for label, average_precision in average_precisions.items():
         print(labels[label] + ': {:.4f}'.format(average_precision))
-    print('Last mAP: {:.4f}'.format(sum(average_precisions.values()) / len(average_precisions)))
+    print('Last mAP: {:.4f}'.format(
+        sum(average_precisions.values()) / len(average_precisions)))
 
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(description='train and evaluate YOLO_v3 model on any dataset')
+    argparser = argparse.ArgumentParser(
+        description='train and evaluate YOLO_v3 model on any dataset')
     argparser.add_argument('-c', '--conf', help='path to configuration file')
-    argparser.add_argument('-w', '--weights', help='path to pretrained model', default=None)
+    argparser.add_argument(
+        '-w', '--weights', help='path to pretrained model', default=None)
     args = argparser.parse_args()
+
+    init_session(1.0)
 
     config_path = args.conf
     initial_weights = args.weights

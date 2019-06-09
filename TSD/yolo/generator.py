@@ -174,11 +174,11 @@ class BatchGenerator(Sequence):
                     cv2.rectangle(img, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), (255, 255, 0), 2)
                     cv2.putText(img, obj['name'], 
                                 (obj['xmin']+2, obj['ymin']+2), 
-                                0, 3e-3 * img.shape[0], 
+                                0, 2e-3 * img.shape[0], 
                                 (255,0,0), 2)
 
-                    print(train_instance['filename'])
-                    print(obj['name'])
+#                     print(train_instance['filename'])
+#                     print(obj['name'])
 
                 x_batch[instance_count] = img
 
