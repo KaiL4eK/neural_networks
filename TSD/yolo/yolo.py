@@ -495,7 +495,7 @@ def create_yolov2_model(
     infer_model = Model(image_input, [pred_yolo_1])
     
     mvnc_model = infer_model
-    freeze_layers_cnt = len(infer_model.layers) - 4
+    freeze_layers_cnt = len(infer_model.layers) - 1
     
     return train_model, infer_model, mvnc_model, freeze_layers_cnt
 

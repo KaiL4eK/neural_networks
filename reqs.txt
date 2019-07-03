@@ -7,7 +7,7 @@ sklearn
 keras
 graphviz
 pygraphviz
-tensorflow-gpu==1.11
 lxml
 matplotlib
 python-qt5
+gpustat
