@@ -1,4 +1,4 @@
-tensorflow-gpu==1.9.0
+tensorflow-gpu
 graphviz
 pygraphviz
 scikit-learn

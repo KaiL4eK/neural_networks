@@ -5,4 +5,4 @@ graphviz
 pygraphviz
 scikit-image
 
-tensorflow==1.9
+tensorflow
