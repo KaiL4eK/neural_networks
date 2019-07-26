@@ -3,7 +3,7 @@ import cv2
 import argparse
 import tensorflow as tf
 import keras.backend as K
-from yolo import create_model
+import yolo 
 import json
 from keras.utils import plot_model
 
@@ -17,16 +17,7 @@ def _main_(args):
 
     init_session(0.5)
 
-    if input_img:    
-        img = cv2.imread(input_img)
-
-        img = preprocess_input(img, 416, 416)
-
-        cv2.imshow('1', img)
-        cv2.waitKey(0)
-
-
-    train_model, infer_model, freeze_num = create_model(
+    train_model, infer_model, freeze_num = yolo.create_model(
         nb_class            = 1,
         anchors             = config['model']['anchors'], 
         base                = config['model']['base'],
@@ -34,24 +25,12 @@ def _main_(args):
         load_src_weights    = False
     )
 
-
-    # train_model.summary()
-    # infer_model.summary()
-
-    # infer_model.layers[249].trainable = False
-    # infer_model.layers[250].trainable = False
-    # infer_model.layers[251].trainable = False
-
-    # for i, layer in enumerate(train_model.layers):
-        # print('{} / {} / {}'.format(i, layer.name, layer.trainable))
-
     plot_model(train_model, to_file='model_{}.png'.format(config['model']['base']), show_shapes=True)
 
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='train and evaluate YOLO_v3 model on any dataset')
-    argparser.add_argument('-c', '--conf', help='path to configuration file')   
-    argparser.add_argument('-i', '--input', help='path to input file', default=None)   
+    argparser.add_argument('conf', help='path to configuration file')
 
     args = argparser.parse_args()
     _main_(args)

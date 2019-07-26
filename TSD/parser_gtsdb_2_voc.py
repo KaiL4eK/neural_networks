@@ -1,24 +1,32 @@
-import numpy as np
 import cv2
 import os
 import tqdm
-import glob
 
-from lxml import etree as ET
-from shutil import copyfile
+import voc_generator as vc
 
 import argparse
 argparser = argparse.ArgumentParser(description='Help =)')
-argparser.add_argument('-o', '--output', help='path to output dir')
-argparser.add_argument('-i', '--input', help='path to input folder with images')
+argparser.add_argument('-o', '--output', help='Result directory path')
+argparser.add_argument('-r', '--root', help='Root dir of GTSDB')
 args = argparser.parse_args()
 
-imgs_path = args.input
-annots_fpath = os.path.join(imgs_path, 'gt.txt')
+imgs_path = args.root
+annots_train_fpath = os.path.join(imgs_path, 'TrainIJCNN2013', 'gt.txt')
+annots_full_fpath = os.path.join(imgs_path, 'FullIJCNN2013', 'gt.txt')
+
+frames_train_root_dir = os.path.join(imgs_path, 'TrainIJCNN2013')
+frames_full_root_dir = os.path.join(imgs_path, 'FullIJCNN2013')
+
+train_frames_fpaths = [os.path.join(frames_train_root_dir, i)
+                       for i in os.listdir(frames_train_root_dir)
+                       if i.endswith('.ppm')]
+full_frames_fpaths = [os.path.join(frames_full_root_dir, i)
+                      for i in os.listdir(frames_full_root_dir)
+                      if i.endswith('.ppm')]
 
 dst_data_dir = args.output
-annotation_fldr = os.path.join(dst_data_dir, 'Annotations')
-images_fldr = os.path.join(dst_data_dir, 'Images')
+dst_train_data_dir = dst_data_dir + '_Train'
+dst_full_data_dir = dst_data_dir + '_Full'
 
 class_dict = {
     0: 'speed limit 20 (prohibitory)',
@@ -66,85 +74,48 @@ class_dict = {
     42: 'restriction ends (overtaking (trucks)) (other)',
 }
 
-if not os.path.exists(annotation_fldr):
-    os.makedirs(annotation_fldr)
+print('--- Copy frames to dst folder ---')
 
-if not os.path.exists(images_fldr):
-    os.makedirs(images_fldr)
-
-checked_files = {}
-
-with open(annots_fpath) as fp: 
-    for cnt, line in enumerate(fp):
-        fname = line.split(';')[0]
-        xmin = int(line.split(';')[1])
-        ymin = int(line.split(';')[2])
-        xmax = int(line.split(';')[3])
-        ymax = int(line.split(';')[4])
-        classId = int(line.split(';')[5])
-
-        if fname in checked_files:
-            checked_files[fname] += [[xmin, ymin, xmax, ymax, classId]]
-        else:
-            checked_files[fname] = [[xmin, ymin, xmax, ymax, classId]]
+vc.copy_2_images_dir(dst_train_data_dir, train_frames_fpaths)
+vc.copy_2_images_dir(dst_full_data_dir, full_frames_fpaths)
 
 
-# print("Line {}: {} / {} / {} / {} / {} / {}".format(cnt, fname, xmin, ymin, xmax, ymax, classId))
-# print(checked_files)
+def read_annotations(annot_fpath):
+    checked_files = {}
+
+    with open(annot_fpath) as fp:
+        for idx, line in enumerate(fp):
+            fname = line.split(';')[0]
+            xmin = int(line.split(';')[1])
+            ymin = int(line.split(';')[2])
+            xmax = int(line.split(';')[3])
+            ymax = int(line.split(';')[4])
+            classId = int(line.split(';')[5])
+
+            info = (xmin, ymin, xmax, ymax, class_dict[classId])
+
+            if fname in checked_files:
+                checked_files[fname] += [info]
+            else:
+                checked_files[fname] = [info]
+
+    return checked_files
 
 
-for fpath in tqdm.tqdm(glob.glob(imgs_path + '/*.ppm')):
-    
-    file = os.path.basename(fpath)
-
-# for file, infos in tqdm.tqdm(checked_files.items()):
-
-    img = cv2.imread(os.path.join(imgs_path, file))
-
-    xml_root = ET.Element("annotation")
-    xml_filename = ET.SubElement(xml_root, "filename")
-    xml_filename.text = file
-
-    xml_size = ET.SubElement(xml_root, "size")
-    xml_width = ET.SubElement(xml_size, "width")
-    xml_width.text = str(img.shape[1])
-    xml_height = ET.SubElement(xml_size, "height")
-    xml_height.text = str(img.shape[0])
-    xml_depth = ET.SubElement(xml_size, "depth")
-    xml_depth.text = str(img.shape[2])
-
-    if file in checked_files:
-        infos = checked_files[file]
-        # print(file)
-        for info in infos:
-
-            xmin, ymin, xmax, ymax, classId = info
-
-            xml_object = ET.SubElement(xml_root, "object")
-            xml_name = ET.SubElement(xml_object, "name")
-            xml_name.text = class_dict[classId]
-#             xml_name.text = 'sign'
-
-            xml_bndbox = ET.SubElement(xml_object, "bndbox")
-
-            xml_xmin = ET.SubElement(xml_bndbox, "xmin")
-            xml_xmin.text = str(xmin)
-            xml_ymin = ET.SubElement(xml_bndbox, "ymin")
-            xml_ymin.text = str(ymin)
-            xml_xmax = ET.SubElement(xml_bndbox, "xmax")
-            xml_xmax.text = str(xmax)
-            xml_ymax = ET.SubElement(xml_bndbox, "ymax")
-            xml_ymax.text = str(ymax)
+def append_frames_wo_annot(checked_files, frames_fpath_list):
+    for fpath in frames_fpath_list:
+        fname = os.path.basename(fpath)
+        if fname not in checked_files:
+            checked_files[fname] = None
 
 
-            # print('\t%s' % info)
+train_checked_files = read_annotations(annots_train_fpath)
+full_checked_files = read_annotations(annots_full_fpath)
 
-            # cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (255,0,0), 3)
+append_frames_wo_annot(train_checked_files, train_frames_fpaths)
+append_frames_wo_annot(full_checked_files, full_frames_fpaths)
 
-            # cv2.imshow('Result', img)
-            # cv2.waitKey(500)
+print('--- Creating annotations ---')
 
-    tree = ET.ElementTree(xml_root)
-    tree.write(annotation_fldr + '/' + file.split('.')[0] + '.xml', pretty_print=True, xml_declaration=True,   encoding="utf-8")
-
-    copyfile(fpath, images_fldr + '/' + file)
+vc.generate_annotations(dst_train_data_dir, train_checked_files)
+vc.generate_annotations(dst_full_data_dir, full_checked_files)

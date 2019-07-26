@@ -1,35 +1,54 @@
-import numpy as np
-import cv2
 import os
 import tqdm
-import glob
-import csv
+import pandas as pd
 
-from lxml import etree as ET
 from shutil import copyfile
 
-data_root_path = 'RTSD'
+import voc_generator as vc
 
-frames_paths = ['rtsd-d1-frames']
-gt_frame_fpaths = []
+import argparse
+argparser = argparse.ArgumentParser(description='Help =)')
+argparser.add_argument('-r', '--root',
+                       help='Root dir of RTSD detection')
+argparser.add_argument('-o', '--output',
+                       help='Result directory path')
+argparser.add_argument('-s', '--show_frames',
+                       action='store_true',
+                       help='Show frames during saving')
+args = argparser.parse_args()
+print(args)
 
-for frames_path in frames_paths:
-    frames_dirpath = os.path.join(data_root_path, frames_path)
+data_root_path = args.root
 
-    for subdir in ['test', 'train']:
-        path = os.path.join(frames_dirpath, subdir)
+frames_dirs = ['rtsd-d1-frames', 'rtsd-d2-frames', 'rtsd-d3-frames']
+gt_train_frame_fpaths = []
+gt_test_frame_fpaths = []
 
-        gt_frame_fpaths += [os.path.join(path, i) for i in os.listdir(path)]
+for frames_dir in frames_dirs:
+    frames_train_root_path = os.path.join(data_root_path, frames_dir, 'train')
+    frames_test_root_path = os.path.join(data_root_path, frames_dir, 'test')
+
+    gt_train_frame_fpaths += [os.path.join(frames_train_root_path, i)
+                              for i in os.listdir(frames_train_root_path)]
+    gt_test_frame_fpaths += [os.path.join(frames_test_root_path, i)
+                             for i in os.listdir(frames_test_root_path)]
 
 
-gt_paths = ['rtsd-d1-gt']
-gt_classes = []
+gt_paths = ['rtsd-d1-gt', 'rtsd-d2-gt', 'rtsd-d3-gt']
+unique_classes = []
 
 gt_train_csv_fname = 'train_gt.csv'
-gt_test_csv_fname  = 'test_gt.csv'
+gt_test_csv_fname = 'test_gt.csv'
 
 gt_train_annot_fpaths = []
-gt_test_annot_fpaths  = []
+gt_test_annot_fpaths = []
+
+
+def pandas_get_unique_classes(csv_fpath):
+    data = pd.read_csv(csv_fpath)
+    unique_classes = data['sign_class'].unique().tolist()
+    return unique_classes
+
 
 for gt_path in gt_paths:
     gt_dirpath = os.path.join(data_root_path, gt_path)
@@ -39,109 +58,89 @@ for gt_path in gt_paths:
         class_dirpath = os.path.join(gt_dirpath, local_class)
 
         if os.path.isdir(class_dirpath):
-            if local_class not in gt_classes:
-                gt_classes.append(local_class)
+            gt_train_annot_fpath = os.path.join(
+                class_dirpath, gt_train_csv_fname)
+            gt_test_annot_fpath = os.path.join(
+                class_dirpath, gt_test_csv_fname)
 
-            gt_train_annot_fpaths.append((local_class, os.path.join(class_dirpath, gt_train_csv_fname)))
-            gt_test_annot_fpaths.append((local_class, os.path.join(class_dirpath, gt_test_csv_fname)))
+            train_classes = pandas_get_unique_classes(gt_train_annot_fpath)
+            test_classes = pandas_get_unique_classes(gt_test_annot_fpath)
+
+            for _class in train_classes:
+                class_name = local_class + '/' + _class
+
+                if class_name not in unique_classes:
+                    unique_classes += [class_name]
+
+            gt_train_annot_fpaths += [(local_class, gt_train_annot_fpath)]
+            gt_test_annot_fpaths += [(local_class, gt_test_annot_fpath)]
 
 print(gt_train_annot_fpaths)
 print(gt_test_annot_fpaths)
-print(gt_classes)
+# print(unique_classes)
+
+dst_data_dir = args.output
+
+dst_train_data_dir = dst_data_dir + '_Train'
+dst_test_data_dir = dst_data_dir + '_Test'
+
+print('--- Copy frames to dst folder ---')
+
+vc.copy_2_images_dir(dst_train_data_dir, gt_train_frame_fpaths)
+vc.copy_2_images_dir(dst_test_data_dir, gt_test_frame_fpaths)
+
+FILENAME_KEY = 'filename'
+LEFT_X_KEY = 'x_from'
+UUPPER_Y_KEY = 'y_from'
+WIDTH_KEY = 'width'
+HEIGHT_KEY = 'height'
+SIGN_CLS_KEY = 'sign_class'
+
+print('--- Reading annotations ---')
 
 
-dst_data_dir = 'data/RTSD_voc'
-annotation_train_fldr = os.path.join(dst_data_dir, 'Annotations_train')
-annotation_test_fldr  = os.path.join(dst_data_dir, 'Annotations_test')
-images_fldr = os.path.join(dst_data_dir, 'Images')
+def read_annotations(list_annot_fpath):
+    checked_files = {}
+    for annot in tqdm.tqdm(list_annot_fpath):
+        class_name, annot_fpath = annot
 
-if not os.path.exists(annotation_train_fldr):
-    os.makedirs(annotation_train_fldr)
-
-if not os.path.exists(annotation_test_fldr):
-    os.makedirs(annotation_test_fldr)
-
-if not os.path.exists(images_fldr):
-    os.makedirs(images_fldr)
-
-print('Copy frames to dst folder')
-
-for frame_fpath in tqdm.tqdm(gt_frame_fpaths):
-    copyfile(frame_fpath, os.path.join(images_fldr, os.path.basename(frame_fpath)))
-
-FILENAME_KEY='filename'
-LEFT_X_KEY  ='x_from'
-UUPPER_Y_KEY='y_from'
-WIDTH_KEY   ='width'
-HEIGHT_KEY  ='height'
-SIGN_CLS_KEY='sign_class'
-
-checked_files = {}
-
-print('Reading annotations')
-
-for train_annot in tqdm.tqdm(gt_train_annot_fpaths):
-    class_name, annot_fpath = train_annot
-
-    with open(annot_fpath, 'r') as annot_fd:
-        d_reader = csv.DictReader(annot_fd)
-
-        for row in d_reader:
+        df = pd.read_csv(annot_fpath)
+        for index, row in df.iterrows():
             fname = row[FILENAME_KEY]
             xmin = int(row[LEFT_X_KEY])
             ymin = int(row[UUPPER_Y_KEY])
             xmax = int(xmin) + int(row[WIDTH_KEY])
             ymax = int(ymin) + int(row[HEIGHT_KEY])
 
-            if fname in checked_files:
-                checked_files[fname] += [(xmin, ymin, xmax, ymax, class_name)]
+            full_cls_name = class_name + '/' + row[SIGN_CLS_KEY]
+            info = (xmin, ymin, xmax, ymax, full_cls_name)
+
+            if fname in checked_files and info not in checked_files[fname]:
+                checked_files[fname] += [info]
             else:
-                checked_files[fname] = [(xmin, ymin, xmax, ymax, class_name)]
+                checked_files[fname] = [info]
 
-print('Creating annotations')
+    return checked_files
 
-for file in tqdm.tqdm(checked_files.keys()):
 
-    img = cv2.imread(os.path.join(images_fldr, file))
+def append_frames_wo_annot(checked_files, frames_fpath_list):
+    for fpath in frames_fpath_list:
+        fname = os.path.basename(fpath)
+        if fname not in checked_files:
+            checked_files[fname] = None
 
-    xml_root = ET.Element("annotation")
-    xml_filename = ET.SubElement(xml_root, "filename")
-    xml_filename.text = file
 
-    xml_size = ET.SubElement(xml_root, "size")
-    xml_width = ET.SubElement(xml_size, "width")
-    xml_width.text = str(img.shape[1])
-    xml_height = ET.SubElement(xml_size, "height")
-    xml_height.text = str(img.shape[0])
-    xml_depth = ET.SubElement(xml_size, "depth")
-    xml_depth.text = str(img.shape[2])
+train_checked_files = read_annotations(gt_train_annot_fpaths)
+test_checked_files = read_annotations(gt_test_annot_fpaths)
 
-    if file in checked_files:
-        infos = checked_files[file]
+print('--- Append frames without annotation ---')
 
-        for info in infos:
+append_frames_wo_annot(train_checked_files, gt_train_frame_fpaths)
+append_frames_wo_annot(test_checked_files, gt_test_frame_fpaths)
 
-            xmin, ymin, xmax, ymax, class_name = info
+print('--- Creating annotations ---')
 
-            xml_object = ET.SubElement(xml_root, "object")
-            xml_name = ET.SubElement(xml_object, "name")
-            xml_name.text = class_name
-
-            xml_bndbox = ET.SubElement(xml_object, "bndbox")
-
-            xml_xmin = ET.SubElement(xml_bndbox, "xmin")
-            xml_xmin.text = str(xmin)
-            xml_ymin = ET.SubElement(xml_bndbox, "ymin")
-            xml_ymin.text = str(ymin)
-            xml_xmax = ET.SubElement(xml_bndbox, "xmax")
-            xml_xmax.text = str(xmax)
-            xml_ymax = ET.SubElement(xml_bndbox, "ymax")
-            xml_ymax.text = str(ymax)
-
-            cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (255,0,0), 3)
-
-            cv2.imshow('Result', img)
-            cv2.waitKey(1000)
-
-    tree = ET.ElementTree(xml_root)
-    tree.write(os.path.join(annotation_train_fldr, file.split('.')[0] + '.xml'), pretty_print=True, xml_declaration=True,   encoding="utf-8")
+vc.generate_annotations(
+    dst_train_data_dir, train_checked_files, args.show_frames)
+vc.generate_annotations(
+    dst_test_data_dir, test_checked_files, args.show_frames)

@@ -4,7 +4,7 @@ import argparse
 import os
 import numpy as np
 import json
-from yolo import create_model, dummy_loss
+import yolo
 from generator import BatchGenerator
 from utils.utils import normalize, evaluate, makedirs, init_session
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
@@ -131,7 +131,7 @@ def train(config, initial_weights):
     warmup_batches = config['train']['warmup_epochs'] * \
         (config['train']['train_times'] * len(train_generator))
 
-    train_model, infer_model, _, freeze_num = create_model(
+    train_model, infer_model, _, freeze_num = yolo.create_model(
         nb_class=len(labels),
         anchors=config['model']['anchors'],
         max_box_per_image=max_box_per_image,
@@ -186,7 +186,7 @@ def train(config, initial_weights):
 
         # optimizer = Adam(lr=1e-3, clipnorm=0.1)
         optimizer = Adam()
-        train_model.compile(loss=dummy_loss, optimizer=optimizer)
+        train_model.compile(loss=yolo.dummy_loss, optimizer=optimizer)
         train_model.fit_generator(
             generator=train_generator,
             steps_per_epoch=len(train_generator) *
@@ -287,7 +287,7 @@ def train(config, initial_weights):
     #   Prepare fit
     ###############################
     
-    train_model.compile(loss=dummy_loss, optimizer=optimizer)
+    train_model.compile(loss=yolo.dummy_loss, optimizer=optimizer)
     train_model.fit_generator(
         generator=train_generator,
         steps_per_epoch=len(train_generator) * config['train']['train_times'],
