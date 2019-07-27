@@ -4,6 +4,7 @@ import numpy as np
 import keras
 from keras import backend as K
 
+
 class CustomTensorBoard(TensorBoard):
     """ to log the loss after each batch
     """
@@ -28,6 +29,7 @@ class CustomTensorBoard(TensorBoard):
 
         super(CustomTensorBoard, self).on_batch_end(batch, logs)
 
+
 class CustomModelCheckpoint(ModelCheckpoint):
     """ to save the template model, not the multi-GPU model
     """
@@ -37,7 +39,7 @@ class CustomModelCheckpoint(ModelCheckpoint):
         self.model_to_save = model_to_save
 
     def on_epoch_end(self, epoch, logs={}):
-#         print(K.eval(self.model.optimizer.lr))
+        #         print(K.eval(self.model.optimizer.lr))
 
         self.epochs_since_last_save += 1
         if self.epochs_since_last_save >= self.period:
@@ -57,7 +59,8 @@ class CustomModelCheckpoint(ModelCheckpoint):
                                      current, filepath))
                         self.best = current
                         if self.save_weights_only:
-                            self.model_to_save.save_weights(filepath, overwrite=True)
+                            self.model_to_save.save_weights(
+                                filepath, overwrite=True)
                         else:
                             self.model_to_save.save(filepath, overwrite=True)
                     else:
@@ -66,7 +69,8 @@ class CustomModelCheckpoint(ModelCheckpoint):
                                   (epoch + 1, self.monitor, self.best))
             else:
                 if self.verbose > 0:
-                    print('\nEpoch %05d: saving model to %s' % (epoch + 1, filepath))
+                    print('\nEpoch %05d: saving model to %s' %
+                          (epoch + 1, filepath))
                 if self.save_weights_only:
                     self.model_to_save.save_weights(filepath, overwrite=True)
                 else:
@@ -117,10 +121,11 @@ class MAP_evaluation(keras.callbacks.Callback):
         self.bestMap = 0
 
         if not isinstance(self.tensorboard, keras.callbacks.TensorBoard) and self.tensorboard is not None:
-            raise ValueError("Tensorboard object must be a instance from keras.callbacks.TensorBoard")
+            raise ValueError(
+                "Tensorboard object must be a instance from keras.callbacks.TensorBoard")
 
     def on_epoch_end(self, epoch, logs={}):
-    
+
         if epoch % self.period == 0 and self.period != 0:
             average_precisions = self.evaluate(model=self.infer_model,
                                                generator=self.generator,
@@ -134,17 +139,18 @@ class MAP_evaluation(keras.callbacks.Callback):
             mAP = sum(average_precisions.values()) / len(average_precisions)
             print('mAP: {:.4f}'.format(mAP))
 
-            if not self.bestVloss:
-                self.bestVloss = logs['val_loss']
+            # if not self.bestVloss:
+            # self.bestVloss = logs['val_loss']
 
             if self.save_best and self.save_name_fmt:
-                if mAP >= self.bestMap: # and logs['val_loss'] <= self.bestVloss:
-                    self.bestVloss = logs['val_loss']
+                # and logs['val_loss'] <= self.bestVloss:
+                if mAP >= self.bestMap:
+                    # self.bestVloss = logs['val_loss']
+                    save_name = self.save_name_fmt.format(
+                        epoch=epoch + 1, mAP=mAP, **logs)
+                    print('\nEpoch %05d: mAP improved from %g to %g, saving model to %s' %
+                          (epoch, self.bestMap, mAP, save_name))
                     self.bestMap = mAP
-
-                    save_name = self.save_name_fmt.format(epoch=epoch + 1, mAP=mAP, **logs)
-                    print('\nEpoch %05d: mAP improved from %g to %g, saving model to %s' % (epoch, self.bestMap, mAP,
-                                                                                            save_name))
                     self.infer_model.save(save_name)
                 else:
                     print("mAP did not improve from {}.".format(self.bestMap))
@@ -156,5 +162,3 @@ class MAP_evaluation(keras.callbacks.Callback):
                 summary_value.simple_value = mAP
                 summary_value.tag = "val_mAP"
                 self.tensorboard.writer.add_summary(summary, epoch)
-
-

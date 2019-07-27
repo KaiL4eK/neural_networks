@@ -1,7 +1,9 @@
+from sklearn.model_selection import train_test_split
 import numpy as np
 import os
 import xml.etree.ElementTree as ET
 import pickle
+
 
 def get_img_path(img_dirs, filename):
     for img_dir in img_dirs:
@@ -12,6 +14,7 @@ def get_img_path(img_dirs, filename):
 
     return None
 
+
 def parse_voc_annotation(ann_dirs, img_dirs, cache_name, labels=[]):
     # Dirty hack to check
     if cache_name and len(cache_name) > 1 and os.path.exists(cache_name):
@@ -21,17 +24,17 @@ def parse_voc_annotation(ann_dirs, img_dirs, cache_name, labels=[]):
     else:
         if not isinstance(ann_dirs, list):
             ann_dirs = [ann_dirs]
-        
+
         if not isinstance(img_dirs, list):
             img_dirs = [img_dirs]
-        
+
         all_insts = []
         seen_labels = {}
-        
+
         for ann_dir in ann_dirs:
-            for ann in sorted(os.listdir(ann_dir)):        
-                
-                img = {'object':[]}
+            for ann in sorted(os.listdir(ann_dir)):
+
+                img = {'object': []}
 
                 try:
                     annot_file = os.path.join(ann_dir, ann)
@@ -40,14 +43,15 @@ def parse_voc_annotation(ann_dirs, img_dirs, cache_name, labels=[]):
                     print(e)
                     print('Ignore this bad annotation: ' + annot_file)
                     continue
-                
+
                 for elem in tree.iter():
                     if 'filename' in elem.tag:
                         fpath = get_img_path(img_dirs, elem.text)
                         if fpath is None:
                             img = None
-                            print('Image file {} for {} not found'.format(elem.text, annot_file))
-                            break;
+                            print('Image file {} for {} not found'.format(
+                                elem.text, annot_file))
+                            break
                         else:
                             img['filename'] = fpath
 
@@ -57,7 +61,7 @@ def parse_voc_annotation(ann_dirs, img_dirs, cache_name, labels=[]):
                         img['height'] = int(elem.text)
                     if 'object' in elem.tag or 'part' in elem.tag:
                         obj = {}
-                        
+
                         for attr in list(elem):
                             if 'name' in attr.tag:
                                 obj['name'] = attr.text
@@ -66,27 +70,32 @@ def parse_voc_annotation(ann_dirs, img_dirs, cache_name, labels=[]):
                                     seen_labels[obj['name']] += 1
                                 else:
                                     seen_labels[obj['name']] = 1
-                                
+
                                 if len(labels) > 0 and obj['name'] not in labels:
-                                    print('Ignore label: {}'.format(obj['name']))
+                                    print('Ignore label: {}'.format(
+                                        obj['name']))
                                     break
                                 else:
                                     img['object'] += [obj]
-                                    
+
                             if 'bndbox' in attr.tag:
                                 for dim in list(attr):
                                     if 'xmin' in dim.tag:
-                                        obj['xmin'] = int(round(float(dim.text)))
+                                        obj['xmin'] = int(
+                                            round(float(dim.text)))
                                     if 'ymin' in dim.tag:
-                                        obj['ymin'] = int(round(float(dim.text)))
+                                        obj['ymin'] = int(
+                                            round(float(dim.text)))
                                     if 'xmax' in dim.tag:
-                                        obj['xmax'] = int(round(float(dim.text)))
+                                        obj['xmax'] = int(
+                                            round(float(dim.text)))
                                     if 'ymax' in dim.tag:
-                                        obj['ymax'] = int(round(float(dim.text)))
+                                        obj['ymax'] = int(
+                                            round(float(dim.text)))
 
 #                 if len(img['object']) == 0:
 #                     print('Warning! Zero objects on image {}'.format(img['filename']))
-                
+
                 if img is not None:
                     all_insts += [img]
 
@@ -98,22 +107,19 @@ def parse_voc_annotation(ann_dirs, img_dirs, cache_name, labels=[]):
     return all_insts, seen_labels
 
 
-from sklearn.model_selection import train_test_split
-
-
 def replace_all_labels_2_one(instances, new_label):
-    
-    labels = { new_label: 0 }
-    
+
+    labels = {new_label: 0}
+
     for inst in instances:
         for obj in inst['object']:
             obj['name'] = new_label
-    
+
             labels[new_label] += 1
-    
+
     return instances, labels
 
-            
+
 def split_by_objects(instances, labels, rate):
 
     classes = {}
@@ -130,9 +136,10 @@ def split_by_objects(instances, labels, rate):
 
     train_lbls = {}
     valid_lbls = {}
-    
+
     for _class, _imgs in classes.items():
-        train_, valid_ = train_test_split(_imgs, test_size=rate, random_state=42)
+        train_, valid_ = train_test_split(
+            _imgs, test_size=rate, random_state=42)
 
         print('Splitted {} for {}/{}'.format(_class, len(train_), len(valid_)))
 
@@ -141,7 +148,7 @@ def split_by_objects(instances, labels, rate):
 
         train_lbls[_class] = len(train_)
         valid_lbls[_class] = len(valid_)
-        
+
     print('Result split {}/{}'.format(len(train_entries), len(valid_entries)))
 
     return train_entries, train_lbls, valid_entries, valid_lbls

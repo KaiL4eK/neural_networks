@@ -33,14 +33,17 @@ class BatchGenerator(Sequence):
         self.shuffle = shuffle
         self.mem_mode = mem_mode
 
-        self.min_net_size = (np.array(min_net_size) // self.downsample) * self.downsample
-        self.max_net_size = (np.array(max_net_size) // self.downsample) * self.downsample
+        self.min_net_size = (np.array(min_net_size) //
+                             self.downsample) * self.downsample
+        self.max_net_size = (np.array(max_net_size) //
+                             self.downsample) * self.downsample
 
         self.scale_distr = scale_distr
         self.jitter = jitter
         self.flip = flip
         self.norm = norm
-        self.anchors = [BoundBox(0, 0, anchors[2 * i], anchors[2 * i + 1]) for i in range(len(anchors) // 2)]
+        self.anchors = [BoundBox(0, 0, anchors[2 * i], anchors[2 * i + 1])
+                        for i in range(len(anchors) // 2)]
         self.infer_sz = infer_sz
 
         self.net_size_h = 0
@@ -78,14 +81,22 @@ class BatchGenerator(Sequence):
             r_bound = len(self.instances)
             l_bound = r_bound - self.batch_size
 
-        x_batch = np.zeros((r_bound - l_bound, net_h, net_w, 3))  # input images
-        t_batch = np.zeros((r_bound - l_bound, 1, 1, 1, self.max_box_per_image, 4))  # list of groundtruth boxes
+        x_batch = np.zeros(
+            (r_bound - l_bound, net_h, net_w, 3))  # input images
+        # list of groundtruth boxes
+        t_batch = np.zeros(
+            (r_bound - l_bound, 1, 1, 1, self.max_box_per_image, 4))
 
-        dummies = [np.zeros((r_bound - l_bound, 1)) for i in range(self.output_layers_count)]
+        dummies = [np.zeros((r_bound - l_bound, 1))
+                   for i in range(self.output_layers_count)]
 
         # According to reversed outputs
-        yolos = [np.zeros((r_bound - l_bound, (2 ** i) * base_grid_h, (2 ** i) * base_grid_w, self.anchors_per_output,
-                           4 + 1 + len(self.labels))) for i in reversed(range(self.output_layers_count))]
+        yolos = [np.zeros((r_bound - l_bound,
+                           (2 ** i) * base_grid_h,
+                           (2 ** i) * base_grid_w,
+                           self.anchors_per_output,
+                           4 + 1 + len(self.labels)))
+                 for i in reversed(range(self.output_layers_count))]
 
         # yolo_1 = np.zeros((r_bound - l_bound, 1*base_grid_h,  1*base_grid_w, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 1
         # yolo_2 = np.zeros((r_bound - l_bound, 2*base_grid_h,  2*base_grid_w, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 2
@@ -140,8 +151,10 @@ class BatchGenerator(Sequence):
                 center_y = center_y / float(net_h) * grid_h  # sigma(t_y) + c_y
 
                 # determine the sizes of the bounding box
-                w = np.log((obj['xmax'] - obj['xmin']) / float(max_anchor.xmax))  # t_w
-                h = np.log((obj['ymax'] - obj['ymin']) / float(max_anchor.ymax))  # t_h
+                w = np.log((obj['xmax'] - obj['xmin']) /
+                           float(max_anchor.xmax))  # t_w
+                h = np.log((obj['ymax'] - obj['ymin']) /
+                           float(max_anchor.ymax))  # t_h
 
                 box = [center_x, center_y, w, h]
 
@@ -154,12 +167,15 @@ class BatchGenerator(Sequence):
 
                 # assign ground truth x, y, w, h, confidence and class probs to y_batch
                 yolo[instance_count, grid_y, grid_x, output_anchor_idx] = 0
-                yolo[instance_count, grid_y, grid_x, output_anchor_idx, 0:4] = box
+                yolo[instance_count, grid_y, grid_x,
+                     output_anchor_idx, 0:4] = box
                 yolo[instance_count, grid_y, grid_x, output_anchor_idx, 4] = 1.
-                yolo[instance_count, grid_y, grid_x, output_anchor_idx, 5 + obj_indx] = 1
+                yolo[instance_count, grid_y, grid_x,
+                     output_anchor_idx, 5 + obj_indx] = 1
 
                 # assign the true box to t_batch
-                true_box = [center_x, center_y, obj['xmax'] - obj['xmin'], obj['ymax'] - obj['ymin']]
+                true_box = [center_x, center_y, obj['xmax'] -
+                            obj['xmin'], obj['ymax'] - obj['ymin']]
                 t_batch[instance_count, 0, 0, 0, true_box_index] = true_box
 
                 true_box_index += 1
@@ -171,11 +187,12 @@ class BatchGenerator(Sequence):
             else:
                 # plot image and bounding boxes for sanity check
                 for obj in all_objs:
-                    cv2.rectangle(img, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), (255, 255, 0), 2)
-                    cv2.putText(img, obj['name'], 
-                                (obj['xmin']+2, obj['ymin']+2), 
-                                0, 2e-3 * img.shape[0], 
-                                (255,0,0), 2)
+                    cv2.rectangle(
+                        img, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), (255, 255, 0), 2)
+                    cv2.putText(img, obj['name'],
+                                (obj['xmin']+2, obj['ymin']+2),
+                                0, 2e-3 * img.shape[0],
+                                (255, 0, 0), 2)
 
 #                     print(train_instance['filename'])
 #                     print(obj['name'])
@@ -234,15 +251,18 @@ class BatchGenerator(Sequence):
             dy = int((net_h - new_h) // 2)
 
             # apply scaling and cropping
-            im_sized = apply_random_scale_and_crop(image, new_w, new_h, net_w, net_h, dx, dy)
+            im_sized = apply_random_scale_and_crop(
+                image, new_w, new_h, net_w, net_h, dx, dy)
 
         else:
             # determine the amount of scaling and cropping
             dw = self.jitter * image_w
             dh = self.jitter * image_h
 
-            new_ar = (image_w + np.random.uniform(-dw, dw)) / (image_h + np.random.uniform(-dh, dh));
-            scale = np.random.uniform(1 - self.scale_distr, 1 + self.scale_distr);
+            new_ar = (image_w + np.random.uniform(-dw, dw)) / \
+                (image_h + np.random.uniform(-dh, dh))
+            scale = np.random.uniform(
+                1 - self.scale_distr, 1 + self.scale_distr)
 
             if new_ar < 1:
                 new_h = int(scale * net_h)
@@ -255,10 +275,12 @@ class BatchGenerator(Sequence):
             dy = int(np.random.uniform(0, net_h - new_h))
 
             # apply scaling and cropping
-            im_sized = apply_random_scale_and_crop(image, new_w, new_h, net_w, net_h, dx, dy)
+            im_sized = apply_random_scale_and_crop(
+                image, new_w, new_h, net_w, net_h, dx, dy)
 
             # randomly distort hsv space
-            im_sized = random_distort_image(im_sized, hue=18, saturation=1.1, exposure=1.1)
+            im_sized = random_distort_image(
+                im_sized, hue=18, saturation=1.1, exposure=1.1)
 
             # randomly flip
             if self.flip:
@@ -266,15 +288,23 @@ class BatchGenerator(Sequence):
                 im_sized = random_flip(im_sized, flip)
 
         # correct the size and pos of bounding boxes
-        all_objs = correct_bounding_boxes(instance['object'], new_w, new_h, net_w, net_h, dx, dy, flip, image_w, image_h)
+        all_objs = correct_bounding_boxes(
+            instance['object'], new_w, new_h, net_w, net_h, dx, dy, flip, image_w, image_h)
 
         return im_sized, all_objs
 
     def on_epoch_end(self):
-        if self.shuffle: np.random.shuffle(self.instances)
+        if self.shuffle:
+            np.random.shuffle(self.instances)
 
     def num_classes(self):
         return len(self.labels)
+
+    def get_class_name(self, label_idx):
+        if label_idx >= self.num_classes() or label_idx < 0:
+            return None
+
+        return self.labels[label_idx]
 
     def size(self):
         return len(self.instances)
@@ -291,10 +321,11 @@ class BatchGenerator(Sequence):
         annots = []
 
         for obj in self.instances[i]['object']:
-            annot = [obj['xmin'], obj['ymin'], obj['xmax'], obj['ymax'], self.labels.index(obj['name'])]
+            annot = [obj['xmin'], obj['ymin'], obj['xmax'],
+                     obj['ymax'], self.labels.index(obj['name'])]
             annots += [annot]
 
-        if len(annots) == 0: 
+        if len(annots) == 0:
             annots = [[]]
 
         return np.array(annots)
