@@ -121,7 +121,7 @@ def replace_all_labels_2_one(instances, new_label):
 
 
 def split_by_objects(instances, labels, rate):
-
+    # TODO - Fix it! Not use now because it can put train samples to test =(
     classes = {}
 
     for inst in instances:

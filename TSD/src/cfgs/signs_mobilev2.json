@@ -1,6 +1,6 @@
 {
     "model" : {
-        "main_name":            "TSD_MobileNetv2",
+        "main_name":            "TSD_MbNv2",
         "min_input_size":       [416, 416],
         "max_input_size":       [416, 416],
         "base":                 "MobileNetv2_35",

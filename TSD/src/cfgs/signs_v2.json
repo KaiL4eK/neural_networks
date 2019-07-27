@@ -5,13 +5,14 @@
         "max_input_size":       [416, 416],
         "base":                 "Darknet19",
         "anchors":              [8,8, 14,14, 26,25],
+        "anchors_per_output":   3,
         "labels":               [],
         "infer_shape":          [416, 416]
     },
 
     "train": {
-        "train_image_folder":   ["../data/GTSDB_voc_train/Images/", "../data/GTSDB_voc_test/Images/"],
-        "train_annot_folder":   ["../data/GTSDB_voc_train/Annotations/", "../data/GTSDB_voc_test/Annotations/"],
+        "train_image_folder":   ["../data/GTSDB_VOC_Full/Images/"],
+        "train_annot_folder":   ["../data/GTSDB_VOC_Full/Annotations/"],
         "cache_name":           "",
 
         "train_times":          1,
@@ -31,9 +32,8 @@
         "xywh_scale":           1,
         "class_scale":          1,
 
-        "tensorboard_dir":      "logs/sign_v2",
-        "saved_weights_name":   "chk/sign_v2.h5",
-        "debug":                false
+        "debug":                false,
+        "freeze":               true
     },
 
     "valid": {
