@@ -11,7 +11,7 @@ def unfreeze_model(model):
 
 def init_session(rate):
 
-    import keras.backend as K
+    import tensorflow.keras.backend as K
     import tensorflow as tf
 
     config = tf.ConfigProto()
@@ -19,7 +19,12 @@ def init_session(rate):
     config.gpu_options.allow_growth = True
     config.gpu_options.per_process_gpu_memory_fraction = rate
 
-    K.set_session(tf.Session(config=config))
+    sess = tf.Session(config=config)
+
+    init = tf.global_variables_initializer()
+    sess.run(init)
+
+    K.set_session(sess)
 
 
 def _sigmoid(x):

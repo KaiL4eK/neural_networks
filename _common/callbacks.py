@@ -1,8 +1,6 @@
-from keras.callbacks import TensorBoard, ModelCheckpoint
 import tensorflow as tf
 import numpy as np
-import keras
-from keras import backend as K
+from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint, Callback
 
 
 class CustomTensorBoard(TensorBoard):
@@ -39,7 +37,6 @@ class CustomModelCheckpoint(ModelCheckpoint):
         self.model_to_save = model_to_save
 
     def on_epoch_end(self, epoch, logs={}):
-        #         print(K.eval(self.model.optimizer.lr))
 
         self.epochs_since_last_save += 1
         if self.epochs_since_last_save >= self.period:
@@ -79,7 +76,7 @@ class CustomModelCheckpoint(ModelCheckpoint):
         super(CustomModelCheckpoint, self).on_batch_end(epoch, logs)
 
 
-class MAP_evaluation(keras.callbacks.Callback):
+class MAP_evaluation(Callback):
     """ Evaluate a given dataset using a given model.
             code originally from https://github.com/fizyr/keras-retinanet
 
@@ -120,7 +117,7 @@ class MAP_evaluation(keras.callbacks.Callback):
         self.bestVloss = None
         self.bestMap = 0
 
-        if not isinstance(self.tensorboard, keras.callbacks.TensorBoard) and self.tensorboard is not None:
+        if not isinstance(self.tensorboard, TensorBoard) and self.tensorboard is not None:
             raise ValueError(
                 "Tensorboard object must be a instance from keras.callbacks.TensorBoard")
 

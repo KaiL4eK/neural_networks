@@ -5,17 +5,19 @@ import os
 import numpy as np
 import json
 import yolo
+import tensorflow as tf
 from generator import BatchGenerator
 from utils.utils import normalize, evaluate, makedirs, init_session, unfreeze_model
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
-from keras.optimizers import Adam, SGD
-from keras.utils.layer_utils import print_summary
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
+from tensorflow.keras.optimizers import Adam, SGD
+from tensorflow.keras.utils import plot_model
 
-import keras
-from keras.models import load_model
+from tensorflow.keras.models import load_model
 from _common import utils
 from _common.callbacks import CustomModelCheckpoint, CustomTensorBoard, MAP_evaluation
 from _common.voc import parse_voc_annotation, split_by_objects, replace_all_labels_2_one
+
+# MBN2 - 149 ms/step
 
 
 def create_training_instances(
@@ -163,12 +165,11 @@ def train(config, initial_weights):
         is_freezed=freezing
     )
 
-    from keras.utils.vis_utils import plot_model
     model_render_file = 'images/{}.png'.format(config['model']['base'])
     if not os.path.isdir(os.path.dirname(model_render_file)):
         os.makedirs(os.path.dirname(model_render_file))
     plot_model(infer_model, to_file=model_render_file, show_shapes=True)
-#     print_summary(infer_model)
+    # infer_model.summary()
 
     # load the pretrained weight if exists, otherwise load the backend weight only
     if initial_weights and os.path.exists(initial_weights):

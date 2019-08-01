@@ -1,16 +1,16 @@
-from keras.regularizers import l2
 from functools import wraps, reduce
 import numpy as np
 import tensorflow as tf
-from keras.engine.topology import Layer
-from keras.models import Model
-from keras.layers.merge import add, concatenate
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras.layers import Layer, Input
+from tensorflow.keras.models import Model
+
 import backend
 import os
 
-from keras.layers import Concatenate, MaxPooling2D
-from keras.layers import Conv2D, Input, BatchNormalization, LeakyReLU
-from keras.layers import ZeroPadding2D, UpSampling2D, Lambda, Conv2DTranspose, Flatten, ReLU
+# from keras.layers import Concatenate, MaxPooling2D
+# from keras.layers import Conv2D, Input, BatchNormalization, LeakyReLU
+# from keras.layers import ZeroPadding2D, UpSampling2D, Lambda, Conv2DTranspose, Flatten, ReLU
 
 
 def dummy_loss(y_true, y_pred):
@@ -18,8 +18,10 @@ def dummy_loss(y_true, y_pred):
 
 
 class YoloLayer(Layer):
-    def __init__(self, anchors, max_grid_hw, batch_size, warmup_batches, ignore_thresh,
-                 grid_scale, obj_scale, noobj_scale, xywh_scale, class_scale, debug=False,
+    def __init__(self, anchors, max_grid_hw,
+                 batch_size, warmup_batches, ignore_thresh,
+                 grid_scale, obj_scale, noobj_scale,
+                 xywh_scale, class_scale, debug=False,
                  **kwargs):
         # make the model settings persistent
         self.ignore_thresh = ignore_thresh
@@ -38,14 +40,30 @@ class YoloLayer(Layer):
         # make a persistent mesh grid
         max_grid_h, max_grid_w = max_grid_hw
 
-        cell_x = tf.to_float(tf.reshape(tf.tile(tf.range(max_grid_w), [
-                             max_grid_h]), (1, max_grid_h, max_grid_w, 1, 1)))
+        cell_x = tf.to_float(
+            tf.reshape(
+                tf.tile(
+                    tf.range(max_grid_w),
+                    [max_grid_h]
+                ),
+                (1, max_grid_h, max_grid_w, 1, 1)
+            )
+        )
 
-        cell_y = tf.to_float(tf.reshape(tf.tile(tf.range(max_grid_h), [
-                             max_grid_w]), (1, max_grid_w, max_grid_h, 1, 1)))
+        cell_y = tf.to_float(
+            tf.reshape(
+                tf.tile(
+                    tf.range(max_grid_h),
+                    [max_grid_w]
+                ),
+                (1, max_grid_w, max_grid_h, 1, 1)
+            )
+        )
         cell_y = tf.transpose(cell_y, (0, 2, 1, 3, 4))
         self.cell_grid = tf.tile(
-            tf.concat([cell_x, cell_y], -1), [batch_size, 1, 1, 3, 1])
+            tf.concat([cell_x, cell_y], -1),
+            [batch_size, 1, 1, 3, 1]
+        )
 
         super(YoloLayer, self).__init__(**kwargs)
 
@@ -57,25 +75,33 @@ class YoloLayer(Layer):
         input_image, y_pred, y_true, true_boxes = x
 
         # adjust the shape of the y_predict [batch, grid_h, grid_w, 3, 4+1+nb_class]
-        y_pred = tf.reshape(y_pred, tf.concat(
-            [tf.shape(y_pred)[:3], tf.constant([3, -1])], axis=0))
+        y_pred = tf.reshape(
+            y_pred, tf.concat(
+                [tf.shape(y_pred)[:3], tf.constant([3, -1])],
+                axis=0
+            )
+        )
 
         # initialize the masks
         object_mask = tf.expand_dims(y_true[..., 4], 4)
 
         # the variable to keep track of number of batches processed
-        batch_seen = tf.Variable(0.)
+        # batch_seen = tf.Variable(0.)
 
         # compute grid factor and net factor
         grid_h = tf.shape(y_true)[1]
         grid_w = tf.shape(y_true)[2]
         grid_factor = tf.reshape(
-            tf.cast([grid_w, grid_h], tf.float32), [1, 1, 1, 1, 2])
+            tf.cast([grid_w, grid_h], tf.float32),
+            [1, 1, 1, 1, 2]
+        )
 
         net_h = tf.shape(input_image)[1]
         net_w = tf.shape(input_image)[2]
         net_factor = tf.reshape(
-            tf.cast([net_w, net_h], tf.float32), [1, 1, 1, 1, 2])
+            tf.cast([net_w, net_h], tf.float32),
+            [1, 1, 1, 1, 2]
+        )
 
         """
         Adjust prediction
@@ -113,7 +139,8 @@ class YoloLayer(Layer):
 
         pred_xy = tf.expand_dims(pred_box_xy / grid_factor, 4)
         pred_wh = tf.expand_dims(
-            tf.exp(pred_box_wh) * self.anchors / net_factor, 4)
+            tf.exp(pred_box_wh) * self.anchors / net_factor, 4
+        )
 
         pred_wh_half = pred_wh / 2.
         pred_mins = pred_xy - pred_wh_half
@@ -132,8 +159,10 @@ class YoloLayer(Layer):
         iou_scores = tf.truediv(intersect_areas, union_areas)
 
         best_ious = tf.reduce_max(iou_scores, axis=4)
-        conf_delta *= tf.expand_dims(tf.to_float(best_ious <
-                                                 self.ignore_thresh), 4)
+        conf_delta *= tf.expand_dims(
+            tf.to_float(best_ious < self.ignore_thresh),
+            4
+        )
 
         """
         Compute some online statistics
@@ -167,32 +196,62 @@ class YoloLayer(Layer):
         count = tf.reduce_sum(object_mask)
         count_noobj = tf.reduce_sum(1 - object_mask)
         detect_mask = tf.to_float((pred_box_conf*object_mask) >= 0.5)
-        class_mask = tf.expand_dims(tf.to_float(
-            tf.equal(tf.argmax(pred_box_class, -1), true_box_class)), 4)
-        recall50 = tf.reduce_sum(tf.to_float(
-            iou_scores >= 0.5) * detect_mask * class_mask) / (count + 1e-3)
-        recall75 = tf.reduce_sum(tf.to_float(
-            iou_scores >= 0.75) * detect_mask * class_mask) / (count + 1e-3)
-        avg_iou = tf.reduce_sum(iou_scores) / (count + 1e-3)
-        avg_obj = tf.reduce_sum(pred_box_conf * object_mask) / (count + 1e-3)
+        class_mask = tf.expand_dims(
+            tf.to_float(
+                tf.equal(
+                    tf.argmax(pred_box_class, -1),
+                    true_box_class
+                )
+            ),
+            4
+        )
+
+        recall50 = tf.reduce_sum(
+            tf.to_float(iou_scores >= 0.5) *
+            detect_mask * class_mask
+        ) / (count + 1e-3)
+
+        recall75 = tf.reduce_sum(
+            tf.to_float(iou_scores >= 0.75) *
+            detect_mask * class_mask
+        ) / (count + 1e-3)
+
+        avg_iou = tf.reduce_sum(
+            iou_scores
+        ) / (count + 1e-3)
+
+        avg_obj = tf.reduce_sum(
+            pred_box_conf * object_mask
+        ) / (count + 1e-3)
+
         avg_noobj = tf.reduce_sum(
-            pred_box_conf * (1-object_mask)) / (count_noobj + 1e-3)
-        avg_cat = tf.reduce_sum(object_mask * class_mask) / (count + 1e-3)
+            pred_box_conf * (1-object_mask)
+        ) / (count_noobj + 1e-3)
+
+        avg_cat = tf.reduce_sum(
+            object_mask * class_mask
+        ) / (count + 1e-3)
 
         """
         Warm-up training
         """
-        batch_seen = tf.assign_add(batch_seen, 1.)
+        # batch_seen = tf.assign_add(batch_seen, 1.)
 
-        true_box_xy, true_box_wh, xywh_mask = tf.cond(tf.less(batch_seen, self.warmup_batches+1),
-                                                      lambda: [true_box_xy + (0.5 + self.cell_grid[:, :grid_h, :grid_w, :, :]) * (1-object_mask),
-                                                               true_box_wh +
-                                                               tf.zeros_like(true_box_wh) *
-                                                               (1-object_mask),
-                                                               tf.ones_like(object_mask)],
-                                                      lambda: [true_box_xy,
-                                                               true_box_wh,
-                                                               object_mask])
+        # true_box_xy, true_box_wh, xywh_mask = tf.cond(
+        #     tf.less(batch_seen, self.warmup_batches+1),
+        #     lambda: [true_box_xy +
+        #              (0.5 +
+        #               self.cell_grid[:, :grid_h, :grid_w, :, :]
+        #               ) * (1-object_mask),
+        #              true_box_wh +
+        #              tf.zeros_like(true_box_wh) *
+        #              (1-object_mask),
+        #              tf.ones_like(object_mask)],
+        #     lambda: [true_box_xy,
+        #              true_box_wh,
+        #              object_mask]
+        # )
+        xywh_mask = object_mask
 
         """
         Compare each true box to all anchor boxes
@@ -540,7 +599,7 @@ def create_model_new(
     if backends[base][1]:
         print('Loading {}'.format(backends[base][1]))
         train_model.load_weights(os.path.join(
-            'src_weights', backends[base][1]), by_name=True, skip_mismatch=True)
+            'src_weights', backends[base][1]), by_name=True)
 
     if is_freezed and new_backend.head_layers_cnt > 0:
         freeze_layers_cnt = len(infer_model.layers) - \

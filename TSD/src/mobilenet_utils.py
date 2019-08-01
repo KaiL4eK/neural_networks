@@ -1,6 +1,6 @@
-from keras.layers import Input, Conv2D, GlobalAveragePooling2D, Dropout, DepthwiseConv2D
-from keras.layers import Activation, BatchNormalization, add, Reshape, ReLU
-from keras import backend as K
+from tensorflow.keras.layers import Input, Conv2D, GlobalAveragePooling2D, Dropout, DepthwiseConv2D
+from tensorflow.keras.layers import Activation, BatchNormalization, add, Reshape, ReLU
+from tensorflow.keras import backend as K
 
 
 def _make_divisible(v, divisor, min_value=None):

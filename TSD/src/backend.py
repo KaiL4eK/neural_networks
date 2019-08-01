@@ -1,6 +1,8 @@
-from keras.layers import Conv2D, Input, BatchNormalization, LeakyReLU
-from keras.layers import Concatenate, MaxPooling2D, UpSampling2D
-from keras.regularizers import l2
+from tensorflow.keras.layers import Conv2D, Input, BatchNormalization, LeakyReLU
+from tensorflow.keras.layers import Concatenate, MaxPooling2D, UpSampling2D
+from tensorflow.keras.layers import ZeroPadding2D, add, concatenate
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2 as Keras_MobileNetV2
 
 from functools import wraps, reduce
 
@@ -29,8 +31,7 @@ class MobileNetV2(DetBackend):
         alpha = self.alpha
 
         if original_model:
-            from keras.applications.mobilenetv2 import MobileNetV2
-            mobilenetv2 = MobileNetV2(
+            mobilenetv2 = Keras_MobileNetV2(
                 input_tensor=image_input, include_top=False, weights=None, alpha=alpha)
             x = mobilenetv2.output
         else:
