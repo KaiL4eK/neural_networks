@@ -9,10 +9,11 @@ import tensorflow as tf
 from generator import BatchGenerator
 from utils.utils import normalize, evaluate, makedirs, init_session, unfreeze_model
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
-from tensorflow.keras.optimizers import Adam, SGD
+from tensorflow.keras.optimizers import Adam, SGD, RMSprop
 from tensorflow.keras.utils import plot_model
-
 from tensorflow.keras.models import load_model
+from tensorflow.keras.backend import clear_session
+
 from _common import utils
 from _common.callbacks import CustomModelCheckpoint, CustomTensorBoard, MAP_evaluation
 from _common.voc import parse_voc_annotation, split_by_objects, replace_all_labels_2_one
@@ -76,14 +77,10 @@ def create_training_instances(
     return train_ints, valid_ints, sorted(labels), max_box_per_image
 
 
-def train(config, initial_weights):
-
+def prepare_generators(config):
     if config['train']['cache_name']:
         makedirs(os.path.dirname(config['train']['cache_name']))
 
-    ###############################
-    #   Parse the annotations
-    ###############################
     train_ints, valid_ints, labels, max_box_per_image = create_training_instances(
         config['train']['train_annot_folder'],
         config['train']['train_image_folder'],
@@ -130,9 +127,15 @@ def train(config, initial_weights):
         infer_sz=config['model']['infer_shape']
     )
 
-    ###############################
-    #   Create the model
-    ###############################
+    config['other'] = {
+        'labels': labels,
+        'mbpi': max_box_per_image
+    }
+
+    return train_generator, valid_generator
+
+
+def prepare_model(config, initial_weights):
 
     os.environ['CUDA_VISIBLE_DEVICES'] = config['train']['gpus']
     multi_gpu = len(config['train']['gpus'].split(','))
@@ -140,19 +143,19 @@ def train(config, initial_weights):
     freezing = config['train'].get('freeze', True)
     config['train']['warmup_epochs'] = 0
 
-    warmup_batches = config['train']['warmup_epochs'] * \
-        (config['train']['train_times'] * len(train_generator))
+    # warmup_batches = config['train']['warmup_epochs'] * \
+    #     (config['train']['train_times'] * len(train_generator))
 
     if initial_weights and os.path.exists(initial_weights):
         freezing = False
 
     train_model, infer_model, _ = yolo.create_model_new(
-        nb_class=len(labels),
+        nb_class=len(config['other']['labels']),
         anchors=config['model']['anchors'],
-        max_box_per_image=max_box_per_image,
+        max_box_per_image=config['other']['mbpi'],
         max_input_size=config['model']['max_input_size'],
         batch_size=config['train']['batch_size'],
-        warmup_batches=warmup_batches,
+        warmup_batches=0,
         ignore_thresh=config['train']['ignore_thresh'],
         multi_gpu=multi_gpu,
         grid_scales=config['train']['grid_scales'],
@@ -168,7 +171,7 @@ def train(config, initial_weights):
     model_render_file = 'images/{}.png'.format(config['model']['base'])
     if not os.path.isdir(os.path.dirname(model_render_file)):
         os.makedirs(os.path.dirname(model_render_file))
-    plot_model(infer_model, to_file=model_render_file, show_shapes=True)
+    # plot_model(infer_model, to_file=model_render_file, show_shapes=True)
     # infer_model.summary()
 
     # load the pretrained weight if exists, otherwise load the backend weight only
@@ -177,10 +180,10 @@ def train(config, initial_weights):
         train_model.load_weights(
             initial_weights, by_name=True, skip_mismatch=True)
 
-    ###############################
-    #   Kick off the training
-    ###############################
+    return train_model, infer_model, freezing
 
+
+def train_freezed(config, train_model, train_generator, valid_generator):
     early_stop = EarlyStopping(
         monitor='val_loss',
         min_delta=0.1,
@@ -192,7 +195,7 @@ def train(config, initial_weights):
     callbacks = [early_stop]
 
     if freezing:
-        optimizer = Adam()
+        optimizer = Adam(lr=1e-3)
         train_model.compile(loss=yolo.dummy_loss, optimizer=optimizer)
         train_model.fit_generator(
             generator=train_generator,
@@ -217,6 +220,30 @@ def train(config, initial_weights):
 
     unfreeze_model(infer_model)
 
+
+def train_grid_search(config, initial_weights, lr_list, optimizer_list):
+    train_generator, valid_generator = prepare_generators(config)
+
+    for lr in lr_list:
+        for optimizer in optimizer_list:
+            config['train']['learning_rate'] = lr
+            config['train']['optimizer'] = optimizer
+
+            train_model, infer_model, freezing = prepare_model(
+                config, initial_weights)
+
+            if freezing:
+                train_freezed(config, train_model,
+                              train_generator, valid_generator)
+
+            print('Training with {} / {}'.format(lr, optimizer))
+            train(config, train_model, infer_model,
+                  train_generator, valid_generator)
+
+            clear_session()
+
+
+def train(config, train_model, infer_model, train_generator, valid_generator):
     print('Full training')
 
     checkpoint_name = utils.get_checkpoint_name(config)
@@ -279,7 +306,8 @@ def train(config, initial_weights):
 
     optimizers = {
         'SGD': SGD(lr=config['train']['learning_rate'], momentum=0.9, decay=0.0005),
-        'Adam': Adam(lr=config['train']['learning_rate'])
+        'Adam': Adam(lr=config['train']['learning_rate']),
+        'RMSprop': RMSprop(lr=config['train']['learning_rate']),
     }
 
     optimizer = optimizers[config['train']['optimizer']]
@@ -341,4 +369,5 @@ if __name__ == '__main__':
     with open(config_path) as config_buffer:
         config = json.loads(config_buffer.read())
 
-    train(config, initial_weights)
+    train_grid_search(config, initial_weights, [
+                      1e-3, 1e-4, 1e-5], ['RMSprop', 'Adam'])

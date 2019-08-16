@@ -1,16 +1,11 @@
 from functools import wraps, reduce
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.regularizers import l2
-from tensorflow.keras.layers import Layer, Input
+from tensorflow.keras.layers import Layer, Input, Conv2D
 from tensorflow.keras.models import Model
 
 import backend
 import os
-
-# from keras.layers import Concatenate, MaxPooling2D
-# from keras.layers import Conv2D, Input, BatchNormalization, LeakyReLU
-# from keras.layers import ZeroPadding2D, UpSampling2D, Lambda, Conv2DTranspose, Flatten, ReLU
 
 
 def dummy_loss(y_true, y_pred):
@@ -305,180 +300,6 @@ class YoloLayer(Layer):
         return [(None, 1)]
 
 
-def create_squeeze_model(
-    nb_class,
-    anchors,
-    max_box_per_image,
-    max_grid,
-    batch_size,
-    warmup_batches,
-    ignore_thresh,
-    grid_scales,
-    obj_scale,
-    noobj_scale,
-    xywh_scale,
-    class_scale,
-    train_shape
-):
-    outputs = 1
-    anchors_per_output = len(anchors)//2//outputs
-
-    image_input = Input(shape=train_shape, name='input_img')
-    true_boxes = Input(shape=(1, 1, 1, max_box_per_image, 4),
-                       name='input_true_boxes')
-    # grid_h, grid_w, nb_anchor, 5+nb_class
-    true_yolo_1 = Input(shape=(None, None, anchors_per_output,
-                               4+1+nb_class), name='input_true_yolo_x32')
-
-    yolo_anchors = []
-
-    for i in reversed(range(outputs)):
-        yolo_anchors += [anchors[i*2 *
-                                 anchors_per_output:(i+1)*2*anchors_per_output]]
-
-    # yolo_anchors = [anchors[12:18], anchors[6:12], anchors[0:6]]
-    pred_filter_count = (anchors_per_output*(5+nb_class))
-
-    sq1x1 = "squeeze1x1"
-    exp1x1 = "expand1x1"
-    exp3x3 = "expand3x3"
-    relu = "relu_"
-
-    def fire_module(x, fire_id, squeeze=16, expand=64):
-        s_id = 'fire' + str(fire_id) + '/'
-
-        x = Conv2D(squeeze, (1, 1), padding='valid', name=s_id + sq1x1)(x)
-        # x     = LeakyReLU(name=s_id + relu + sq1x1)(x)
-        x = ReLU(6., name=s_id + relu + sq1x1)(x)
-
-        left = Conv2D(expand,  (1, 1), padding='valid', name=s_id + exp1x1)(x)
-        # left  = LeakyReLU(name=s_id + relu + exp1x1)(left)
-        left = ReLU(6., name=s_id + relu + exp1x1)(left)
-
-        right = Conv2D(expand,  (3, 3), padding='same',  name=s_id + exp3x3)(x)
-        # right = LeakyReLU(name=s_id + relu + exp3x3)(right)
-        right = ReLU(6., name=s_id + relu + exp3x3)(right)
-
-        x = add([left, right], name=s_id + 'concat')
-
-        return x
-
-    x = Conv2D(64, (3, 3), strides=(2, 2),
-               padding='same', name='conv1')(image_input)
-    # x = LeakyReLU(name='relu_conv1')(x)
-    x = ReLU(6., name='relu_conv1')(x)
-
-    x = MaxPooling2D(pool_size=(2, 2), name='pool1')(x)
-
-    x = fire_module(x, fire_id=2, squeeze=16, expand=64)
-    x = fire_module(x, fire_id=3, squeeze=16, expand=64)
-
-    x = MaxPooling2D(pool_size=(2, 2), name='pool3')(x)
-
-    x = fire_module(x, fire_id=4, squeeze=32, expand=128)
-    x = fire_module(x, fire_id=5, squeeze=32, expand=128)
-
-    x = MaxPooling2D(pool_size=(2, 2), name='pool5')(x)
-
-    # x = ZeroPadding2D(padding=(1, 1))(x)
-
-    x = fire_module(x, fire_id=6, squeeze=48, expand=192)
-    x = fire_module(x, fire_id=7, squeeze=48, expand=192)
-
-    x = MaxPooling2D(pool_size=(2, 2), name='pool7')(x)
-
-    x = fire_module(x, fire_id=8, squeeze=64, expand=256)
-    x = fire_module(x, fire_id=9, squeeze=64, expand=256)
-
-    pred_yolo_1 = Conv2D(pred_filter_count,
-                         (1, 1),
-                         strides=(1, 1),
-                         padding='same',
-                         name='DetectionLayer',
-                         kernel_initializer='lecun_normal')(x)
-
-    loss_yolo_1 = YoloLayer(yolo_anchors[0],
-                            [1*num for num in max_grid],
-                            batch_size,
-                            warmup_batches,
-                            ignore_thresh,
-                            grid_scales[0],
-                            obj_scale,
-                            noobj_scale,
-                            xywh_scale,
-                            class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes])
-
-    train_model = Model([image_input, true_boxes, true_yolo_1], [loss_yolo_1])
-    infer_model = Model(image_input, [pred_yolo_1])
-
-    return train_model, infer_model, infer_model, 0
-
-
-def create_xception_model(
-    nb_class,
-    anchors,
-    max_box_per_image,
-    max_grid,
-    batch_size,
-    warmup_batches,
-    ignore_thresh,
-    grid_scales,
-    obj_scale,
-    noobj_scale,
-    xywh_scale,
-    class_scale,
-    train_shape,
-    **kwargs
-):
-    outputs = 1
-    anchors_per_output = len(anchors)//2//outputs
-
-    image_input = Input(shape=train_shape, name='input_img')
-    true_boxes = Input(shape=(1, 1, 1, max_box_per_image, 4),
-                       name='input_true_boxes')
-    true_yolo_1 = Input(shape=(None, None, anchors_per_output, 4+1+nb_class),
-                        name='input_true_yolo_x32')  # grid_h, grid_w, nb_anchor, 5+nb_class
-
-    yolo_anchors = []
-
-    for i in reversed(range(outputs)):
-        yolo_anchors += [anchors[i*2 *
-                                 anchors_per_output:(i+1)*2*anchors_per_output]]
-
-    # yolo_anchors = [anchors[12:18], anchors[6:12], anchors[0:6]]
-    pred_filter_count = (anchors_per_output*(5+nb_class))
-
-    from keras.applications.xception import Xception
-
-    xception = Xception(input_tensor=image_input,
-                        include_top=False, weights='imagenet')
-
-    x = xception.output
-
-    pred_yolo_1 = Conv2D(pred_filter_count, 1, padding='same',
-                         strides=1, name='DetectionLayer1')(x)
-    loss_yolo_1 = YoloLayer(yolo_anchors[0],
-                            [1*num for num in max_grid],
-                            batch_size,
-                            warmup_batches,
-                            ignore_thresh,
-                            grid_scales[0],
-                            obj_scale,
-                            noobj_scale,
-                            xywh_scale,
-                            class_scale)([image_input, pred_yolo_1, true_yolo_1, true_boxes])
-
-    train_model = Model([image_input, true_boxes, true_yolo_1], [loss_yolo_1])
-    infer_model = Model(image_input, [pred_yolo_1])
-
-    freeze_layers_cnt = len(infer_model.layers) - 4
-    print('Non-freezed layers {}'.format(freeze_layers_cnt))
-
-    mvnc_model = infer_model
-
-    return train_model, infer_model, mvnc_model, freeze_layers_cnt
-
-
 def create_yolo_head_models(
     done_backend,
     nb_class,
@@ -498,7 +319,7 @@ def create_yolo_head_models(
     true_boxes = Input(shape=(1, 1, 1, max_box_per_image, 4),
                        name='input_true_boxes')
     true_yolos = []
-    for i in range(len(done_backend.pred_layers)):
+    for i in range(len(done_backend.outputs)):
         # grid_h, grid_w, nb_anchor, 5+nb_class
         true_yolo = Input(shape=(None, None, anchors_per_output, 4+1+nb_class),
                           name='input_true_yolo_{}_x{}'.format(i, done_backend.downgrades[i]))
@@ -506,15 +327,25 @@ def create_yolo_head_models(
         true_yolos += [true_yolo]
 
     yolo_anchors = []
-    for i in reversed(range(len(done_backend.pred_layers))):
+    for i in reversed(range(len(done_backend.outputs))):
         yolo_anchors += [anchors[i*2 *
                                  anchors_per_output:(i+1)*2*anchors_per_output]]
 
     image_input = done_backend.input_layers[0]
     loss_yolos = []
-    for idx, pred in enumerate(done_backend.pred_layers):
+    pred_layers = []
+    for idx, out in enumerate(done_backend.outputs):
         max_grid_hw = np.array([max_input_size[0] // done_backend.downgrades[idx],
                                 max_input_size[1] // done_backend.downgrades[idx]])
+
+        pred_yolo = Conv2D(filters=anchors_per_output*(4+1+nb_class),
+                           kernel_size=(1, 1),
+                           strides=(1, 1),
+                           padding='same',
+                           name='PredictionLayer_'+str(idx),
+                           kernel_initializer='lecun_normal'
+                           )(out)
+        pred_layers += [pred_yolo]
 
         loss_yolo = YoloLayer(yolo_anchors[idx],
                               max_grid_hw,
@@ -525,12 +356,12 @@ def create_yolo_head_models(
                               obj_scale,
                               noobj_scale,
                               xywh_scale,
-                              class_scale)([image_input, pred, true_yolos[idx], true_boxes])
+                              class_scale)([image_input, pred_yolo, true_yolos[idx], true_boxes])
 
         loss_yolos += [loss_yolo]
 
     train_model = Model([image_input, true_boxes] + true_yolos, loss_yolos)
-    infer_model = Model(image_input, done_backend.pred_layers)
+    infer_model = Model(image_input, pred_layers)
     mvnc_model = infer_model
 
     return train_model, infer_model, mvnc_model
@@ -557,7 +388,7 @@ def create_model_new(
     is_freezed=False
 ):
     backend_options = {
-        'pred_filters':         anchors_per_output*(4+1+nb_class),
+        # 'pred_filters':         anchors_per_output*(4+1+nb_class),
         'train_shape':          train_shape
     }
 
@@ -568,8 +399,8 @@ def create_model_new(
                 'MobileNetv2_50':   (backend.MobileNetV2_50,    ""),
                 'MobileNetv2_75':   (backend.MobileNetV2_75,    ""),
                 'MobileNetv2_100':  (backend.MobileNetV2_100,   ""),
-                'SqueezeNet':       (create_squeeze_model,      ""),
-                'Xception':         (create_xception_model,     "")
+                'SqueezeNet':       (backend.SqueezeNet,        ""),
+                'Xception':         (backend.Xception,          "")
                 }
 
     if base not in backends:
@@ -596,10 +427,13 @@ def create_model_new(
         class_scale
     )
 
-    if backends[base][1]:
+    weights_path = os.path.join('src_weights', backends[base][1])
+    if backends[base][1] and os.path.exists(weights_path):
         print('Loading {}'.format(backends[base][1]))
-        train_model.load_weights(os.path.join(
-            'src_weights', backends[base][1]), by_name=True)
+        train_model.load_weights(
+            weights_path,
+            by_name=True
+        )
 
     if is_freezed and new_backend.head_layers_cnt > 0:
         freeze_layers_cnt = len(infer_model.layers) - \
