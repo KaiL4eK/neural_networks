@@ -141,7 +141,7 @@ class MAP_evaluation(Callback):
 
             if self.save_best and self.save_name_fmt:
                 # and logs['val_loss'] <= self.bestVloss:
-                if mAP >= self.bestMap:
+                if mAP > self.bestMap:
                     # self.bestVloss = logs['val_loss']
                     save_name = self.save_name_fmt.format(
                         epoch=epoch + 1, mAP=mAP, **logs)

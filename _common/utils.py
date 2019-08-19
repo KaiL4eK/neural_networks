@@ -60,11 +60,13 @@ def get_mAP_checkpoint_name(config):
 
 def get_tensorboard_name(config):
     tensorboard_logdir_idx = 0
-    root = 'logs/{}_{}x{}_{}_lr{}'.format(config['model']['main_name'], \
+    root = 'logs/{}_{}x{}_{}_lr{}_b{}'.format(config['model']['main_name'], \
                                      config['model']['infer_shape'][0], \
                                      config['model']['infer_shape'][1],
                                      config['train']['optimizer'],
-                                     config['train']['learning_rate'])
+                                     config['train']['learning_rate'],
+                                     config['train']['batch_size']
+    )
 
     while True:
         name = "%s-%d" % (root, tensorboard_logdir_idx)

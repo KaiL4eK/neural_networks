@@ -1,10 +1,10 @@
 {
     "model" : {
-        "main_name":            "TSD_YOLOv3_Tiny",
+        "main_name":            "TSD_NewMbNv2",
         "min_input_size":       [416, 416],
         "max_input_size":       [416, 416],
-        "base":                 "TinyV3",
-        "anchors":              [5,5, 6,7, 8,8, 11,12, 19,18, 31,30],
+        "base":                 "NewMobileNetv2",
+        "anchors":              [8,8, 13,13, 24,24],
         "anchors_per_output":   3,
         "labels":               [],
         "infer_shape":          [416, 416]
@@ -23,8 +23,8 @@
         "gpus":                 "0",
         
         "optimizer":            "Adam",
-        "learning_rate":        1e-4,
-        "lr_decay":             0.002,
+        "learning_rate":        3e-4,
+        "lr_decay":             0.001,
         "clipnorm":             0.001,
         
         "grid_scales":          [1,1,1],

@@ -5,7 +5,6 @@ from tensorflow.keras.regularizers import l2
 from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2 as Keras_MobileNetV2
 from tensorflow.keras.applications.xception import Xception as Keras_Xception
 
-
 from functools import wraps, reduce
 
 
@@ -99,56 +98,66 @@ class Xception(DetBackend):
         self.downgrades = [32]
 
 
+class NewMobileNetV2(DetBackend):
+    def __init__(self, **kwargs):
+        train_shape = kwargs['train_shape']
+
+        image_input = Input(shape=train_shape, name='input_img')
+
+        import mobilenet_utils as mnu
+
+        alpha = 0.5
+
+        channel_axis = 1 if mnu.K.image_data_format() == 'channels_first' else -1
+
+        first_block_filters = mnu._make_divisible(32 * alpha, 8)
+
+        x = mnu.Conv2D(first_block_filters, 3, padding='same',
+                        strides=2, use_bias=False, name='Conv1')(image_input)
+        x = mnu.BatchNormalization(axis=channel_axis, name='bn_Conv1')(x)
+        x = mnu.ReLU(6., name='Conv1_relu')(x)
+
+        x = mnu._inverted_residual_block(
+            x, filters=16, kernel=3, t=1, strides=1, n=1, alpha=alpha, block_id=0)
+        x = mnu._inverted_residual_block(
+            x, filters=24, kernel=3, t=6, strides=2, n=2, alpha=alpha, block_id=1)
+        x = mnu._inverted_residual_block(
+            x, filters=32, kernel=3, t=6, strides=2, n=3, alpha=alpha, block_id=3)
+        x = mnu._inverted_residual_block(
+            x, filters=64, kernel=3, t=6, strides=2, n=4, alpha=alpha, block_id=6)
+        x = mnu._inverted_residual_block(
+            x, filters=96, kernel=3, t=6, strides=1, n=3, alpha=alpha, block_id=10)
+        # x = mnu._inverted_residual_block(
+        #     x, filters=160, kernel=3, t=6, strides=2, n=3, alpha=alpha, block_id=13)
+        # x = mnu._inverted_residual_block(
+        #     x, filters=320, kernel=3, t=6, strides=1, n=1, alpha=alpha, block_id=16)
+
+        last_block_filters = mnu._make_divisible(1280 / 4 * alpha, 8)
+        # last_block_filters = 1280
+        x = mnu.Conv2D(last_block_filters, 1, padding='same',
+                        strides=1, use_bias=False, name='Conv_1')(x)
+        x = mnu.BatchNormalization(axis=channel_axis, name='Conv_1_bn')(x)
+        x = mnu.ReLU(6., name='out_relu')(x)
+
+        self.outputs = [x]
+        self.input_layers = [image_input]
+
+        self.head_layers_cnt = 1
+        self.downgrades = [16]
+
+
 class MobileNetV2(DetBackend):
     def __init__(self, **kwargs):
         train_shape = kwargs['train_shape']
 
         image_input = Input(shape=train_shape, name='input_img')
 
-        original_model = True
-        ##########################
-        import mobilenet_utils as mnu
-        import os
-
         alpha = self.alpha
 
-        if original_model:
-            mobilenetv2 = Keras_MobileNetV2(
-                input_tensor=image_input, include_top=False, weights=None, alpha=alpha)
-            x = mobilenetv2.output
-        else:
-            channel_axis = 1 if mnu.K.image_data_format() == 'channels_first' else -1
-
-            first_block_filters = mnu._make_divisible(32 * alpha, 8)
-
-            x = mnu.Conv2D(first_block_filters, 3, padding='same',
-                           strides=2, use_bias=False, name='Conv1')(image_input)
-            x = mnu.BatchNormalization(axis=channel_axis, name='bn_Conv1')(x)
-            x = mnu.ReLU(6., name='Conv1_relu')(x)
-
-            x = mnu._inverted_residual_block(
-                x, 16, 3, t=1, strides=1, n=1, alpha=alpha, block_id=0)
-            x = mnu._inverted_residual_block(
-                x, 24, 3, t=6, strides=2, n=2, alpha=alpha, block_id=1)
-            x = mnu._inverted_residual_block(
-                x, 32, 3, t=6, strides=2, n=3, alpha=alpha, block_id=3)
-            x = mnu._inverted_residual_block(
-                x, 64, 3, t=6, strides=2, n=4, alpha=alpha, block_id=6)
-            x = mnu._inverted_residual_block(
-                x, 96, 3, t=6, strides=1, n=3, alpha=alpha, block_id=10)
-            x = mnu._inverted_residual_block(
-                x, 160, 3, t=6, strides=2, n=3, alpha=alpha, block_id=13)
-            x = mnu._inverted_residual_block(
-                x, 320, 3, t=6, strides=1, n=1, alpha=alpha, block_id=16)
-
-            # last_block_filters = mnu._make_divisible(1280 * alpha, 8)
-            last_block_filters = 1280
-            x = mnu.Conv2D(last_block_filters, 1, padding='same',
-                           strides=1, use_bias=False, name='Conv_1')(x)
-            x = mnu.BatchNormalization(axis=channel_axis, name='Conv_1_bn')(x)
-            x = mnu.ReLU(6., name='out_relu')(x)
-
-        ##########################
+        mobilenetv2 = Keras_MobileNetV2(
+            input_tensor=image_input, include_top=False, weights=None, alpha=alpha)
+        x = mobilenetv2.output
+    
         self.outputs = [x]
         self.input_layers = [image_input]
 

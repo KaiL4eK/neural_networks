@@ -22,7 +22,7 @@ class YoloLayer(Layer):
         self.ignore_thresh = ignore_thresh
         self.warmup_batches = warmup_batches
         self.anchors = tf.constant(
-            anchors, dtype='float', shape=[1, 1, 1, 3, 2])
+            anchors, dtype='float', shape=[1, 1, 1, len(anchors)/2, 2])
         self.grid_scale = grid_scale
         self.obj_scale = obj_scale
         self.noobj_scale = noobj_scale
@@ -90,6 +90,9 @@ class YoloLayer(Layer):
             tf.cast([grid_w, grid_h], tf.float32),
             [1, 1, 1, 1, 2]
         )
+
+        # grid_factor = tf.Print(grid_factor, [grid_h, grid_w],
+        #                         message='sz \t\t', summarize=1000)
 
         net_h = tf.shape(input_image)[1]
         net_w = tf.shape(input_image)[2]
@@ -338,6 +341,9 @@ def create_yolo_head_models(
         max_grid_hw = np.array([max_input_size[0] // done_backend.downgrades[idx],
                                 max_input_size[1] // done_backend.downgrades[idx]])
 
+        # import tensorflow.keras.backend as K
+        # print('>>>> {}'.format(K.shape(out)[1]))
+
         pred_yolo = Conv2D(filters=anchors_per_output*(4+1+nb_class),
                            kernel_size=(1, 1),
                            strides=(1, 1),
@@ -363,6 +369,9 @@ def create_yolo_head_models(
     train_model = Model([image_input, true_boxes] + true_yolos, loss_yolos)
     infer_model = Model(image_input, pred_layers)
     mvnc_model = infer_model
+
+    # import tensorflow.keras.backend as K
+    # print('>>>> {}'.format(K.shape(out)[1]))
 
     return train_model, infer_model, mvnc_model
 
@@ -399,6 +408,7 @@ def create_model_new(
                 'MobileNetv2_50':   (backend.MobileNetV2_50,    ""),
                 'MobileNetv2_75':   (backend.MobileNetV2_75,    ""),
                 'MobileNetv2_100':  (backend.MobileNetV2_100,   ""),
+                'NewMobileNetv2':   (backend.NewMobileNetV2,    ""),
                 'SqueezeNet':       (backend.SqueezeNet,        ""),
                 'Xception':         (backend.Xception,          "")
                 }

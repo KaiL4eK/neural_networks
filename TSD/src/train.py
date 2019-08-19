@@ -9,72 +9,16 @@ import tensorflow as tf
 from generator import BatchGenerator
 from utils.utils import normalize, evaluate, makedirs, init_session, unfreeze_model
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
-from tensorflow.keras.optimizers import Adam, SGD, RMSprop
+import tensorflow.keras.optimizers as opt
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.models import load_model
 from tensorflow.keras.backend import clear_session
 
 from _common import utils
 from _common.callbacks import CustomModelCheckpoint, CustomTensorBoard, MAP_evaluation
-from _common.voc import parse_voc_annotation, split_by_objects, replace_all_labels_2_one
+from _common.voc import parse_voc_annotation, split_by_objects, replace_all_labels_2_one, create_training_instances
 
 # MBN2 - 149 ms/step
-
-
-def create_training_instances(
-        train_annot_folder,
-        train_image_folder,
-        train_cache,
-        valid_annot_folder,
-        valid_image_folder,
-        valid_cache,
-        labels,
-):
-    # parse annotations of the training set
-    train_ints, train_labels = parse_voc_annotation(
-        train_annot_folder, train_image_folder, train_cache, labels)
-
-    # parse annotations of the validation set, if any, otherwise split the training set
-    if valid_annot_folder:
-        valid_ints, valid_labels = parse_voc_annotation(
-            valid_annot_folder, valid_image_folder, valid_cache, labels)
-    else:
-        from sklearn.model_selection import train_test_split
-
-        print("valid_annot_folder not exists. Spliting the trainining set.")
-
-        train_ints, valid_ints = train_test_split(train_ints,
-                                                  test_size=0.2,
-                                                  random_state=42)
-        valid_labels = train_labels
-
-        # train_ints, train_labels, valid_ints, valid_labels = split_by_objects(
-        # train_ints, train_labels, 0.2)
-
-    print('After split: {} / {}'.format(len(train_ints), len(valid_ints)))
-
-    # compare the seen labels with the given labels in config.json
-    if len(labels) > 0:
-        overlap_labels = set(labels).intersection(set(train_labels.keys()))
-
-        print('Seen labels: \t' + str(train_labels) + '\n')
-        print('Given labels: \t' + str(labels))
-
-        # return None, None, None if some given label is not in the dataset
-        if len(overlap_labels) != len(labels):
-            print(
-                'Some labels have no annotations! Please revise the list of labels in the config.json.')
-            return None, None, None
-    else:
-        print('No labels are provided. Train on all seen labels.')
-        print(train_labels)
-        print(valid_labels)
-        labels = train_labels.keys()
-
-    max_box_per_image = max([len(inst['object'])
-                             for inst in (train_ints + valid_ints)])
-
-    return train_ints, valid_ints, sorted(labels), max_box_per_image
 
 
 def prepare_generators(config):
@@ -106,7 +50,7 @@ def prepare_generators(config):
         instances=train_ints,
         anchors=config['model']['anchors'],
         labels=labels,
-        downsample=32,  # ratio between network input's size and network output's size, 32 for YOLOv3
+        downsample=16,  # ratio between network input's size and network output's size, 32 for YOLOv3
         max_box_per_image=max_box_per_image,
         batch_size=config['train']['batch_size'],
         min_net_size=config['model']['min_input_size'],
@@ -120,7 +64,7 @@ def prepare_generators(config):
         instances=valid_ints,
         anchors=config['model']['anchors'],
         labels=labels,
-        downsample=32,  # ratio between network input's size and network output's size, 32 for YOLOv3
+        downsample=16,  # ratio between network input's size and network output's size, 32 for YOLOv3
         max_box_per_image=max_box_per_image,
         batch_size=config['train']['batch_size'],
         norm=normalize,
@@ -221,29 +165,7 @@ def train_freezed(config, train_model, train_generator, valid_generator):
     unfreeze_model(infer_model)
 
 
-def train_grid_search(config, initial_weights, lr_list, optimizer_list):
-    train_generator, valid_generator = prepare_generators(config)
-
-    for lr in lr_list:
-        for optimizer in optimizer_list:
-            config['train']['learning_rate'] = lr
-            config['train']['optimizer'] = optimizer
-
-            train_model, infer_model, freezing = prepare_model(
-                config, initial_weights)
-
-            if freezing:
-                train_freezed(config, train_model,
-                              train_generator, valid_generator)
-
-            print('Training with {} / {}'.format(lr, optimizer))
-            train(config, train_model, infer_model,
-                  train_generator, valid_generator)
-
-            clear_session()
-
-
-def train(config, train_model, infer_model, train_generator, valid_generator):
+def start_train(config, train_model, infer_model, train_generator, valid_generator):
     print('Full training')
 
     checkpoint_name = utils.get_checkpoint_name(config)
@@ -305,15 +227,19 @@ def train(config, train_model, infer_model, train_generator, valid_generator):
     ###############################
 
     optimizers = {
-        'SGD': SGD(lr=config['train']['learning_rate'], momentum=0.9, decay=0.0005),
-        'Adam': Adam(lr=config['train']['learning_rate']),
-        'RMSprop': RMSprop(lr=config['train']['learning_rate']),
+        'SGD': opt.SGD(lr=config['train']['learning_rate']),
+        'Adam': opt.Adam(lr=config['train']['learning_rate']),
+        'Nadam': opt.Nadam(lr=config['train']['learning_rate']),
+        'RMSprop': opt.RMSprop(lr=config['train']['learning_rate']),
     }
 
     optimizer = optimizers[config['train']['optimizer']]
 
     if config['train']['clipnorm'] > 0:
         optimizer.clipnorm = config['train']['clipnorm']
+
+    if config['train'].get('lr_decay', 0) > 0:
+        optimizer.decay = config['train']['lr_decay']
 
     callbacks = [checkpoint_vloss, tensorboard_cb, map_evaluator_cb]
 
@@ -357,8 +283,7 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser(
         description='train and evaluate YOLO_v3 model on any dataset')
     argparser.add_argument('-c', '--conf', help='path to configuration file')
-    argparser.add_argument(
-        '-w', '--weights', help='path to pretrained model', default=None)
+    argparser.add_argument('-w', '--weights', help='path to pretrained model', default=None)
     args = argparser.parse_args()
 
     init_session(1.0)
@@ -369,5 +294,13 @@ if __name__ == '__main__':
     with open(config_path) as config_buffer:
         config = json.loads(config_buffer.read())
 
-    train_grid_search(config, initial_weights, [
-                      1e-3, 1e-4, 1e-5], ['RMSprop', 'Adam'])
+    train_generator, valid_generator = prepare_generators(config)
+
+    train_model, infer_model, freezing = prepare_model(config, initial_weights)
+
+    if freezing:
+        train_freezed(config, train_model, train_generator, valid_generator)
+
+    start_train(config, train_model, infer_model, train_generator, valid_generator)
+
+    clear_session()

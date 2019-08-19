@@ -17,13 +17,14 @@
 
         "train_times":          3,
         "batch_size":           4,
-        "learning_rate":        1e-4,
         "nb_epochs":            500,
         "warmup_epochs":        0,
         "ignore_thresh":        0.5,
         "gpus":                 "0",
         
         "optimizer":            "Adam",
+        "learning_rate":        1e-4,
+        "lr_decay":             0.002,
         "clipnorm":             0.001,
         
         "grid_scales":          [1,1,1],
