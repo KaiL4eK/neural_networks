@@ -77,7 +77,7 @@ def _bottleneck(inputs, filters, kernel, t, s, r, block_id, alpha=1.0):
     return x
 
 
-def _inverted_residual_block(inputs, filters, kernel, t, strides, n, block_id, alpha=1.0):
+def _inverted_residual_block(inputs, filters, kernel, t, s, n, block_id, alpha=1.0):
     """Inverted Residual Block
     This function defines a sequence of 1 or more identical layers.
     # Arguments
@@ -95,7 +95,7 @@ def _inverted_residual_block(inputs, filters, kernel, t, strides, n, block_id, a
         Output tensor.
     """
 
-    x = _bottleneck(inputs, filters, kernel, t, strides, r=False, block_id=block_id, alpha=alpha)
+    x = _bottleneck(inputs, filters, kernel, t, s, r=False, block_id=block_id, alpha=alpha)
 
     for i in range(1, n):
         x = _bottleneck(x, filters, kernel, t, 1, r=True, block_id=block_id + i, alpha=alpha)

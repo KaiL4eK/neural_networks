@@ -401,7 +401,9 @@ def create_model_new(
         'train_shape':          train_shape
     }
 
-    backends = {'TinyV3':           (backend.Tiny_YOLOv3,       "yolov3-tiny.h5"),
+    backends = {
+                'TinyV3':           (backend.Tiny_YOLOv3,       "yolov3-tiny.h5"),
+                'SmallTinyV3':      (backend.Small_Tiny_YOLOv3, "yolov3-tiny.h5"),
                 'Darknet53':        (backend.Darknet53,         "yolov3_exp.h5"),
                 'Darknet19':        (backend.Darknet19,         "yolov2.h5"),
                 'MobileNetv2_35':   (backend.MobileNetV2_35,    ""),
