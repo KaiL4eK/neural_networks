@@ -403,7 +403,7 @@ def create_model_new(
 
     backends = {
                 'TinyV3':           (backend.Tiny_YOLOv3,       "yolov3-tiny.h5"),
-                'SmallTinyV3':      (backend.Small_Tiny_YOLOv3, "yolov3-tiny.h5"),
+                'SmallTinyV3':      (backend.Small_Tiny_YOLOv3, ""),
                 'Darknet53':        (backend.Darknet53,         "yolov3_exp.h5"),
                 'Darknet19':        (backend.Darknet19,         "yolov2.h5"),
                 'MobileNetv2_35':   (backend.MobileNetV2_35,    ""),
@@ -440,7 +440,7 @@ def create_model_new(
     )
 
     weights_path = os.path.join('src_weights', backends[base][1])
-    if backends[base][1] and os.path.exists(weights_path):
+    if backends[base][1] and os.path.exists(weights_path) and load_src_weights:
         print('Loading {}'.format(backends[base][1]))
         train_model.load_weights(
             weights_path,

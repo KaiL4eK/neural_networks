@@ -1,12 +1,12 @@
 from tensorflow.keras.layers import Conv2D, Input, BatchNormalization, LeakyReLU
 from tensorflow.keras.layers import Concatenate, MaxPooling2D, UpSampling2D
 from tensorflow.keras.layers import ZeroPadding2D, add, concatenate, Lambda
-from tensorflow.keras.regularizers import l2
+
 from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2 as Keras_MobileNetV2
 from tensorflow.keras.applications.xception import Xception as Keras_Xception
 
-from functools import wraps, reduce
-
+import mobilenet_utils as mnu
+import darknet_utils as dnu
 
 class DetBackend(object):
     def __init__(self):
@@ -17,6 +17,7 @@ class DetBackend(object):
         self.downgrades = [1]
 
 
+# 6,6, 7,7, 8,8, 10,10, 12,11, 14,14, 18,17, 23,22, 32,31
 # 6,6, 9,9, 12,12, 15,15, 21,20, 31,30
 # 8,8, 14,13, 25,24
 class NewMobileNetV2(DetBackend):
@@ -24,8 +25,6 @@ class NewMobileNetV2(DetBackend):
         train_shape = kwargs['train_shape']
 
         image_input = Input(shape=train_shape, name='input_img')
-
-        import mobilenet_utils as mnu
 
         alpha = 0.35
 
@@ -200,174 +199,63 @@ class Tiny_YOLOv3(DetBackend):
 
         image_input = Input(shape=train_shape, name='input_img')
 
-        @wraps(Conv2D)
-        def DarknetConv2D(*args, **kwargs):
-            """Wrapper to set Darknet parameters for Convolution2D."""
-            darknet_conv_kwargs = {'kernel_regularizer': l2(5e-4)}
-            darknet_conv_kwargs['padding'] = 'valid' if kwargs.get(
-                'strides') == (2, 2) else 'same'
-            darknet_conv_kwargs.update(kwargs)
-            return Conv2D(*args, **darknet_conv_kwargs)
+        x8, x16, x32 = dnu.TinyV3Base(image_input)
 
-        def DarknetConv2D_BN_Leaky(*args, **kwargs):
-            """Darknet Convolution2D followed by BatchNormalization and LeakyReLU."""
-            no_bias_kwargs = {
-                'use_bias': False
-            }
-            no_bias_kwargs.update(kwargs)
-            return compose(DarknetConv2D(*args, **no_bias_kwargs),
-                            BatchNormalization(),
-                            LeakyReLU(alpha=0.1))
+        y1 = dnu.compose(
+            dnu.DarknetConv2D_BN_Leaky(512, 3),
+            )(x32)
 
-        def compose(*funcs):
-            """Compose arbitrarily many functions, evaluated left to right.
-
-            Reference: https://mathieularose.com/function-composition-in-python/
-            """
-            # return lambda x: reduce(lambda v, f: f(v), funcs, x)
-            if funcs:
-                return reduce(lambda f, g: lambda *a, **kw: g(f(*a, **kw)), funcs)
-            else:
-                raise ValueError(
-                    'Composition of empty sequence not supported.')
-
-        x1 = compose(
-            DarknetConv2D_BN_Leaky(16, (3, 3)),
-            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
-            DarknetConv2D_BN_Leaky(32, (3, 3)),
-            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
-            DarknetConv2D_BN_Leaky(64, (3, 3)),
-            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
-            DarknetConv2D_BN_Leaky(128, (3, 3)),
-            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
-            )(image_input)
-
-        x2 = compose(
-            DarknetConv2D_BN_Leaky(256, (3, 3)),        
-            MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same'),
-            DarknetConv2D_BN_Leaky(512, (3, 3)),
-            MaxPooling2D(pool_size=(2, 2), strides=(1, 1), padding='same'),
-            DarknetConv2D_BN_Leaky(1024, (3, 3)),
-            DarknetConv2D_BN_Leaky(256, (1, 1)),
-            )(x1)
-
-        pred_yolo_1 = compose(
-            DarknetConv2D_BN_Leaky(512, (3, 3)),
-            # DarknetConv2D_BN_Leaky(pred_filter_count, (1, 1), layer_idx=10, BN=False, relu=False, name='pred_1'),
-            # DarknetConv2D(pred_filter_count, (1, 1), name='conv2d_10')
-            )(x2)
-
-        x2 = compose(
-            DarknetConv2D_BN_Leaky(128, (1, 1)),
+        x16u = dnu.compose(
+            dnu.DarknetConv2D_BN_Leaky(128, 1),
             UpSampling2D(2)
-            )(x2)
+            )(x32)
 
-        pred_yolo_2 = compose(
+        y2 = dnu.compose(
             Concatenate(),
-            DarknetConv2D_BN_Leaky(256, (3, 3)),
-            # DarknetConv2D_BN_Leaky(pred_filter_count, (1, 1), layer_idx=13, BN=False, relu=False, name='pred_2'),
-            # DarknetConv2D(pred_filter_count, (1, 1), name='conv2d_13')
-            )([x2, x1])
+            dnu.DarknetConv2D_BN_Leaky(256, 3),
+            )([x16u, x16])
 
-        self.outputs = [pred_yolo_1, pred_yolo_2]
+        self.outputs = [y1, y2]
         self.input_layers = [image_input]
 
         self.head_layers_cnt = 2
         self.downgrades = [32, 16]
 
 
-# TODO
 class Small_Tiny_YOLOv3(DetBackend):
     def __init__(self, **kwargs):
         train_shape = kwargs['train_shape']
 
         image_input = Input(shape=train_shape, name='input_img')
 
-        @wraps(Conv2D)
-        def DarknetConv2D(*args, **kwargs):
-            """Wrapper to set Darknet parameters for Convolution2D."""
-            darknet_conv_kwargs = {'kernel_regularizer': l2(5e-4)}
-            darknet_conv_kwargs['padding'] = 'valid' if kwargs.get(
-                'strides') == (2, 2) else 'same'
-            darknet_conv_kwargs.update(kwargs)
-            return Conv2D(*args, **darknet_conv_kwargs)
+        x8, x16, x32 = dnu.TinyV3Base(image_input)
 
-        def DarknetConv2D_BN_Leaky(*args, **kwargs):
-            """Darknet Convolution2D followed by BatchNormalization and LeakyReLU."""
-            no_bias_kwargs = {
-                'use_bias': False
-            }
-            no_bias_kwargs.update(kwargs)
-            return compose(DarknetConv2D(*args, **no_bias_kwargs),
-                            BatchNormalization(),
-                            LeakyReLU(alpha=0.1))
-
-        def compose(*funcs):
-            """Compose arbitrarily many functions, evaluated left to right.
-
-            Reference: https://mathieularose.com/function-composition-in-python/
-            """
-            # return lambda x: reduce(lambda v, f: f(v), funcs, x)
-            if funcs:
-                return reduce(lambda f, g: lambda *a, **kw: g(f(*a, **kw)), funcs)
-            else:
-                raise ValueError(
-                    'Composition of empty sequence not supported.')
-
-        x8 = compose(
-            DarknetConv2D_BN_Leaky(16, (3, 3)),
-            MaxPooling2D(pool_size=2, strides=2, padding='same'),
-            # x2
-            DarknetConv2D_BN_Leaky(32, (3, 3)),
-            MaxPooling2D(pool_size=2, strides=2, padding='same'),
-            # x4
-            DarknetConv2D_BN_Leaky(64, (3, 3)),
-            MaxPooling2D(pool_size=2, strides=2, padding='same'),
-            # x8
-            )(image_input)
-            
-        x16 = compose(
-            DarknetConv2D_BN_Leaky(128, (3, 3)),
-            MaxPooling2D(pool_size=2, strides=2, padding='same'),
-            # x16
-            )(x8)
-
-        x32 = compose(
-            DarknetConv2D_BN_Leaky(256, (3, 3)),        
-            MaxPooling2D(pool_size=2, strides=2, padding='same'),
-            # x32
-            DarknetConv2D_BN_Leaky(512, (3, 3)),
-            MaxPooling2D(pool_size=2, strides=1, padding='same'),
-            DarknetConv2D_BN_Leaky(1024, (3, 3)),
-            DarknetConv2D_BN_Leaky(256, (1, 1)),
-            )(x16)
-
-        pred_yolo_1 = compose(
-            DarknetConv2D_BN_Leaky(512, (3, 3)),
+        y1 = dnu.compose(
+            dnu.DarknetConv2D_BN_Leaky(512, 3),
             )(x32)
 
-        x16u = compose(
-            DarknetConv2D_BN_Leaky(128, (1, 1)),
+        x16u = dnu.compose(
+            dnu.DarknetConv2D_BN_Leaky(128, 1),
             UpSampling2D(2)
             )(x32)
 
-        pred_yolo_2 = compose(
+        y2 = dnu.compose(
             Concatenate(),
-            DarknetConv2D_BN_Leaky(256, (3, 3)),
+            dnu.DarknetConv2D_BN_Leaky(256, 3),
             )([x16u, x16])
 
-        x8u = compose(
-            DarknetConv2D_BN_Leaky(128, (1, 1)),
+        x8u = dnu.compose(
+            dnu.DarknetConv2D_BN_Leaky(128, 1),
             UpSampling2D(2)
-            # )(pred_yolo_2)
+            # )(y2)
             )(x16u)
 
-        pred_yolo_3 = compose(
+        y3 = dnu.compose(
             Concatenate(),
-            DarknetConv2D_BN_Leaky(128, (3, 3)),
+            dnu.DarknetConv2D_BN_Leaky(128, 3),
             )([x8u, x8])
 
-        self.outputs = [pred_yolo_1, pred_yolo_2, pred_yolo_3]
+        self.outputs = [y1, y2, y3]
         self.input_layers = [image_input]
 
         self.head_layers_cnt = 3
@@ -518,157 +406,45 @@ class Darknet19(DetBackend):
             import tensorflow as tf
             return tf.space_to_depth(x, block_size=2)
 
-        # Layer 1
-        x = Conv2D(32, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_1', use_bias=False)(image_input)
-        x = BatchNormalization(name='norm_1')(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(32, 3, idx=1)(image_input)
         x = MaxPooling2D(pool_size=(2, 2))(x)
 
-        # Layer 2
-        x = Conv2D(64, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_2', use_bias=False)(x)
-        x = BatchNormalization(name='norm_2')(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(64, 3, idx=2)(x)
         x = MaxPooling2D(pool_size=(2, 2))(x)
 
-        # Layer 3
-        x = Conv2D(128, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_3', use_bias=False)(x)
-        x = BatchNormalization(name='norm_3')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 4
-        x = Conv2D(64, (1, 1), strides=(1, 1), padding='same',
-                   name='conv_4', use_bias=False)(x)
-        x = BatchNormalization(name='norm_4')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 5
-        x = Conv2D(128, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_5', use_bias=False)(x)
-        x = BatchNormalization(name='norm_5')(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(128, 3, idx=3)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(64, 1, idx=4)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(128, 3, idx=5)(x)
         x = MaxPooling2D(pool_size=(2, 2))(x)
 
-        # Layer 6
-        x = Conv2D(256, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_6', use_bias=False)(x)
-        x = BatchNormalization(name='norm_6')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 7
-        x = Conv2D(128, (1, 1), strides=(1, 1), padding='same',
-                   name='conv_7', use_bias=False)(x)
-        x = BatchNormalization(name='norm_7')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 8
-        x = Conv2D(256, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_8', use_bias=False)(x)
-        x = BatchNormalization(name='norm_8')(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(256, 3, idx=6)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(128, 1, idx=7)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(256, 3, idx=8)(x)
         x = MaxPooling2D(pool_size=(2, 2))(x)
 
-        # Layer 9
-        x = Conv2D(512, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_9', use_bias=False)(x)
-        x = BatchNormalization(name='norm_9')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 10
-        x = Conv2D(256, (1, 1), strides=(1, 1), padding='same',
-                   name='conv_10', use_bias=False)(x)
-        x = BatchNormalization(name='norm_10')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 11
-        x = Conv2D(512, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_11', use_bias=False)(x)
-        x = BatchNormalization(name='norm_11')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 12
-        x = Conv2D(256, (1, 1), strides=(1, 1), padding='same',
-                   name='conv_12', use_bias=False)(x)
-        x = BatchNormalization(name='norm_12')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 13
-        x = Conv2D(512, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_13', use_bias=False)(x)
-        x = BatchNormalization(name='norm_13')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
+        x = dnu.Darknet19Conv2D_BN_Leaky(512, 3, idx=9)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(256, 1, idx=10)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(512, 3, idx=11)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(256, 1, idx=12)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(512, 3, idx=13)(x)
         skip_connection = x
-
         x = MaxPooling2D(pool_size=(2, 2))(x)
 
-        # Layer 14
-        x = Conv2D(1024, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_14', use_bias=False)(x)
-        x = BatchNormalization(name='norm_14')(x)
-        x = LeakyReLU(alpha=0.1)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(1024, 3, idx=14)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(512, 1, idx=15)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(1024, 3, idx=16)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(512, 1, idx=17)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(1024, 3, idx=18)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(1024, 3, idx=19)(x)
+        x = dnu.Darknet19Conv2D_BN_Leaky(1024, 3, idx=20)(x)
 
-        # Layer 15
-        x = Conv2D(512, (1, 1), strides=(1, 1), padding='same',
-                   name='conv_15', use_bias=False)(x)
-        x = BatchNormalization(name='norm_15')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 16
-        x = Conv2D(1024, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_16', use_bias=False)(x)
-        x = BatchNormalization(name='norm_16')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 17
-        x = Conv2D(512, (1, 1), strides=(1, 1), padding='same',
-                   name='conv_17', use_bias=False)(x)
-        x = BatchNormalization(name='norm_17')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 18
-        x = Conv2D(1024, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_18', use_bias=False)(x)
-        x = BatchNormalization(name='norm_18')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 19
-        x = Conv2D(1024, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_19', use_bias=False)(x)
-        x = BatchNormalization(name='norm_19')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 20
-        x = Conv2D(1024, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_20', use_bias=False)(x)
-        x = BatchNormalization(name='norm_20')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Layer 21
-        skip_connection = Conv2D(64, (1, 1), strides=(
-            1, 1), padding='same', name='conv_21', use_bias=False)(skip_connection)
-        skip_connection = BatchNormalization(name='norm_21')(skip_connection)
-        skip_connection = LeakyReLU(alpha=0.1)(skip_connection)
+        skip_connection = dnu.Darknet19Conv2D_BN_Leaky(64, 1, idx=21)(skip_connection)
         skip_connection = Lambda(space_to_depth_x2)(skip_connection)
 
         x = concatenate([skip_connection, x])
 
-        # Layer 22
-        x = Conv2D(1024, (3, 3), strides=(1, 1), padding='same',
-                   name='conv_22', use_bias=False)(x)
-        x = BatchNormalization(name='norm_22')(x)
-        x = LeakyReLU(alpha=0.1)(x)
-
-        # Backend ends =)
-        # pred_yolo_1 = Conv2D(pred_filter_count,
-        #                      (1, 1),
-        #                      strides=(1, 1),
-        #                      padding='same',
-        #                      name='DetectionLayer',
-        #                      kernel_initializer='lecun_normal')(x)
-
+        x = dnu.Darknet19Conv2D_BN_Leaky(1024, 3, idx=22)(x)
+        
         self.outputs = [x]
         self.input_layers = [image_input]
 

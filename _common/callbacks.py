@@ -76,6 +76,32 @@ class CustomModelCheckpoint(ModelCheckpoint):
         super(CustomModelCheckpoint, self).on_batch_end(epoch, logs)
 
 
+class CustomLogger(Callback):
+    def __init__(self,
+                 config,
+                 period=1,
+                 tensorboard=None):
+
+        self.period = period
+        self.tensorboard = tensorboard
+        self.config = config
+
+        if not isinstance(self.tensorboard, TensorBoard) and self.tensorboard is not None:
+            raise ValueError(
+                "Tensorboard object must be a instance from keras.callbacks.TensorBoard")
+
+    def on_train_begin(self, logs=None):
+
+        if self.tensorboard is not None and self.tensorboard.writer is not None:
+            import tensorflow as tf
+            import json
+            with tf.Session() as sess:
+                # hyperparameters = [tf.convert_to_tensor([k, str(v)]) for k, v in params.items()]
+                tensor = tf.convert_to_tensor(json.dumps(self.config, indent=2))
+                summary = tf.summary.text("Config", tensor)
+                self.tensorboard.writer.add_summary(summary.eval())
+
+
 class MAP_evaluation(Callback):
     """ Evaluate a given dataset using a given model.
             code originally from https://github.com/fizyr/keras-retinanet

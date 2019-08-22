@@ -23,8 +23,8 @@ def _main_(args):
     #   Create the validation generator
     ###############################  
     valid_ints, labels = parse_voc_annotation(
-        config['eval']['valid_annot_folder'], 
-        config['eval']['valid_image_folder'], 
+        config['eval']['annot_folder'], 
+        config['eval']['image_folder'], 
         config['eval']['cache_name'],
         config['model']['labels']
     )

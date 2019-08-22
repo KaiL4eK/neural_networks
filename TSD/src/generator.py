@@ -12,9 +12,9 @@ class BatchGenerator(Sequence):
                  instances,
                  anchors,
                  labels,
-                 min_net_size=[0, 0],
-                 max_net_size=[0, 0],
-                 downsample=32,  # ratio between network input's size and network output's size, 32 for YOLOv3
+                 min_net_size=[416, 416],
+                 max_net_size=[416, 416],
+                 downsample=[32],  # ratio between network input's size and network output's size, 32 for YOLOv3
                  max_box_per_image=30,
                  batch_size=1,
                  shuffle=True,
@@ -29,18 +29,20 @@ class BatchGenerator(Sequence):
         self.batch_size = batch_size
         self.labels = labels
         self.downsample = downsample
+        self.max_downsample = max(downsample)
         self.max_box_per_image = max_box_per_image
         self.shuffle = shuffle
         self.mem_mode = mem_mode
 
         self.min_net_size = (np.array(min_net_size) //
-                             self.downsample) * self.downsample
+                             self.max_downsample) * self.max_downsample
         self.max_net_size = (np.array(max_net_size) //
-                             self.downsample) * self.downsample
+                             self.max_downsample) * self.max_downsample
 
         self.scale_distr = scale_distr
         self.jitter = jitter
         self.flip = flip
+        
         self.norm = norm
         self.anchors = [BoundBox(0, 0, anchors[2 * i], anchors[2 * i + 1])
                         for i in range(len(anchors) // 2)]
@@ -69,9 +71,7 @@ class BatchGenerator(Sequence):
             # get image input size, change every 10 batches
             net_h, net_w = self._get_net_size(idx)
 
-        # base_grid_h, base_grid_w = int((net_h + self.downsample / 2) // self.downsample),
-        #                            int((net_w + self.downsample / 2) // self.downsample)
-        base_grid_h, base_grid_w = net_h // self.downsample, net_w // self.downsample
+        # base_grid_h, base_grid_w = net_h // self.downsample, net_w // self.downsample
 
         # determine the first and the last indices of the batch
         l_bound = idx * self.batch_size
@@ -90,17 +90,17 @@ class BatchGenerator(Sequence):
         dummies = [np.zeros((r_bound - l_bound, 1))
                    for i in range(self.output_layers_count)]
 
-        # According to reversed outputs
+        # According to reversed outputs - because of anchors
         yolos = [np.zeros((r_bound - l_bound,
-                           (2 ** i) * base_grid_h,
-                           (2 ** i) * base_grid_w,
+                           net_h // self.downsample[i],
+                           net_w // self.downsample[i],
                            self.anchors_per_output,
                            4 + 1 + len(self.labels)))
                  for i in reversed(range(self.output_layers_count))]
 
-        # yolo_1 = np.zeros((r_bound - l_bound, 1*base_grid_h,  1*base_grid_w, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 1
-        # yolo_2 = np.zeros((r_bound - l_bound, 2*base_grid_h,  2*base_grid_w, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 2
-        # yolo_3 = np.zeros((r_bound - l_bound, 4*base_grid_h,  4*base_grid_w, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 3
+        # yolo_1 = np.zeros((r_bound - l_bound, 1*net_h // self.downsample,  1*net_w // self.downsample, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 1
+        # yolo_2 = np.zeros((r_bound - l_bound, 2*net_h // self.downsample,  2*net_w // self.downsample, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 2
+        # yolo_3 = np.zeros((r_bound - l_bound, 4*net_h // self.downsample,  4*net_w // self.downsample, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 3
         # yolos = [yolo_3, yolo_2, yolo_1]
 
         # if self.infer_sz:
@@ -166,16 +166,19 @@ class BatchGenerator(Sequence):
                 grid_y = int(np.floor(center_y))
 
                 # assign ground truth x, y, w, h, confidence and class probs to y_batch
-                yolo[instance_count, grid_y, grid_x, output_anchor_idx] = 0
-                yolo[instance_count, grid_y, grid_x,
+                yolo[instance_count, grid_y, grid_x, 
+                     output_anchor_idx] = 0
+                yolo[instance_count, grid_y, grid_x, 
                      output_anchor_idx, 0:4] = box
-                yolo[instance_count, grid_y, grid_x, output_anchor_idx, 4] = 1.
+                yolo[instance_count, grid_y, grid_x, 
+                     output_anchor_idx, 4] = 1.
                 yolo[instance_count, grid_y, grid_x,
                      output_anchor_idx, 5 + obj_indx] = 1
 
                 # assign the true box to t_batch
-                true_box = [center_x, center_y, obj['xmax'] -
-                            obj['xmin'], obj['ymax'] - obj['ymin']]
+                true_box = [center_x, center_y, 
+                            obj['xmax'] - obj['xmin'], 
+                            obj['ymax'] - obj['ymin']]
                 t_batch[instance_count, 0, 0, 0, true_box_index] = true_box
 
                 true_box_index += 1
@@ -216,10 +219,10 @@ class BatchGenerator(Sequence):
 
             # new_w = new_h * rate
 
-            self.net_size_h = self.downsample * np.random.randint(self.min_net_size[0] / self.downsample,
-                                                                  self.max_net_size[0] / self.downsample + 1)
-            self.net_size_w = self.downsample * np.random.randint(self.min_net_size[1] / self.downsample,
-                                                                  self.max_net_size[1] / self.downsample + 1)
+            self.net_size_h = self.max_downsample * np.random.randint(self.min_net_size[0] / self.max_downsample,
+                                                                      self.max_net_size[0] / self.max_downsample + 1)
+            self.net_size_w = self.max_downsample * np.random.randint(self.min_net_size[1] / self.max_downsample,
+                                                                      self.max_net_size[1] / self.max_downsample + 1)
 
             # self.net_size_h = int(new_h)
             # self.net_size_w = int(new_w)

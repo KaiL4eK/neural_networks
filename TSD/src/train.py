@@ -15,7 +15,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.backend import clear_session
 
 from _common import utils
-from _common.callbacks import CustomModelCheckpoint, CustomTensorBoard, MAP_evaluation
+import _common.callbacks as cbs
 from _common.voc import parse_voc_annotation, split_by_objects, replace_all_labels_2_one, create_training_instances
 
 # MBN2 - 149 ms/step
@@ -26,11 +26,11 @@ def prepare_generators(config):
         makedirs(os.path.dirname(config['train']['cache_name']))
 
     train_ints, valid_ints, labels, max_box_per_image = create_training_instances(
-        config['train']['train_annot_folder'],
-        config['train']['train_image_folder'],
+        config['train']['annot_folder'],
+        config['train']['image_folder'],
         config['train']['cache_name'],
-        config['valid']['valid_annot_folder'],
-        config['valid']['valid_image_folder'],
+        config['valid']['annot_folder'],
+        config['valid']['image_folder'],
         config['valid']['cache_name'],
         config['model']['labels']
     )
@@ -50,7 +50,7 @@ def prepare_generators(config):
         instances=train_ints,
         anchors=config['model']['anchors'],
         labels=labels,
-        downsample=16,  # ratio between network input's size and network output's size, 32 for YOLOv3
+        downsample=config['model']['downsample'],  # ratio between network input's size and network output's size, 32 for YOLOv3
         max_box_per_image=max_box_per_image,
         batch_size=config['train']['batch_size'],
         min_net_size=config['model']['min_input_size'],
@@ -64,7 +64,7 @@ def prepare_generators(config):
         instances=valid_ints,
         anchors=config['model']['anchors'],
         labels=labels,
-        downsample=16,  # ratio between network input's size and network output's size, 32 for YOLOv3
+        downsample=config['model']['downsample'],  # ratio between network input's size and network output's size, 32 for YOLOv3
         max_box_per_image=max_box_per_image,
         batch_size=config['train']['batch_size'],
         norm=normalize,
@@ -109,7 +109,8 @@ def prepare_model(config, initial_weights):
         class_scale=config['train']['class_scale'],
         base=config['model']['base'],
         anchors_per_output=config['model']['anchors_per_output'],
-        is_freezed=freezing
+        is_freezed=freezing,
+        load_src_weights=config['train'].get('load_src_weights', True)
     )
 
     model_render_file = 'images/{}.png'.format(config['model']['base'])
@@ -171,7 +172,7 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
     checkpoint_name = utils.get_checkpoint_name(config)
     utils.makedirs_4_file(checkpoint_name)
 
-    checkpoint_vloss = CustomModelCheckpoint(
+    checkpoint_vloss = cbs.CustomModelCheckpoint(
         model_to_save=infer_model,
         filepath=checkpoint_name,
         monitor='val_loss',
@@ -196,23 +197,26 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
     utils.makedirs(tensorboard_logdir)
     print('Tensorboard dir: {}'.format(tensorboard_logdir))
 
-    tensorboard_cb = TensorBoard(log_dir=tensorboard_logdir,
-                                 histogram_freq=0,
-                                 write_graph=True,
-                                 write_images=True)
+    tensorboard_cb = TensorBoard(
+        log_dir=tensorboard_logdir,
+        histogram_freq=0,
+        write_graph=False
+    )
 
     mAP_checkpoint_name = utils.get_mAP_checkpoint_name(config)
     utils.makedirs_4_file(mAP_checkpoint_name)
 
-    map_evaluator_cb = MAP_evaluation(infer_model=infer_model,
-                                      generator=valid_generator,
-                                      save_best=True,
-                                      save_name=mAP_checkpoint_name,
-                                      tensorboard=tensorboard_cb,
-                                      iou_threshold=0.5,
-                                      score_threshold=0.5,
-                                      infer_sz=config['model']['infer_shape'],
-                                      evaluate=evaluate)
+    map_evaluator_cb = cbs.MAP_evaluation(
+        infer_model=infer_model,
+        generator=valid_generator,
+        save_best=True,
+        save_name=mAP_checkpoint_name,
+        tensorboard=tensorboard_cb,
+        iou_threshold=0.5,
+        score_threshold=0.5,
+        infer_sz=config['model']['infer_shape'],
+        evaluate=evaluate
+    )
 
     early_stop = EarlyStopping(
         monitor='val_loss',
@@ -220,6 +224,11 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
         patience=20,
         mode='min',
         verbose=1
+    )
+
+    logger_cb = cbs.CustomLogger(
+        config=config,
+        tensorboard=tensorboard_cb
     )
 
     ###############################
@@ -241,7 +250,7 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
     if config['train'].get('lr_decay', 0) > 0:
         optimizer.decay = config['train']['lr_decay']
 
-    callbacks = [checkpoint_vloss, tensorboard_cb, map_evaluator_cb]
+    callbacks = [checkpoint_vloss, tensorboard_cb, map_evaluator_cb, logger_cb]
 
     ###############################
     #   Prepare fit
