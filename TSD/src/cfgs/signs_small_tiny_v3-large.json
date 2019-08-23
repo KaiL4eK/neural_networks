@@ -48,8 +48,8 @@
     },
 
     "eval": {
-        "image_folder":         ["../data/RTSD_VOC_Full/Images/"],
-        "annot_folder":         ["../data/RTSD_VOC_Full/Annotations/"],
+        "image_folder":         ["../data/RTSD_VOC_Test/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Test/Annotations/"],
         "cache_name":           ""
     }
 }

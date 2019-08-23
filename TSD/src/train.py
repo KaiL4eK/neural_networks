@@ -16,7 +16,7 @@ from tensorflow.keras.backend import clear_session
 
 from _common import utils
 import _common.callbacks as cbs
-from _common.voc import parse_voc_annotation, split_by_objects, replace_all_labels_2_one, create_training_instances
+from _common.voc import replace_all_labels_2_one, create_training_instances
 
 # MBN2 - 149 ms/step
 
@@ -183,7 +183,7 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
     )
 
     reduce_on_plateau = ReduceLROnPlateau(
-        monitor='loss',
+        monitor='val_loss',
         factor=0.5,
         patience=10,
         verbose=1,
@@ -265,10 +265,11 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
         validation_steps=len(valid_generator) * config['valid']['valid_times'],
 
         epochs=config['train']['nb_epochs'] + config['train']['warmup_epochs'],
-        verbose=2 if config['train']['debug'] else 1,
+        verbose=1,
         callbacks=callbacks,
         workers=8,
-        max_queue_size=100
+        max_queue_size=100,
+        use_multiprocessing=False
     )
 
     ###############################

@@ -13,20 +13,22 @@ class BoundBox:
         self.c       = c
         self.classes = classes
 
-        self.label = -1
-        self.score = -1
-
-    def get_label(self):
-        if self.label == -1:
+        # Means score of best class
+        if self.classes:
             self.label = np.argmax(self.classes)
+            self.score = self.classes[self.label]
+        else:
+            self.label = -1
+            self.score = -1
 
-        return self.label
-
-    def get_score(self):
-        if self.score == -1:
-            self.score = self.classes[self.get_label()]
-
+    def get_best_class_score(self):
         return self.score
+
+    def reset_class_score(self, class_idx):
+        if self.classes:
+            self.classes[class_idx] = 0
+            self.label = np.argmax(self.classes)
+            self.score = self.classes[self.label]
 
     def get_str(self):
         return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.c, self.classes)

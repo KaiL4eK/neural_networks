@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint, Callback
 
+import _common.utils as c_ut
 
 class CustomTensorBoard(TensorBoard):
     """ to log the loss after each batch
@@ -101,7 +102,20 @@ class CustomLogger(Callback):
                 summary = tf.summary.text("Config", tensor)
                 self.tensorboard.writer.add_summary(summary.eval())
 
+    def on_epoch_end(self, epoch, logs=None):
+            import tensorflow as tf
+            
+            lr = self.model.optimizer.lr
+            decay = self.model.optimizer.decay
+            iterations = self.model.optimizer.iterations
+            lr_with_decay = lr / (1. + decay * tf.cast(iterations, tf.float32))
+            
+            summary_value = tf.Summary().value.add()
+            summary_value.simple_value = lr_with_decay
+            summary_value.tag = "lr"
+            self.tensorboard.writer.add_summary(summary, epoch)
 
+            
 class MAP_evaluation(Callback):
     """ Evaluate a given dataset using a given model.
             code originally from https://github.com/fizyr/keras-retinanet
@@ -132,6 +146,7 @@ class MAP_evaluation(Callback):
         self.infer_model = infer_model
         self.generator = generator
         self.iou_threshold = iou_threshold
+        self.score_threshold = score_threshold
         self.save_path = save_path
         self.period = period
         self.save_best = save_best
@@ -153,14 +168,13 @@ class MAP_evaluation(Callback):
             average_precisions = self.evaluate(model=self.infer_model,
                                                generator=self.generator,
                                                iou_threshold=self.iou_threshold,
+                                               obj_thresh=self.score_threshold,
+                                               nms_thresh=0.45
                                                net_h=self.infer_sz[0],
                                                net_w=self.infer_sz[1],
                                                save_path=None)
             print('\n')
-            for label, average_precision in average_precisions.items():
-                print(label, '{:.4f}'.format(average_precision))
-            mAP = sum(average_precisions.values()) / len(average_precisions)
-            print('mAP: {:.4f}'.format(mAP))
+            c_ut.print_predicted_average_precisions(average_precisions)
 
             # if not self.bestVloss:
             # self.bestVloss = logs['val_loss']

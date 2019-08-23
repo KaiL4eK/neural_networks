@@ -3,6 +3,7 @@ import numpy as np
 import os
 from .bbox import BoundBox, bbox_iou
 from scipy.special import expit
+from tqdm import tqdm
 
 def unfreeze_model(model):
     for layer in model.layers:
@@ -41,12 +42,13 @@ def makedirs(path):
 
 def evaluate(model,
              generator,
+             net_h,
+             net_w,
              iou_threshold=0.5,
              obj_thresh=0.5,
              nms_thresh=0.45,
-             net_h=416,
-             net_w=416,
-             save_path=None):
+             save_path=None,
+             verbose=False):
     """ Evaluate a given dataset using a given model.
     code originally from https://github.com/fizyr/keras-retinanet
 
@@ -63,24 +65,35 @@ def evaluate(model,
         A dict mapping class names to mAP scores.
     """
     # gather all detections and annotations
-    all_detections = [[None for i in range(
-        generator.num_classes())] for j in range(generator.size())]
-    all_annotations = [[None for i in range(
-        generator.num_classes())] for j in range(generator.size())]
+    all_detections = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
+    all_annotations = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
 
-    for i in range(generator.size()):
+    iterator = range(generator.size())
+    if verbose:
+        # Modify with rendering
+        iterator = tqdm(iterator)
+
+    for i in iterator:
         raw_image = [generator.load_image(i)]
 
         # make the boxes and the labels
         pred_boxes = get_yolo_boxes(
-            model, raw_image, net_h, net_w, generator.get_anchors(), obj_thresh, nms_thresh)[0]
+            model, 
+            raw_image, 
+            net_h, 
+            net_w, 
+            generator.get_anchors(), 
+            obj_thresh, 
+            nms_thresh
+        )[0]
 
-        score = np.array([box.get_score() for box in pred_boxes])
+        score = np.array([box.get_best_class_score() for box in pred_boxes])
         pred_labels = np.array([box.label for box in pred_boxes])
 
         if len(pred_boxes) > 0:
             pred_boxes = np.array(
-                [[box.xmin, box.ymin, box.xmax, box.ymax, box.get_score()] for box in pred_boxes])
+                [[box.xmin, box.ymin, box.xmax, box.ymax, box.get_best_class_score()] 
+                    for box in pred_boxes])
         else:
             pred_boxes = np.array([[]])
 
@@ -97,9 +110,8 @@ def evaluate(model,
 
         try:
             for label in range(generator.num_classes()):
-                all_annotations[i][label] = annotations[annotations[:, 4]
-                                                        == label, :4].copy()
-        except:
+                all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()
+        except IndexError:
             # IndexError - generator returned empty annotations
             for label in range(generator.num_classes()):
                 all_annotations[i][label] = np.array([])
@@ -119,16 +131,30 @@ def evaluate(model,
             num_annotations += annotations.shape[0]
             detected_annotations = []
 
+            if save_path:
+                fpath = os.path.join(save_path, 'det_{}.png'.format(i))
+                render_image = generator.load_image(i)
+                for annot in annotations:
+                    cv2.rectangle(render_image,
+                                  (annot[0], annot[1]),
+                                  (annot[2], annot[3]),
+                                  (0, 255, 0), 3)
+
             for d in detections:
                 scores = np.append(scores, d[4])
+
+                if save_path:
+                    cv2.rectangle(render_image,
+                                  (int(d[0]), int(d[1])),
+                                  (int(d[2]), int(d[3])),
+                                  (255, 0, 0), 2)
 
                 if annotations.shape[0] == 0:
                     false_positives = np.append(false_positives, 1)
                     true_positives = np.append(true_positives, 0)
                     continue
 
-                overlaps = compute_overlap(
-                    np.expand_dims(d, axis=0), annotations)
+                overlaps = compute_overlap(np.expand_dims(d, axis=0), annotations)
                 assigned_annotation = np.argmax(overlaps, axis=1)
                 max_overlap = overlaps[0, assigned_annotation]
 
@@ -139,6 +165,9 @@ def evaluate(model,
                 else:
                     false_positives = np.append(false_positives, 1)
                     true_positives = np.append(true_positives, 0)
+       
+            if save_path:
+                cv2.imwrite(fpath, render_image)
 
         # no annotations -> AP for this class is 0 (is this correct?)
         if num_annotations == 0:
@@ -162,8 +191,7 @@ def evaluate(model,
 
         # compute average precision
         average_precision = compute_ap(recall, precision)
-        average_precisions[generator.get_class_name(
-            label_idx)] = average_precision
+        average_precisions[generator.get_class_name(label_idx)] = average_precision
 
     return average_precisions
 
@@ -210,7 +238,7 @@ def do_nms(boxes, nms_thresh):
                 index_j = sorted_indices[j]
 
                 if bbox_iou(boxes[index_i], boxes[index_j]) >= nms_thresh:
-                    boxes[index_j].classes[c] = 0
+                    boxes[index_j].reset_class_score(c)
 
 
 def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
@@ -240,7 +268,7 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
                 continue
 
             # first 4 elements are x, y, w, and h
-            x, y, w, h = netout[row, col, b, :4]
+            x, y, w, h = np.clip(netout[row, col, b, :4], -1e10, 1e10)
 
             x = (col + x) / grid_w  # center position, unit: image width
             y = (row + y) / grid_h  # center position, unit: image height
@@ -250,9 +278,7 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
             # last elements are class probabilities
             classes = netout[row, col, b, 5:]
 
-            box = BoundBox(x-w/2, y-h/2, x+w/2, y+h/2, objectness, classes)
-
-            boxes.append(box)
+            boxes += [BoundBox(x-w/2, y-h/2, x+w/2, y+h/2, objectness, classes)]
 
     return boxes
 
@@ -325,8 +351,7 @@ def get_yolo_boxes(model, images, net_h, net_w, anchors, obj_thresh, nms_thresh)
 
             yolo_anchors = anchors[(l_idx-j)*6:(r_idx-j)*6]
 
-            boxes += decode_netout(yolos[j],
-                                   yolo_anchors, obj_thresh, net_h, net_w)
+            boxes += decode_netout(yolos[j], yolo_anchors, obj_thresh, net_h, net_w)
 
         correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w)
         do_nms(boxes, nms_thresh)

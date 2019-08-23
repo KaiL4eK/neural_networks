@@ -57,7 +57,7 @@ class BatchGenerator(Sequence):
         if self.output_layers_count not in [1, 2, 3]:
             assert False, "Unchecked network output"
 
-        if shuffle:
+        if self.shuffle:
             np.random.shuffle(self.instances)
 
     def __len__(self):
