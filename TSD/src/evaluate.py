@@ -54,7 +54,7 @@ def _main_(args):
     infer_model = load_model(weights)
 
     # compute mAP for all the classes
-    average_precisions = evaluate(infer_model, valid_generator, isTiny=config['model']['isTiny'])
+    average_precisions = evaluate(infer_model, valid_generator)
 
     # print the score
     for label, average_precision in average_precisions.items():
@@ -62,7 +62,7 @@ def _main_(args):
     print('mAP: {:.4f}'.format(sum(average_precisions.values()) / len(average_precisions)))           
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(description='Evaluate YOLO_v3 model on any dataset')
+    argparser = argparse.ArgumentParser(description='Evaluate YOLOv3 model on any dataset')
     argparser.add_argument('-c', '--conf', help='path to configuration file')    
     argparser.add_argument('-w', '--weights', help='path to pretrained model')
 

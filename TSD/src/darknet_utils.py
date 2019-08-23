@@ -12,11 +12,13 @@ def DarknetConv2D(*args, **kwargs):
     conv_kwargs.update(kwargs)
     return Conv2D(*args, **conv_kwargs)
 
+# He_uniform better use with ReLU (let`s check this!)
 
 def DarknetConv2D_BN_Leaky(*args, **kwargs):
     """Darknet Convolution2D followed by BatchNormalization and LeakyReLU."""
     no_bias_kwargs = {
-        'use_bias': False
+        'use_bias': False,
+        'kernel_initializer': 'he_uniform'
     }
     no_bias_kwargs.update(kwargs)
     return compose(DarknetConv2D(*args, **no_bias_kwargs),
@@ -28,6 +30,7 @@ def Darknet19Conv2D_BN_Leaky(*args, idx, **kwargs):
     """Darknet Convolution2D followed by BatchNormalization and LeakyReLU."""
     new_kwargs = {
         'use_bias': False,
+        'kernel_initializer': 'he_uniform',
         'name': 'conv_' + str(idx)
     }
     new_kwargs.update(kwargs)

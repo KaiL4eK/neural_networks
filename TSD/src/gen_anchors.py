@@ -137,8 +137,8 @@ def _main_():
     image_sz = config['model']['infer_shape']
 
     train_imgs, train_labels = parse_voc_annotation(
-        config['train']['train_annot_folder'],
-        config['train']['train_image_folder'],
+        config['train']['annot_folder'],
+        config['train']['image_folder'],
         config['train']['cache_name'],
         config['model']['labels']
     )

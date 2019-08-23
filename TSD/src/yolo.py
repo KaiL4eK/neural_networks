@@ -69,6 +69,9 @@ class YoloLayer(Layer):
     def call(self, x):
         input_image, y_pred, y_true, true_boxes = x
 
+        t_batch_size = tf.shape(y_pred)[0] # batch size, tensor
+        t_batch_size = tf.to_float(t_batch_size)
+
         # adjust the shape of the y_predict [batch, grid_h, grid_w, 3, 4+1+nb_class]
         y_pred = tf.reshape(
             y_pred, tf.concat(
@@ -259,21 +262,15 @@ class YoloLayer(Layer):
         wh_scale = tf.expand_dims(
             2 - wh_scale[..., 0] * wh_scale[..., 1], axis=4)
 
-        xy_delta = xywh_mask * (pred_box_xy-true_box_xy) * \
-            wh_scale * self.xywh_scale
-        wh_delta = xywh_mask * (pred_box_wh-true_box_wh) * \
-            wh_scale * self.xywh_scale
-        conf_delta = object_mask * (pred_box_conf-true_box_conf) * self.obj_scale + \
-            (1-object_mask) * conf_delta * self.noobj_scale
-        class_delta = object_mask * \
-            tf.expand_dims(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_box_class, logits=pred_box_class), 4) * \
-            self.class_scale
+        xy_delta = xywh_mask * (pred_box_xy-true_box_xy) * wh_scale * self.xywh_scale
+        wh_delta = xywh_mask * (pred_box_wh-true_box_wh) * wh_scale * self.xywh_scale
+        conf_delta = object_mask * (pred_box_conf-true_box_conf) * self.obj_scale + (1-object_mask) * conf_delta * self.noobj_scale
+        class_delta = object_mask * tf.expand_dims(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_box_class, logits=pred_box_class), 4)
 
-        loss_xy = tf.reduce_sum(tf.square(xy_delta),       list(range(1, 5)))
-        loss_wh = tf.reduce_sum(tf.square(wh_delta),       list(range(1, 5)))
-        loss_conf = tf.reduce_sum(tf.square(conf_delta),     list(range(1, 5)))
-        loss_class = tf.reduce_sum(
-            class_delta,               list(range(1, 5)))
+        loss_xy = tf.reduce_sum(tf.square(xy_delta), list(range(1, 5)))
+        loss_wh = tf.reduce_sum(tf.square(wh_delta), list(range(1, 5)))
+        loss_conf = tf.reduce_sum(tf.square(conf_delta), list(range(1, 5)))
+        loss_class = tf.reduce_sum(class_delta * self.class_scale, list(range(1, 5)))
 
         loss = loss_xy + loss_wh + loss_conf + loss_class
 
@@ -297,7 +294,7 @@ class YoloLayer(Layer):
                                    tf.reduce_sum(loss_conf),
                                    tf.reduce_sum(loss_class)],  message='loss xy, wh, conf, class: \t', summarize=1000)
 
-        return loss*self.grid_scale
+        return loss * self.grid_scale / t_batch_size
 
     def compute_output_shape(self, input_shape):
         return [(None, 1)]
