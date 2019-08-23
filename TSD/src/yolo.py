@@ -35,24 +35,24 @@ class YoloLayer(Layer):
         # make a persistent mesh grid
         max_grid_h, max_grid_w = max_grid_hw
 
-        cell_x = tf.to_float(
+        cell_x = tf.cast(
             tf.reshape(
                 tf.tile(
                     tf.range(max_grid_w),
                     [max_grid_h]
                 ),
                 (1, max_grid_h, max_grid_w, 1, 1)
-            )
+            ), tf.float32
         )
 
-        cell_y = tf.to_float(
+        cell_y = tf.cast(
             tf.reshape(
                 tf.tile(
                     tf.range(max_grid_h),
                     [max_grid_w]
                 ),
                 (1, max_grid_w, max_grid_h, 1, 1)
-            )
+            ), tf.float32
         )
         cell_y = tf.transpose(cell_y, (0, 2, 1, 3, 4))
         self.cell_grid = tf.tile(
@@ -69,8 +69,7 @@ class YoloLayer(Layer):
     def call(self, x):
         input_image, y_pred, y_true, true_boxes = x
 
-        t_batch_size = tf.shape(y_pred)[0] # batch size, tensor
-        t_batch_size = tf.to_float(t_batch_size)
+        t_batch_size = tf.cast(tf.shape(y_pred)[0], tf.float32)
 
         # adjust the shape of the y_predict [batch, grid_h, grid_w, 3, 4+1+nb_class]
         y_pred = tf.reshape(
@@ -161,7 +160,7 @@ class YoloLayer(Layer):
 
         best_ious = tf.reduce_max(iou_scores, axis=4)
         conf_delta *= tf.expand_dims(
-            tf.to_float(best_ious < self.ignore_thresh),
+            tf.cast(best_ious < self.ignore_thresh, tf.float32),
             4
         )
 
@@ -196,24 +195,24 @@ class YoloLayer(Layer):
 
         count = tf.reduce_sum(object_mask)
         count_noobj = tf.reduce_sum(1 - object_mask)
-        detect_mask = tf.to_float((pred_box_conf*object_mask) >= 0.5)
+        detect_mask = tf.cast((pred_box_conf*object_mask) >= 0.5, tf.float32)
         class_mask = tf.expand_dims(
-            tf.to_float(
+            tf.cast(
                 tf.equal(
                     tf.argmax(pred_box_class, -1),
                     true_box_class
-                )
+                ), tf.float32
             ),
             4
         )
 
         recall50 = tf.reduce_sum(
-            tf.to_float(iou_scores >= 0.5) *
+            tf.cast(iou_scores >= 0.5, tf.float32) *
             detect_mask * class_mask
         ) / (count + 1e-3)
 
         recall75 = tf.reduce_sum(
-            tf.to_float(iou_scores >= 0.75) *
+            tf.cast(iou_scores >= 0.75, tf.float32) *
             detect_mask * class_mask
         ) / (count + 1e-3)
 
