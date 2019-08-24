@@ -77,6 +77,9 @@ class CustomModelCheckpoint(ModelCheckpoint):
         super(CustomModelCheckpoint, self).on_batch_end(epoch, logs)
 
 
+import tensorflow.keras.backend as K
+
+
 class CustomLogger(Callback):
     def __init__(self,
                  config,
@@ -91,31 +94,31 @@ class CustomLogger(Callback):
             raise ValueError(
                 "Tensorboard object must be a instance from keras.callbacks.TensorBoard")
 
-    def on_train_begin(self, logs=None):
+    # def on_train_begin(self, logs=None):
 
-        if self.tensorboard is not None and self.tensorboard.writer is not None:
-            import tensorflow as tf
-            import json
-            with tf.Session() as sess:
-                # hyperparameters = [tf.convert_to_tensor([k, str(v)]) for k, v in params.items()]
-                tensor = tf.convert_to_tensor(json.dumps(self.config, indent=2))
-                summary = tf.summary.text("Config", tensor)
-                self.tensorboard.writer.add_summary(summary.eval())
+    #     if self.tensorboard is not None and self.tensorboard.writer is not None:
+    #         import json
+    #         # with tf.Session() as sess:
+    #         # hyperparameters = [tf.convert_to_tensor([k, str(v)]) for k, v in params.items()]
+    #         tensor = tf.convert_to_tensor(json.dumps(self.config, indent=2))
+    #         summary = tf.summary.text("Config", tensor)
+    #         self.tensorboard.writer.add_summary(K.eval(summary))
 
     def on_epoch_end(self, epoch, logs=None):
-            import tensorflow as tf
-            
+
+        if self.tensorboard is not None and self.tensorboard.writer is not None:
             lr = self.model.optimizer.lr
             decay = self.model.optimizer.decay
             iterations = self.model.optimizer.iterations
-            lr_with_decay = lr / (1. + decay * tf.cast(iterations, tf.float32))
-            
-            summary_value = tf.Summary().value.add()
-            summary_value.simple_value = lr_with_decay
-            summary_value.tag = "lr"
+            lr_with_decay = lr / (1. + decay * K.cast(iterations, K.dtype(decay)))
+
+            summary = tf.Summary()
+            summary_value = summary.value.add()
+            summary_value.simple_value = K.eval(lr_with_decay)
+            summary_value.tag = "learning_rate"
             self.tensorboard.writer.add_summary(summary, epoch)
 
-            
+
 class MAP_evaluation(Callback):
     """ Evaluate a given dataset using a given model.
             code originally from https://github.com/fizyr/keras-retinanet
@@ -169,12 +172,12 @@ class MAP_evaluation(Callback):
                                                generator=self.generator,
                                                iou_threshold=self.iou_threshold,
                                                obj_thresh=self.score_threshold,
-                                               nms_thresh=0.45
+                                               nms_thresh=0.45,
                                                net_h=self.infer_sz[0],
                                                net_w=self.infer_sz[1],
                                                save_path=None)
             print('\n')
-            c_ut.print_predicted_average_precisions(average_precisions)
+            mAP = c_ut.print_predicted_average_precisions(average_precisions)
 
             # if not self.bestVloss:
             # self.bestVloss = logs['val_loss']

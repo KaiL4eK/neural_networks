@@ -124,5 +124,7 @@ def makedirs_4_file(filepath):
 def print_predicted_average_precisions(av_precs):
     for label, average_precision in av_precs.items():
         print(label, '{:.4f}'.format(average_precision))
-        mAP = sum(av_precs.values()) / len(av_precs)
-        print('mAP: {:.4f}'.format(mAP))
+    mAP = sum(av_precs.values()) / len(av_precs)
+    print('mAP: {:.4f}'.format(mAP))
+
+    return mAP

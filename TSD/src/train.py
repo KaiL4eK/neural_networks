@@ -123,7 +123,7 @@ def prepare_model(config, initial_weights):
     if initial_weights and os.path.exists(initial_weights):
         print("\nLoading pretrained weights {}".format(initial_weights))
         train_model.load_weights(
-            initial_weights, by_name=True, skip_mismatch=True)
+            initial_weights, by_name=True)
 
     return train_model, infer_model, freezing
 
@@ -182,17 +182,6 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
         period=1
     )
 
-    reduce_on_plateau = ReduceLROnPlateau(
-        monitor='val_loss',
-        factor=0.5,
-        patience=10,
-        verbose=1,
-        mode='min',
-        min_delta=0.01,
-        cooldown=0,
-        min_lr=0
-    )
-
     tensorboard_logdir = utils.get_tensorboard_name(config)
     utils.makedirs(tensorboard_logdir)
     print('Tensorboard dir: {}'.format(tensorboard_logdir))
@@ -218,10 +207,21 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
         evaluate=evaluate
     )
 
+    reduce_on_plateau = ReduceLROnPlateau(
+        monitor='val_loss',
+        factor=0.2,
+        patience=20,
+        verbose=1,
+        mode='min',
+        min_delta=0,
+        cooldown=10,
+        min_lr=1e-5
+    )
+
     early_stop = EarlyStopping(
         monitor='val_loss',
         min_delta=0,
-        patience=20,
+        patience=80,
         mode='min',
         verbose=1
     )
@@ -250,7 +250,7 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
     if config['train'].get('lr_decay', 0) > 0:
         optimizer.decay = config['train']['lr_decay']
 
-    callbacks = [checkpoint_vloss, tensorboard_cb, map_evaluator_cb, logger_cb]
+    callbacks = [checkpoint_vloss, tensorboard_cb, map_evaluator_cb, logger_cb, early_stop, reduce_on_plateau]
 
     ###############################
     #   Prepare fit
@@ -271,22 +271,6 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
         max_queue_size=100,
         use_multiprocessing=False
     )
-
-    ###############################
-    #   Run the evaluation
-    ###############################
-    # compute mAP for all the classes
-    average_precisions = evaluate(model=infer_model,
-                                  generator=valid_generator,
-                                  iou_threshold=0.5,
-                                  net_h=config['model']['infer_shape'][0],
-                                  net_w=config['model']['infer_shape'][1])
-
-    # print the score
-    for label, average_precision in average_precisions.items():
-        print(label + ': {:.4f}'.format(average_precision))
-    print('Last mAP: {:.4f}'.format(
-        sum(average_precisions.values()) / len(average_precisions)))
 
 
 if __name__ == '__main__':

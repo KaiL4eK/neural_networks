@@ -85,7 +85,7 @@ def _main_(args):
                                   net_h=config['model']['infer_shape'][0],
                                   net_w=config['model']['infer_shape'][1],
                                   verbose=True,
-                                  save_path='output')
+                                  save_path=None)
     c_ut.print_predicted_average_precisions(average_precisions)
     
 if __name__ == '__main__':

@@ -125,7 +125,13 @@ def evaluate(model,
         scores = np.zeros((0,))
         num_annotations = 0.0
 
-        for i in range(generator.size()):
+        iterator = range(generator.size())
+        if verbose:
+            print('Processing label: {} - {}'.format(label_idx, generator.get_class_name(label_idx)))
+            # Modify with rendering
+            iterator = tqdm(iterator)
+
+        for i in iterator:
             detections = all_detections[i][label_idx]
             annotations = all_annotations[i][label_idx]
             num_annotations += annotations.shape[0]

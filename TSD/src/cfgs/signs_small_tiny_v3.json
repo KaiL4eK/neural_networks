@@ -5,27 +5,27 @@
         "max_input_size":       [448, 448],
         "base":                 "SmallTinyV3",
         "downsample":           [32, 16, 8],
-        "anchors":              [6,6, 7,7, 8,8, 10,10, 12,11, 14,14, 18,17, 23,22, 32,31],
+        "anchors":              [4,4, 5,5, 6,6, 6,10, 8,8, 10,10, 14,14, 21,20, 33,32],
         "anchors_per_output":   3,
         "labels":               [],
         "infer_shape":          [416, 416]
     },
 
     "train": {
-        "image_folder":         ["../data/GTSDB_VOC_Full/Images/"],
-        "annot_folder":         ["../data/GTSDB_VOC_Full/Annotations/"],
+        "image_folder":         ["../data/RTSD_VOC_Train/Images/", "../data/GTSDB_VOC_Full/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Train/Annotations/", "../data/GTSDB_VOC_Full/Annotations/"],
         "cache_name":           "",
 
         "train_times":          1,
         "batch_size":           16,
-        "nb_epochs":            1500,
+        "nb_epochs":            500,
         "warmup_epochs":        0,
         "ignore_thresh":        0.5,
         "gpus":                 "0",
         
-        "optimizer":            "Adam",
+        "optimizer":            "Nadam",
         "learning_rate":        1e-3,
-        "lr_decay":             0.01,
+        "lr_decay":             0,
         "clipnorm":             0,
         
         "grid_scales":          [1,1,1],
@@ -48,8 +48,8 @@
     },
 
     "eval": {
-        "image_folder":         ["../data/RTSD_VOC_Full/Images/"],
-        "annot_folder":         ["../data/RTSD_VOC_Full/Annotations/"],
+        "image_folder":         ["../data/RTSD_VOC_Test/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Test/Annotations/"],
         "cache_name":           ""
     }
 }
