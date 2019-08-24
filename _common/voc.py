@@ -177,7 +177,7 @@ def create_training_instances(
         print("valid_annot_folder not exists. Spliting the trainining set.")
 
         train_ints, valid_ints = train_test_split(train_ints,
-                                                  test_size=0.2,
+                                                  test_size=0.1,
                                                   random_state=42)
         valid_labels = train_labels
 

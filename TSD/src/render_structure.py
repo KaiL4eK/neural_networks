@@ -5,7 +5,7 @@ import tensorflow as tf
 import keras.backend as K
 import yolo 
 import json
-from keras.utils import plot_model
+from tensorflow.keras.utils import plot_model
 import os
 
 def _main_(args):

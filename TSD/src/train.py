@@ -19,8 +19,6 @@ import _common.callbacks as cbs
 from _common.voc import replace_all_labels_2_one, create_training_instances
 
 # MBN2 - 149 ms/step
-
-
 def prepare_generators(config):
     if config['train']['cache_name']:
         makedirs(os.path.dirname(config['train']['cache_name']))
@@ -169,6 +167,33 @@ def train_freezed(config, train_model, train_generator, valid_generator):
 def start_train(config, train_model, infer_model, train_generator, valid_generator):
     print('Full training')
 
+    ###############################
+    #   Optimizers
+    ###############################
+
+    optimizers = {
+        'SGD': opt.SGD(lr=config['train']['learning_rate']),
+        'Adam': opt.Adam(lr=config['train']['learning_rate']),
+        'Nadam': opt.Nadam(lr=config['train']['learning_rate']),
+        'RMSprop': opt.RMSprop(lr=config['train']['learning_rate']),
+    }
+
+    optimizer = optimizers[config['train']['optimizer']]
+
+    if config['train']['clipnorm'] > 0:
+        optimizer.clipnorm = config['train']['clipnorm']
+    
+    if config['train'].get('lr_decay', 0) > 0:
+        optimizer.decay = config['train']['lr_decay']
+    
+    if config['train']['optimizer'] == 'Nadam':
+        # Just to set field
+        optimizer.decay = 0.0
+
+    ###############################
+    #   Callbacks
+    ###############################
+    
     checkpoint_name = utils.get_checkpoint_name(config)
     utils.makedirs_4_file(checkpoint_name)
 
@@ -209,7 +234,7 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
 
     reduce_on_plateau = ReduceLROnPlateau(
         monitor='val_loss',
-        factor=0.2,
+        factor=0.3,
         patience=20,
         verbose=1,
         mode='min',
@@ -231,26 +256,8 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
         tensorboard=tensorboard_cb
     )
 
-    ###############################
-    #   Optimizers
-    ###############################
-
-    optimizers = {
-        'SGD': opt.SGD(lr=config['train']['learning_rate']),
-        'Adam': opt.Adam(lr=config['train']['learning_rate']),
-        'Nadam': opt.Nadam(lr=config['train']['learning_rate']),
-        'RMSprop': opt.RMSprop(lr=config['train']['learning_rate']),
-    }
-
-    optimizer = optimizers[config['train']['optimizer']]
-
-    if config['train']['clipnorm'] > 0:
-        optimizer.clipnorm = config['train']['clipnorm']
-
-    if config['train'].get('lr_decay', 0) > 0:
-        optimizer.decay = config['train']['lr_decay']
-
-    callbacks = [checkpoint_vloss, tensorboard_cb, map_evaluator_cb, logger_cb, early_stop, reduce_on_plateau]
+    callbacks = [checkpoint_vloss, tensorboard_cb, map_evaluator_cb, logger_cb, early_stop]
+    callbacks += [reduce_on_plateau]
 
     ###############################
     #   Prepare fit
