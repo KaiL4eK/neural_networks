@@ -22,6 +22,7 @@ def _main_(args):
         max_input_size      = config['model']['max_input_size'],
         anchors             = config['model']['anchors'], 
         base                = config['model']['base'],
+        base_params         = config['model']['base_params'],
         train_shape         = (*config['model']['infer_shape'], 3),
         load_src_weights    = False
     )

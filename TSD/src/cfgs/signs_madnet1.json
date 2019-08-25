@@ -1,0 +1,63 @@
+{
+    "model" : {
+        "main_name":            "TSD_MadNetv1",
+        "base":                 "MadNetv1",
+        "base_params": {
+            
+        },
+        "min_input_size":       [608, 608],
+        "max_input_size":       [864, 864],
+        "downsample":           [64, 32, 16],
+        "anchors":              [8,8, 11,11, 11,18, 14,14, 18,19, 20,10, 26,26, 38,38, 62,59],
+        "anchors_per_output":   3,
+        "labels":               [],
+        "infer_shape":          [800, 800]
+    },
+
+    "aug": {
+        "enabled":              true,
+        "shift_jitter":         0.3
+    },
+
+    "train": {
+        "image_folder":         ["../data/RTSD_VOC_Train/Images/", "../data/GTSDB_VOC_Full/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Train/Annotations/", "../data/GTSDB_VOC_Full/Annotations/"],
+        "cache_name":           "",
+
+        "train_times":          1,
+        "batch_size":           4,
+        "nb_epochs":            500,
+        "warmup_epochs":        0,
+        "ignore_thresh":        0.5,
+        "gpus":                 "0",
+        
+        "optimizer":            "Nadam",
+        "learning_rate":        1e-3,
+        "lr_decay":             0,
+        "clipnorm":             0,
+        
+        "grid_scales":          [1,1,1],
+        "obj_scale":            5,
+        "noobj_scale":          1,
+        "xywh_scale":           1,
+        "class_scale":          1,
+
+        "debug":                false,
+        "freeze":               false,
+        "load_src_weights":     false
+    },
+
+    "valid": {
+        "image_folder":         [],
+        "annot_folder":         [],
+        "cache_name":           "",
+
+        "valid_times":          1
+    },
+
+    "eval": {
+        "image_folder":         ["../data/RTSD_VOC_Test/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Test/Annotations/"],
+        "cache_name":           ""
+    }
+}

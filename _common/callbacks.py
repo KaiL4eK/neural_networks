@@ -78,7 +78,58 @@ class CustomModelCheckpoint(ModelCheckpoint):
 
 
 import tensorflow.keras.backend as K
+from utils.utils import preprocess_input
+import time
 
+class FPSLogger(Callback):
+    def __init__(self,
+                 infer_model,
+                 generator,
+                 infer_sz,
+                 tensorboard=None):
+
+        self.infer_model = infer_model
+        self.generator = generator
+        self.tensorboard = tensorboard
+        self.infer_sz = infer_sz
+
+        self.fps_test_imgs_cnt = 1
+        self.batch_input = np.zeros((self.fps_test_imgs_cnt, self.infer_sz[0], self.infer_sz[1], 3))
+        for i in range(self.fps_test_imgs_cnt):
+            self.batch_input[i] = preprocess_input(self.generator.load_image(i), self.infer_sz[0], self.infer_sz[1])
+
+        if not isinstance(self.tensorboard, TensorBoard) and self.tensorboard is not None:
+            raise ValueError(
+                "Tensorboard object must be a instance from keras.callbacks.TensorBoard")
+
+    def on_train_begin(self, logs=None):
+        if self.tensorboard is not None and self.tensorboard.writer is not None:
+            print('Pretraining FPS estimation')
+            for i in range(100):
+                self.infer_model.predict_on_batch(self.batch_input)
+
+            start_time = time.time()
+            self.infer_model.predict_on_batch(self.batch_input)
+            result_time = (time.time() - start_time) / self.fps_test_imgs_cnt
+
+            print('Pretraining FPS estimation done')
+
+            hyperparameters = [tf.convert_to_tensor(['inf_time', str(result_time)])]
+            summary = tf.summary.text('logs=)', tf.stack(hyperparameters))
+            self.tensorboard.writer.add_summary(K.eval(summary))
+
+    # def on_epoch_end(self, epoch, logs=None):
+
+    #     if self.tensorboard is not None and self.tensorboard.writer is not None:
+    #         start_time = time.time()
+    #         self.infer_model.predict_on_batch(self.batch_input)
+    #         result_time = time.time() - start_time
+
+    #         summary = tf.Summary()
+    #         summary_value = summary.value.add()
+    #         summary_value.simple_value = result_time / self.fps_test_imgs_cnt
+    #         summary_value.tag = "fps"
+    #         self.tensorboard.writer.add_summary(summary, epoch)
 
 class CustomLogger(Callback):
     def __init__(self,

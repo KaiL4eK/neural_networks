@@ -1,9 +1,12 @@
 {
     "model" : {
         "main_name":            "TSD_Small_YOLOv3_Tiny",
+        "base":                 "SmallTinyV3",
+        "base_params": {
+            
+        },
         "min_input_size":       [416, 416],
         "max_input_size":       [640, 640],
-        "base":                 "SmallTinyV3",
         "downsample":           [32, 16, 8],
         "anchors":              [8,8, 10,10, 12,12, 14,14, 17,17, 21,20, 26,26, 34,33, 48,46],
         "anchors_per_output":   3,

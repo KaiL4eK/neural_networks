@@ -118,23 +118,24 @@ argparser.add_argument(
     '--conf',
     default='config.json',
     help='path to configuration file')
-argparser.add_argument(
-    '-a',
-    '--anchors',
-    default=9,
-    help='number of anchors to use')
+# argparser.add_argument(
+#     '-a',
+#     '--anchors',
+#     default=9,
+#     help='number of anchors to use')
 
 args = argparser.parse_args()
 
 
 def _main_():
     config_path = args.conf
-    num_anchors = int(args.anchors)
 
     with open(config_path) as config_buffer:
         config = json.loads(config_buffer.read())
 
-    image_sz = config['model']['infer_shape']
+    num_anchors = config['model']['anchors_per_output'] * len(config['model']['downsample'])
+
+    infer_sz = config['model']['infer_shape']
 
     train_imgs, train_labels = parse_voc_annotation(
         config['train']['annot_folder'],
@@ -155,15 +156,15 @@ def _main_():
 
             new_ar = image['width'] * 1. / image['height']
             if new_ar > 1.:
-                scale_rate = image_sz[1] * 1. / image['width']
+                scale_rate = infer_sz[1] * 1. / image['width']
             else:
-                scale_rate = image_sz[0] * 1. / image['height']
+                scale_rate = infer_sz[0] * 1. / image['height']
 
             new_width = a_width * scale_rate
             new_height = a_height * scale_rate
 
 #             print(image['filename'])
-#             print( int(a_width / image['width'] * image_sz[1]), int(a_height / image['height'] * image_sz[0]) )
+#             print( int(a_width / image['width'] * infer_sz[1]), int(a_height / image['height'] * infer_sz[0]) )
 
 #             relative_w = a_width/image['width']
 #             relative_h = a_height/image['height']
@@ -174,8 +175,7 @@ def _main_():
     centroids = run_kmeans(annotation_dims, num_anchors)
 
     # write anchors to file
-    print('\naverage IOU for', num_anchors, 'anchors:', '%0.2f' %
-          avg_IOU(annotation_dims, centroids))
+    print('\naverage IOU for {} anchors: {:0.2f}'.format(num_anchors, avg_IOU(annotation_dims, centroids)))
     print_anchors(centroids)
 
 

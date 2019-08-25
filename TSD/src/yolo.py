@@ -390,11 +390,13 @@ def create_model_new(
     class_scale=1,
     train_shape=(None, None, 3),
     load_src_weights=True,
-    is_freezed=False
+    is_freezed=False,
+    base_params={}
 ):
     backend_options = {
         # 'pred_filters':         anchors_per_output*(4+1+nb_class),
-        'train_shape':          train_shape
+        'train_shape':  train_shape,
+        'base_params':  base_params
     }
 
     backends = {
@@ -407,6 +409,7 @@ def create_model_new(
                 'MobileNetv2_75':   (backend.MobileNetV2_75,    ""),
                 'MobileNetv2_100':  (backend.MobileNetV2_100,   ""),
                 'NewMobileNetv2':   (backend.NewMobileNetV2,    ""),
+                'MadNetv1':         (backend.MadNetv1,         ""),
                 'SqueezeNet':       (backend.SqueezeNet,        ""),
                 'Xception':         (backend.Xception,          "")
                 }

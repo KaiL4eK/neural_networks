@@ -28,10 +28,6 @@ def init_session(rate):
     K.set_session(sess)
 
 
-def _sigmoid(x):
-    return expit(x)
-
-
 def makedirs(path):
     try:
         os.makedirs(path)
@@ -290,7 +286,7 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
 
 
 def normalize(image):
-    return image/255.  # * 2 - 1
+    return image/255. # * 2 - 1
 
 
 def get_embedded_img_sz(image, input_hw):
@@ -313,12 +309,15 @@ def preprocess_input(image, net_h, net_w):
     new_h, new_w = get_embedded_img_sz(image, (net_h, net_w))
 
     resized = cv2.resize(image, (new_w, new_h))
-    resized = normalize(resized)
 
     # embed the image into the standard letter box
-    new_image = np.zeros((net_h, net_w, 3))
+    new_image = np.zeros((net_h, net_w, 3), np.uint8)
+    new_image.fill(127)
+
     new_image[(net_h-new_h)//2:(net_h+new_h)//2,
               (net_w-new_w)//2:(net_w+new_w)//2, :] = resized
+
+    new_image = normalize(new_image)
 
     return new_image
 
@@ -430,3 +429,6 @@ def _softmax(x, axis=-1):
     e_x = np.exp(x)
 
     return e_x / e_x.sum(axis, keepdims=True)
+
+def _sigmoid(x):
+    return expit(x)

@@ -23,10 +23,11 @@ class DetBackend(object):
 class NewMobileNetV2(DetBackend):
     def __init__(self, **kwargs):
         train_shape = kwargs['train_shape']
+        base_params = kwargs['base_params']
 
         image_input = Input(shape=train_shape, name='input_img')
 
-        alpha = 0.35
+        alpha = base_params['alpha']
 
         channel_axis = 1 if mnu.K.image_data_format() == 'channels_first' else -1
 
@@ -48,26 +49,99 @@ class NewMobileNetV2(DetBackend):
         # x = mnu._inverted_residual_block(x, filters=320, kernel=3, t=6, strides=1, n=1, alpha=alpha, block_id=16)
 
         last_block_filters = mnu._make_divisible(1280 * alpha, 8)
-        x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='Conv_1')(x16)
-        x = mnu.BatchNormalization(axis=channel_axis, name='Conv_1_bn')(x)
-        x_out1 = mnu.ReLU(6., name='out_relu1')(x)
+        x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='out_conv1')(x16)
+        x = mnu.BatchNormalization(axis=channel_axis, name='out_bn1')(x)
+        y1 = mnu.ReLU(6., name='out_relu1')(x)
 
-        # x8u = UpSampling2D(2)(x16)
-        # x = Concatenate()([x8u, x8])
+        # Next branch
+        x8u = UpSampling2D(2)(x16)
+        x = Concatenate()([x8u, x8])
 
-        # x = mnu._inverted_residual_block(x, 16, 3, t=6, s=1, n=2, alpha=alpha, block_id=15)
+        x = mnu._inverted_residual_block(x, 32, 3, t=6, s=1, n=2, alpha=alpha, block_id=13)
 
         last_block_filters = mnu._make_divisible(1280 / 2 * alpha, 8)
-        x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='Conv_2')(x8)
-        x = mnu.BatchNormalization(axis=channel_axis, name='Conv_2_bn')(x)
-        x_out2 = mnu.ReLU(6., name='out_relu2')(x)
+        x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='out_conv2')(x)
+        x = mnu.BatchNormalization(axis=channel_axis, name='out_bn2')(x)
+        y2 = mnu.ReLU(6., name='out_relu2')(x)
 
-        self.outputs = [x_out1, x_out2]
+        self.outputs = [y1, y2]
         self.input_layers = [image_input]
 
         self.head_layers_cnt = 2
         self.downgrades = [16, 8]
 
+
+class MadNetv1(DetBackend):
+    def __init__(self, **kwargs):
+        train_shape = kwargs['train_shape']
+
+        image_input = Input(shape=train_shape, name='input_img')
+        x = image_input
+
+        x2 = dnu.compose(
+            dnu.DarknetConv2D_BN_Leaky(4, 3),
+            MaxPooling2D(pool_size=2, strides=2, padding='same')
+            )(x)
+
+        x16 = compose(
+            DarknetConv2D_BN_Leaky(16, 3),
+            MaxPooling2D(pool_size=2, strides=2, padding='same'),
+            DarknetConv2D_BN_Leaky(32, 3),
+            MaxPooling2D(pool_size=2, strides=2, padding='same'),
+            DarknetConv2D_BN_Leaky(64, 3),
+            MaxPooling2D(pool_size=2, strides=2, padding='same'),
+        )(x2)
+
+        x32 = compose(
+            DarknetConv2D_BN_Leaky(128, 3, dilation_rate=1),
+            DarknetConv2D_BN_Leaky(128, 3, dilation_rate=2),
+            DarknetConv2D_BN_Leaky(128, 3, dilation_rate=2),
+            MaxPooling2D(pool_size=2, strides=2, padding='same'),
+        )(x16)
+
+        x32 = compose(
+            DarknetConv2D_BN_Leaky(256, 3, dilation_rate=2),
+            DarknetConv2D_BN_Leaky(256, 3, dilation_rate=4),
+            DarknetConv2D_BN_Leaky(256, 3, dilation_rate=4),
+
+            # DarknetConv2D_BN_Leaky(512, 3),
+            # MaxPooling2D(pool_size=2, strides=1, padding='same'),
+            # DarknetConv2D_BN_Leaky(1024, 3),
+            # DarknetConv2D_BN_Leaky(256, 1),
+        )(x32)
+
+
+        # y1 = dnu.compose(
+        #     dnu.DarknetConv2D_BN_Leaky(512, 3),
+        #     )(x64)
+
+        # x32u = dnu.compose(
+        #     dnu.DarknetConv2D_BN_Leaky(128, 1),
+        #     UpSampling2D(2)
+        #     )(x64)
+
+        y2 = dnu.compose(
+            # Concatenate(),
+            dnu.DarknetConv2D_BN_Leaky(256, 3),
+            # )([x32u, x32])
+            )(x32)
+
+        x16u = dnu.compose(
+            dnu.DarknetConv2D_BN_Leaky(128, 1),
+            UpSampling2D(2)
+            # )(y2)
+            )(x32u)
+
+        y3 = dnu.compose(
+            Concatenate(),
+            dnu.DarknetConv2D_BN_Leaky(128, 3),
+            )([x16u, x16])
+
+        self.outputs = [y2, y3]
+        self.input_layers = [image_input]
+
+        self.head_layers_cnt = 2
+        self.downgrades = [32, 16]
 
 class SqueezeNet(DetBackend):
     def __init__(self, **kwargs):

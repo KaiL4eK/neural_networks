@@ -1,31 +1,35 @@
 {
     "model" : {
         "main_name":            "TSD_NewMbNv2",
-        "min_input_size":       [416, 416],
-        "max_input_size":       [416, 416],
         "base":                 "NewMobileNetv2",
-        "anchors":              [6,6, 9,9, 12,12, 15,15, 21,20, 31,30],
+        "base_params": {
+            "alpha": 0.35
+        },
+        "min_input_size":       [288, 288],
+        "max_input_size":       [448, 448],
+        "downsample":           [16, 8],
+        "anchors":              [5,5, 6,7, 8,9, 11,12, 19,19, 31,30],
         "anchors_per_output":   3,
         "labels":               [],
         "infer_shape":          [416, 416]
     },
 
     "train": {
-        "image_folder":         ["../data/GTSDB_VOC_Full/Images/"],
-        "annot_folder":         ["../data/GTSDB_VOC_Full/Annotations/"],
+        "image_folder":         ["../data/RTSD_VOC_Train/Images/", "../data/GTSDB_VOC_Full/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Train/Annotations/", "../data/GTSDB_VOC_Full/Annotations/"],
         "cache_name":           "",
 
-        "train_times":          5,
-        "batch_size":           4,
-        "nb_epochs":            200,
+        "train_times":          1,
+        "batch_size":           16,
+        "nb_epochs":            500,
         "warmup_epochs":        0,
         "ignore_thresh":        0.5,
         "gpus":                 "0",
         
-        "optimizer":            "Adam",
-        "learning_rate":        3e-4,
-        "lr_decay":             0.001,
-        "clipnorm":             0.001,
+        "optimizer":            "Nadam",
+        "learning_rate":        1e-3,
+        "lr_decay":             0,
+        "clipnorm":             0,
         
         "grid_scales":          [1,1,1],
         "obj_scale":            5,
@@ -34,7 +38,8 @@
         "class_scale":          1,
 
         "debug":                false,
-        "freeze":               false
+        "freeze":               false,
+        "load_src_weights":     false
     },
 
     "valid": {
@@ -46,8 +51,8 @@
     },
 
     "eval": {
-        "image_folder":         ["../data/GTSDB_VOC_Full/Images/"],
-        "annot_folder":         ["../data/GTSDB_VOC_Full/Annotations/"],
-        "cache_name":           "pkl/sign_eval.pkl"
+        "image_folder":         ["../data/RTSD_VOC_Test/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Test/Annotations/"],
+        "cache_name":           ""
     }
 }

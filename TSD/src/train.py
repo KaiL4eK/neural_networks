@@ -106,6 +106,7 @@ def prepare_model(config, initial_weights):
         xywh_scale=config['train']['xywh_scale'],
         class_scale=config['train']['class_scale'],
         base=config['model']['base'],
+        base_params=config['model']['base_params'],
         anchors_per_output=config['model']['anchors_per_output'],
         is_freezed=freezing,
         load_src_weights=config['train'].get('load_src_weights', True)
@@ -256,8 +257,17 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
         tensorboard=tensorboard_cb
     )
 
-    callbacks = [checkpoint_vloss, tensorboard_cb, map_evaluator_cb, logger_cb, early_stop]
+    fps_logger = cbs.FPSLogger(
+        infer_model=infer_model,
+        generator=valid_generator,
+        infer_sz=config['model']['infer_shape'],
+        tensorboard=tensorboard_cb
+    )
+
+    callbacks = [tensorboard_cb, map_evaluator_cb, logger_cb, early_stop]
     callbacks += [reduce_on_plateau]
+    callbacks += [fps_logger]
+    # callbacks += [checkpoint_vloss]
 
     ###############################
     #   Prepare fit

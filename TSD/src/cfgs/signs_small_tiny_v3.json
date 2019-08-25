@@ -1,14 +1,22 @@
 {
     "model" : {
         "main_name":            "TSD_Small_YOLOv3_Tiny",
+        "base":                 "SmallTinyV3",
+        "base_params": {
+            
+        },
         "min_input_size":       [288, 288],
         "max_input_size":       [448, 448],
-        "base":                 "SmallTinyV3",
         "downsample":           [32, 16, 8],
         "anchors":              [4,4, 5,5, 6,6, 6,10, 8,8, 10,10, 14,14, 21,20, 33,32],
         "anchors_per_output":   3,
         "labels":               [],
         "infer_shape":          [416, 416]
+    },
+
+    "aug": {
+        "enabled":              true,
+        "shift_jitter":         0.3
     },
 
     "train": {
