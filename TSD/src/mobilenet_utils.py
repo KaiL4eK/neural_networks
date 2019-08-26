@@ -43,6 +43,7 @@ def _bottleneck(inputs, filters, kernel, t, s, r, block_id, alpha=1.0):
                    padding='same',
                    strides=1,
                    use_bias=False,
+                   kernel_initializer='he_uniform',
                    name=prefix + 'expand')(x)
         x = BatchNormalization(axis=channel_axis,
                                epsilon=1e-3,
@@ -69,6 +70,7 @@ def _bottleneck(inputs, filters, kernel, t, s, r, block_id, alpha=1.0):
                strides=1,
                padding='same',
                use_bias=False,
+               kernel_initializer='he_uniform',
                name=prefix + 'project')(x)
     x = BatchNormalization(axis=channel_axis,
                            momentum=0.999,

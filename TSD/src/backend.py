@@ -1,7 +1,7 @@
 from tensorflow.keras.layers import Conv2D, Input, BatchNormalization, LeakyReLU
 from tensorflow.keras.layers import Concatenate, MaxPooling2D, UpSampling2D
 from tensorflow.keras.layers import ZeroPadding2D, add, concatenate, Lambda
-
+from tensorflow.keras.models import Model
 from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2 as Keras_MobileNetV2
 from tensorflow.keras.applications.xception import Xception as Keras_Xception
 
@@ -10,11 +10,12 @@ import darknet_utils as dnu
 
 class DetBackend(object):
     def __init__(self):
-        self.outputs = []
-        self.input_layers = []
+        pass
+        # self.outputs = []
+        # self.input_layers = []
 
-        self.head_layers_cnt = -1
-        self.downgrades = [1]
+        # self.head_layers_cnt = -1
+        # self.downgrades = [1]
 
 
 # 6,6, 7,7, 8,8, 10,10, 12,11, 14,14, 18,17, 23,22, 32,31
@@ -65,10 +66,12 @@ class NewMobileNetV2(DetBackend):
         y2 = mnu.ReLU(6., name='out_relu2')(x)
 
         self.outputs = [y1, y2]
-        self.input_layers = [image_input]
+        self.inputs = [image_input]
 
         self.head_layers_cnt = 2
         self.downgrades = [16, 8]
+
+        self.model = Model(*self.inputs, *self.outputs)
 
 
 class MadNetv1(DetBackend):
@@ -79,7 +82,7 @@ class MadNetv1(DetBackend):
         x = image_input
 
         x2 = dnu.compose(
-            dnu.DarknetConv2D_BN_Leaky(4, 3),
+            dnu.DarknetConv2D_BN_Leaky(8, 7),
             MaxPooling2D(pool_size=2, strides=2, padding='same')
             )(x)
 
@@ -138,7 +141,7 @@ class MadNetv1(DetBackend):
             )([x16u, x16])
 
         self.outputs = [y2, y3]
-        self.input_layers = [image_input]
+        self.inputs = [image_input]
 
         self.head_layers_cnt = 2
         self.downgrades = [32, 16]
@@ -227,13 +230,13 @@ class Xception(DetBackend):
 class MobileNetV2(DetBackend):
     def __init__(self, **kwargs):
         train_shape = kwargs['train_shape']
+        base_params = kwargs['base_params']
 
         image_input = Input(shape=train_shape, name='input_img')
 
-        alpha = self.alpha
+        alpha = base_params['alpha']
 
-        mobilenetv2 = Keras_MobileNetV2(
-            input_tensor=image_input, include_top=False, weights=None, alpha=alpha)
+        mobilenetv2 = Keras_MobileNetV2(input_tensor=image_input, include_top=False, weights=None, alpha=alpha)
         x = mobilenetv2.output
     
         self.outputs = [x]
@@ -241,30 +244,6 @@ class MobileNetV2(DetBackend):
 
         self.head_layers_cnt = 1
         self.downgrades = [32]
-
-
-class MobileNetV2_35(MobileNetV2):
-    def __init__(self, **kwargs):
-        self.alpha = 0.35
-        super().__init__(**kwargs)
-
-
-class MobileNetV2_50(MobileNetV2):
-    def __init__(self, **kwargs):
-        self.alpha = 0.5
-        super().__init__(**kwargs)
-
-
-class MobileNetV2_75(MobileNetV2):
-    def __init__(self, **kwargs):
-        self.alpha = 0.75
-        super().__init__(**kwargs)
-
-
-class MobileNetV2_100(MobileNetV2):
-    def __init__(self, **kwargs):
-        self.alpha = 1
-        super().__init__(**kwargs)
 
 
 class Tiny_YOLOv3(DetBackend):
@@ -330,7 +309,7 @@ class Small_Tiny_YOLOv3(DetBackend):
             )([x8u, x8])
 
         self.outputs = [y1, y2, y3]
-        self.input_layers = [image_input]
+        self.inputs = [image_input]
 
         self.head_layers_cnt = 3
         self.downgrades = [32, 16, 8]

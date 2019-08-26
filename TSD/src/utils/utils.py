@@ -322,7 +322,7 @@ def preprocess_input(image, net_h, net_w):
     return new_image
 
 
-def get_yolo_boxes(model, images, net_h, net_w, anchors, obj_thresh, nms_thresh):
+def get_yolo_boxes(model, images, net_h, net_w, anchors, obj_thresh, nms_thresh, no_boxes=False):
     # anchors - raw format
 
     image_h, image_w, _ = images[0].shape
@@ -336,6 +336,9 @@ def get_yolo_boxes(model, images, net_h, net_w, anchors, obj_thresh, nms_thresh)
 
     batch_output = model.predict_on_batch(batch_input)
     batch_boxes = [None]*nb_images
+    
+    if no_boxes:
+        return batch_boxes
 
     net_output_count = len(batch_output)
 

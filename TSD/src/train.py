@@ -235,7 +235,7 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
 
     reduce_on_plateau = ReduceLROnPlateau(
         monitor='val_loss',
-        factor=0.3,
+        factor=0.4,
         patience=20,
         verbose=1,
         mode='min',
@@ -266,7 +266,7 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
 
     callbacks = [tensorboard_cb, map_evaluator_cb, logger_cb, early_stop]
     callbacks += [reduce_on_plateau]
-    callbacks += [fps_logger]
+    # callbacks += [fps_logger]
     # callbacks += [checkpoint_vloss]
 
     ###############################

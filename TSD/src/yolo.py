@@ -330,7 +330,7 @@ def create_yolo_head_models(
         yolo_anchors += [anchors[i*2 *
                                  anchors_per_output:(i+1)*2*anchors_per_output]]
 
-    image_input = done_backend.input_layers[0]
+    image_input = done_backend.inputs[0]
     loss_yolos = []
     pred_layers = []
     for idx, out in enumerate(done_backend.outputs):
@@ -404,12 +404,9 @@ def create_model_new(
                 'SmallTinyV3':      (backend.Small_Tiny_YOLOv3, ""),
                 'Darknet53':        (backend.Darknet53,         "yolov3_exp.h5"),
                 'Darknet19':        (backend.Darknet19,         "yolov2.h5"),
-                'MobileNetv2_35':   (backend.MobileNetV2_35,    ""),
-                'MobileNetv2_50':   (backend.MobileNetV2_50,    ""),
-                'MobileNetv2_75':   (backend.MobileNetV2_75,    ""),
-                'MobileNetv2_100':  (backend.MobileNetV2_100,   ""),
+                'MobileNetv2':      (backend.MobileNetV2,       ""),
                 'NewMobileNetv2':   (backend.NewMobileNetV2,    ""),
-                'MadNetv1':         (backend.MadNetv1,         ""),
+                'MadNetv1':         (backend.MadNetv1,          ""),
                 'SqueezeNet':       (backend.SqueezeNet,        ""),
                 'Xception':         (backend.Xception,          "")
                 }
@@ -421,6 +418,15 @@ def create_model_new(
     print('Loading "{}" model'.format(base))
 
     new_backend = backends[base][0](**backend_options)
+
+    weights_path = os.path.join('src_weights', backends[base][1])
+    if backends[base][1] and os.path.exists(weights_path) and load_src_weights:
+        print('Loading {}'.format(backends[base][1]))
+        new_backend.model.load_weights(
+            weights_path,
+            by_name=True
+        )
+
     train_model, infer_model, mvnc_model = create_yolo_head_models(
         new_backend,
         nb_class,
@@ -437,14 +443,6 @@ def create_model_new(
         xywh_scale,
         class_scale
     )
-
-    weights_path = os.path.join('src_weights', backends[base][1])
-    if backends[base][1] and os.path.exists(weights_path) and load_src_weights:
-        print('Loading {}'.format(backends[base][1]))
-        train_model.load_weights(
-            weights_path,
-            by_name=True
-        )
 
     if is_freezed and new_backend.head_layers_cnt > 0:
         freeze_layers_cnt = len(infer_model.layers) - \

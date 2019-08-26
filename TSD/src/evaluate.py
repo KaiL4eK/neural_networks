@@ -7,9 +7,7 @@ import json
 import yolo
 from generator import BatchGenerator
 from utils.utils import normalize, evaluate, init_session
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.optimizers import Adam
-from keras.models import load_model
+from tensorflow.keras.models import load_model
 
 from _common.voc import parse_voc_annotation, replace_all_labels_2_one
 import _common.utils as c_ut

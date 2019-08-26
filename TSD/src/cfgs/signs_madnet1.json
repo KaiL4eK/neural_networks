@@ -7,8 +7,8 @@
         },
         "min_input_size":       [608, 608],
         "max_input_size":       [864, 864],
-        "downsample":           [64, 32, 16],
-        "anchors":              [8,8, 11,11, 11,18, 14,14, 18,19, 20,10, 26,26, 38,38, 62,59],
+        "downsample":           [32, 16],
+        "anchors":              [9,10, 13,13, 16,18, 24,24, 37,36, 61,58],
         "anchors_per_output":   3,
         "labels":               [],
         "infer_shape":          [800, 800]

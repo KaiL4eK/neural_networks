@@ -3,7 +3,7 @@
         "main_name":            "TSD_NewMbNv2",
         "base":                 "NewMobileNetv2",
         "base_params": {
-            "alpha": 0.35
+            "alpha": 1.0
         },
         "min_input_size":       [288, 288],
         "max_input_size":       [448, 448],
