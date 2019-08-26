@@ -78,7 +78,6 @@ class CustomModelCheckpoint(ModelCheckpoint):
 
 
 import tensorflow.keras.backend as K
-from utils.utils import preprocess_input
 import time
 
 class FPSLogger(Callback):
@@ -95,28 +94,28 @@ class FPSLogger(Callback):
 
         self.fps_test_imgs_cnt = 1
         self.batch_input = np.zeros((self.fps_test_imgs_cnt, self.infer_sz[0], self.infer_sz[1], 3))
-        for i in range(self.fps_test_imgs_cnt):
-            self.batch_input[i] = preprocess_input(self.generator.load_image(i), self.infer_sz[0], self.infer_sz[1])
+        # for i in range(self.fps_test_imgs_cnt):
+            # self.batch_input[i] = preprocess_input(self.generator.load_image(i), self.infer_sz[0], self.infer_sz[1])
 
         if not isinstance(self.tensorboard, TensorBoard) and self.tensorboard is not None:
             raise ValueError(
                 "Tensorboard object must be a instance from keras.callbacks.TensorBoard")
 
-    def on_train_begin(self, logs=None):
-        if self.tensorboard is not None and self.tensorboard.writer is not None:
-            print('Pretraining FPS estimation')
-            for i in range(100):
-                self.infer_model.predict_on_batch(self.batch_input)
+    # def on_train_begin(self, logs=None):
+        # if self.tensorboard is not None and self.tensorboard.writer is not None:
+        #     print('Pretraining FPS estimation')
+        #     for i in range(100):
+        #         self.infer_model.predict_on_batch(self.batch_input)
 
-            start_time = time.time()
-            self.infer_model.predict_on_batch(self.batch_input)
-            result_time = (time.time() - start_time) / self.fps_test_imgs_cnt
+        #     start_time = time.time()
+        #     self.infer_model.predict_on_batch(self.batch_input)
+        #     result_time = (time.time() - start_time) / self.fps_test_imgs_cnt
 
-            print('Pretraining FPS estimation done')
+        #     print('Pretraining FPS estimation done')
 
-            hyperparameters = [tf.convert_to_tensor(['inf_time', str(result_time)])]
-            summary = tf.summary.text('logs=)', tf.stack(hyperparameters))
-            self.tensorboard.writer.add_summary(K.eval(summary))
+        #     hyperparameters = [tf.convert_to_tensor(['inf_time', str(result_time)])]
+        #     summary = tf.summary.text('logs=)', tf.stack(hyperparameters))
+        #     self.tensorboard.writer.add_summary(K.eval(summary))
 
     # def on_epoch_end(self, epoch, logs=None):
 
@@ -155,19 +154,19 @@ class CustomLogger(Callback):
     #         summary = tf.summary.text("Config", tensor)
     #         self.tensorboard.writer.add_summary(K.eval(summary))
 
-    def on_epoch_end(self, epoch, logs=None):
+    # def on_epoch_end(self, epoch, logs=None):
 
-        if self.tensorboard is not None and self.tensorboard.writer is not None:
-            lr = self.model.optimizer.lr
-            decay = self.model.optimizer.decay
-            iterations = self.model.optimizer.iterations
-            lr_with_decay = lr / (1. + decay * K.cast(iterations, K.dtype(decay)))
+    #     if self.tensorboard is not None and self.tensorboard.writer is not None:
+    #         lr = self.model.optimizer.lr
+    #         decay = self.model.optimizer.decay
+    #         iterations = self.model.optimizer.iterations
+    #         lr_with_decay = lr / (1. + decay * K.cast(iterations, K.dtype(decay)))
 
-            summary = tf.Summary()
-            summary_value = summary.value.add()
-            summary_value.simple_value = K.eval(lr_with_decay)
-            summary_value.tag = "learning_rate"
-            self.tensorboard.writer.add_summary(summary, epoch)
+    #         summary = tf.Summary()
+    #         summary_value = summary.value.add()
+    #         summary_value.simple_value = K.eval(lr_with_decay)
+    #         summary_value.tag = "learning_rate"
+    #         self.tensorboard.writer.add_summary(summary, epoch)
 
 
 class MAP_evaluation(Callback):
@@ -185,29 +184,20 @@ class MAP_evaluation(Callback):
         """
 
     def __init__(self,
-                 infer_model,
+                 model,
                  generator,
-                 iou_threshold=0.3,
-                 score_threshold=0.3,
-                 save_path=None,
                  period=1,
                  save_best=False,
                  save_name=None,
                  tensorboard=None,
-                 infer_sz=[416, 416],
-                 evaluate=None):
-
-        self.infer_model = infer_model
+                 ):
+                 
+        self.yolo_model = model
         self.generator = generator
-        self.iou_threshold = iou_threshold
-        self.score_threshold = score_threshold
-        self.save_path = save_path
         self.period = period
         self.save_best = save_best
         self.save_name_fmt = save_name
         self.tensorboard = tensorboard
-        self.infer_sz = infer_sz
-        self.evaluate = evaluate
 
         self.bestVloss = None
         self.bestMap = 0
@@ -219,14 +209,7 @@ class MAP_evaluation(Callback):
     def on_epoch_end(self, epoch, logs={}):
 
         if epoch % self.period == 0 and self.period != 0:
-            average_precisions = self.evaluate(model=self.infer_model,
-                                               generator=self.generator,
-                                               iou_threshold=self.iou_threshold,
-                                               obj_thresh=self.score_threshold,
-                                               nms_thresh=0.45,
-                                               net_h=self.infer_sz[0],
-                                               net_w=self.infer_sz[1],
-                                               save_path=None)
+            average_precisions = self.yolo_model.evaluate_generator(generator=self.generator)
             print('\n')
             mAP = c_ut.print_predicted_average_precisions(average_precisions)
 
@@ -242,7 +225,7 @@ class MAP_evaluation(Callback):
                     print('\nEpoch %05d: mAP improved from %g to %g, saving model to %s' %
                           (epoch, self.bestMap, mAP, save_name))
                     self.bestMap = mAP
-                    self.infer_model.save(save_name)
+                    self.model.infer_model.save(save_name)
                 else:
                     print("mAP did not improve from {}.".format(self.bestMap))
 

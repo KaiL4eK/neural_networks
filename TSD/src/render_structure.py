@@ -1,4 +1,4 @@
-from utils.utils import preprocess_input, init_session
+from utils.utils import init_session
 import cv2
 import argparse
 import tensorflow as tf
@@ -16,21 +16,12 @@ def _main_(args):
 
     init_session(0.5)
 
-    train_model, infer_model, _ = yolo.create_model_new(
-        nb_class            = 1,
-        anchors_per_output  = config['model']['anchors_per_output'],
-        max_input_size      = config['model']['max_input_size'],
-        anchors             = config['model']['anchors'], 
-        base                = config['model']['base'],
-        base_params         = config['model']['base_params'],
-        train_shape         = (*config['model']['infer_shape'], 3),
-        load_src_weights    = False
-    )
+    yolo_model = yolo.YOLO_Model(config['model'])
 
     model_render_file = 'images/{}.png'.format(config['model']['base'])
     if not os.path.isdir(os.path.dirname(model_render_file)):
         os.makedirs(os.path.dirname(model_render_file))
-    plot_model(infer_model, to_file=model_render_file, show_shapes=True)
+    plot_model(yolo_model.infer_model, to_file=model_render_file, show_shapes=True)
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Help =)')

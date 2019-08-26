@@ -7,7 +7,7 @@ import json
 import yolo
 import tensorflow as tf
 from generator import BatchGenerator
-from utils.utils import normalize, evaluate, makedirs, init_session, unfreeze_model
+from utils.utils import normalize, makedirs, init_session, unfreeze_model
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
 import tensorflow.keras.optimizers as opt
 from tensorflow.keras.utils import plot_model
@@ -51,8 +51,8 @@ def prepare_generators(config):
         downsample=config['model']['downsample'],  # ratio between network input's size and network output's size, 32 for YOLOv3
         max_box_per_image=max_box_per_image,
         batch_size=config['train']['batch_size'],
-        min_net_size=config['model']['min_input_size'],
-        max_net_size=config['model']['max_input_size'],
+        min_net_size=config['train']['min_input_size'],
+        max_net_size=config['train']['max_input_size'],
         shuffle=True,
         jitter=0.1,
         norm=normalize
@@ -69,62 +69,27 @@ def prepare_generators(config):
         infer_sz=config['model']['infer_shape']
     )
 
-    config['other'] = {
-        'labels': labels,
-        'mbpi': max_box_per_image
-    }
+    config['train']['mbpi'] = max_box_per_image
+    config['model']['labels'] = labels
 
     return train_generator, valid_generator
 
 
 def prepare_model(config, initial_weights):
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = config['train']['gpus']
-    multi_gpu = len(config['train']['gpus'].split(','))
-
-    freezing = config['train'].get('freeze', True)
-    config['train']['warmup_epochs'] = 0
-
-    # warmup_batches = config['train']['warmup_epochs'] * \
-    #     (config['train']['train_times'] * len(train_generator))
-
     if initial_weights and os.path.exists(initial_weights):
         freezing = False
 
-    train_model, infer_model, _ = yolo.create_model_new(
-        nb_class=len(config['other']['labels']),
-        anchors=config['model']['anchors'],
-        max_box_per_image=config['other']['mbpi'],
-        max_input_size=config['model']['max_input_size'],
-        batch_size=config['train']['batch_size'],
-        warmup_batches=0,
-        ignore_thresh=config['train']['ignore_thresh'],
-        multi_gpu=multi_gpu,
-        grid_scales=config['train']['grid_scales'],
-        obj_scale=config['train']['obj_scale'],
-        noobj_scale=config['train']['noobj_scale'],
-        xywh_scale=config['train']['xywh_scale'],
-        class_scale=config['train']['class_scale'],
-        base=config['model']['base'],
-        base_params=config['model']['base_params'],
-        anchors_per_output=config['model']['anchors_per_output'],
-        is_freezed=freezing,
-        load_src_weights=config['train'].get('load_src_weights', True)
+    yolo_model = yolo.YOLO_Model(
+        config['model'],
+        config['train']
     )
 
-    model_render_file = 'images/{}.png'.format(config['model']['base'])
-    if not os.path.isdir(os.path.dirname(model_render_file)):
-        os.makedirs(os.path.dirname(model_render_file))
-    # plot_model(infer_model, to_file=model_render_file, show_shapes=True)
-    # infer_model.summary()
-
     # load the pretrained weight if exists, otherwise load the backend weight only
-    if initial_weights and os.path.exists(initial_weights):
-        print("\nLoading pretrained weights {}".format(initial_weights))
-        train_model.load_weights(
-            initial_weights, by_name=True)
+    if initial_weights:
+        yolo_model.load_weights(initial_weights)
 
-    return train_model, infer_model, freezing
+    return yolo_model
 
 
 def train_freezed(config, train_model, train_generator, valid_generator):
@@ -165,7 +130,12 @@ def train_freezed(config, train_model, train_generator, valid_generator):
     unfreeze_model(infer_model)
 
 
-def start_train(config, train_model, infer_model, train_generator, valid_generator):
+def start_train(
+        config, 
+        yolo_model: yolo.YOLO_Model, 
+        train_generator, 
+        valid_generator
+    ):
     print('Full training')
 
     ###############################
@@ -199,7 +169,7 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
     utils.makedirs_4_file(checkpoint_name)
 
     checkpoint_vloss = cbs.CustomModelCheckpoint(
-        model_to_save=infer_model,
+        model_to_save=yolo_model.infer_model,
         filepath=checkpoint_name,
         monitor='val_loss',
         verbose=1,
@@ -222,15 +192,11 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
     utils.makedirs_4_file(mAP_checkpoint_name)
 
     map_evaluator_cb = cbs.MAP_evaluation(
-        infer_model=infer_model,
+        model=yolo_model,
         generator=valid_generator,
         save_best=True,
         save_name=mAP_checkpoint_name,
-        tensorboard=tensorboard_cb,
-        iou_threshold=0.5,
-        score_threshold=0.5,
-        infer_sz=config['model']['infer_shape'],
-        evaluate=evaluate
+        tensorboard=tensorboard_cb
     )
 
     reduce_on_plateau = ReduceLROnPlateau(
@@ -252,19 +218,19 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
         verbose=1
     )
 
-    logger_cb = cbs.CustomLogger(
-        config=config,
-        tensorboard=tensorboard_cb
-    )
+    # logger_cb = cbs.CustomLogger(
+    #     config=config,
+    #     tensorboard=tensorboard_cb
+    # )
 
-    fps_logger = cbs.FPSLogger(
-        infer_model=infer_model,
-        generator=valid_generator,
-        infer_sz=config['model']['infer_shape'],
-        tensorboard=tensorboard_cb
-    )
+    # fps_logger = cbs.FPSLogger(
+    #     infer_model=yolo_model.infer_model,
+    #     generator=valid_generator,
+    #     infer_sz=config['model']['infer_shape'],
+    #     tensorboard=tensorboard_cb
+    # )
 
-    callbacks = [tensorboard_cb, map_evaluator_cb, logger_cb, early_stop]
+    callbacks = [tensorboard_cb, map_evaluator_cb, early_stop]
     callbacks += [reduce_on_plateau]
     # callbacks += [fps_logger]
     # callbacks += [checkpoint_vloss]
@@ -273,15 +239,15 @@ def start_train(config, train_model, infer_model, train_generator, valid_generat
     #   Prepare fit
     ###############################
 
-    train_model.compile(loss=yolo.dummy_loss, optimizer=optimizer)
-    train_model.fit_generator(
+    yolo_model.train_model.compile(loss=yolo.dummy_loss, optimizer=optimizer)
+    yolo_model.train_model.fit_generator(
         generator=train_generator,
         steps_per_epoch=len(train_generator) * config['train']['train_times'],
 
         validation_data=valid_generator,
         validation_steps=len(valid_generator) * config['valid']['valid_times'],
 
-        epochs=config['train']['nb_epochs'] + config['train']['warmup_epochs'],
+        epochs=config['train']['nb_epochs'],
         verbose=1,
         callbacks=callbacks,
         workers=8,
@@ -307,11 +273,11 @@ if __name__ == '__main__':
 
     train_generator, valid_generator = prepare_generators(config)
 
-    train_model, infer_model, freezing = prepare_model(config, initial_weights)
+    yolo_model = prepare_model(config, initial_weights)
 
-    if freezing:
-        train_freezed(config, train_model, train_generator, valid_generator)
+    # if freezing:
+        # train_freezed(config, train_model, train_generator, valid_generator)
 
-    start_train(config, train_model, infer_model, train_generator, valid_generator)
+    start_train(config, yolo_model, train_generator, valid_generator)
 
     clear_session()

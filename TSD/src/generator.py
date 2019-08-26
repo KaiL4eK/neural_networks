@@ -1,7 +1,7 @@
 import cv2
 import copy
 import numpy as np
-from utils.utils import preprocess_input
+import _common.utils as cutls
 from tensorflow.keras.utils import Sequence
 from utils.bbox import BoundBox, bbox_iou
 from utils.image import apply_random_scale_and_crop, random_distort_image, random_flip, correct_bounding_boxes
@@ -63,32 +63,25 @@ class BatchGenerator(Sequence):
     def __len__(self):
         return int(np.ceil(float(len(self.instances)) / self.batch_size))
 
-    def __getitem__(self, idx):
+    def get_inst_bounds(self, idx):
+        return idx * self.batch_size, (idx + 1) * self.batch_size
 
-        if self.infer_sz:
-            net_h, net_w = self.infer_sz
-        else:
-            # get image input size, change every 10 batches
-            net_h, net_w = self._get_net_size(idx)
+    def __getitem__(self, idx):
+        self._update_net_size(idx)
+        net_h, net_w = self.net_size_h, self.net_size_w
 
         # base_grid_h, base_grid_w = net_h // self.downsample, net_w // self.downsample
 
         # determine the first and the last indices of the batch
-        l_bound = idx * self.batch_size
-        r_bound = (idx + 1) * self.batch_size
+        l_bound, r_bound = self.get_inst_bounds(idx)
 
         if r_bound > len(self.instances):
             r_bound = len(self.instances)
             l_bound = r_bound - self.batch_size
 
-        x_batch = np.zeros(
-            (r_bound - l_bound, net_h, net_w, 3))  # input images
+        x_batch = np.zeros((r_bound - l_bound, net_h, net_w, 3))  # input images
         # list of groundtruth boxes
-        t_batch = np.zeros(
-            (r_bound - l_bound, 1, 1, 1, self.max_box_per_image, 4))
-
-        dummies = [np.zeros((r_bound - l_bound, 1))
-                   for i in range(self.output_layers_count)]
+        t_batch = np.zeros((r_bound - l_bound, 1, 1, 1, self.max_box_per_image, 4))
 
         # According to reversed outputs - because of anchors
         yolos = [np.zeros((r_bound - l_bound,
@@ -97,16 +90,6 @@ class BatchGenerator(Sequence):
                            self.anchors_per_output,
                            4 + 1 + len(self.labels)))
                  for i in reversed(range(self.output_layers_count))]
-
-        # yolo_1 = np.zeros((r_bound - l_bound, 1*net_h // self.downsample,  1*net_w // self.downsample, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 1
-        # yolo_2 = np.zeros((r_bound - l_bound, 2*net_h // self.downsample,  2*net_w // self.downsample, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 2
-        # yolo_3 = np.zeros((r_bound - l_bound, 4*net_h // self.downsample,  4*net_w // self.downsample, len(self.anchors)//self.output_layers_count, 4+1+len(self.labels))) # desired network output 3
-        # yolos = [yolo_3, yolo_2, yolo_1]
-
-        # if self.infer_sz:
-        #     print(net_h, net_w)
-        #     print(base_grid_h, base_grid_w)
-        #     print(yolos[0].shape)
 
         instance_count = 0
         true_box_index = 0
@@ -205,13 +188,22 @@ class BatchGenerator(Sequence):
             # increase instance counter in the current batch
             instance_count += 1
 
+        dummies = [np.zeros((r_bound - l_bound, 1))
+                   for i in range(self.output_layers_count)]
+
         if self.norm:
             return [x_batch, t_batch] + [yolo for yolo in reversed(yolos)], dummies
         else:
             return x_batch
 
     def _get_net_size(self, idx):
-        if idx % 10 == 0 or self.net_size_w == 0:
+        self._update_net_size(idx)
+        return self.net_size_h, self.net_size_w
+
+    def _update_net_size(self, idx):
+        if self.infer_sz:
+            self.net_size_h, self.net_size_w = self.infer_sz
+        elif idx % 10 == 0 or self.net_size_w == 0:
             # rate = float(self.max_net_size[1]) / self.max_net_size[0]
 
             # new_h = self.downsample * np.random.randint(self.min_net_size[0] / self.downsample - 2,
@@ -227,8 +219,6 @@ class BatchGenerator(Sequence):
             # self.net_size_h = int(new_h)
             # self.net_size_w = int(new_w)
 
-        return self.net_size_h, self.net_size_w
-
     def _aug_image(self, instance, net_h, net_w):
         image_name = instance['filename']
         image = cv2.imread(image_name)  # RGB image
@@ -241,49 +231,35 @@ class BatchGenerator(Sequence):
         flip = 0
 
         if self.infer_sz:
-            new_ar = image_w * 1. / image_h
+            self.jitter = 0.0
+            self.scale_distr = 0.0
+            
+        # determine the amount of scaling and cropping
+        dw = self.jitter * image_w
+        dh = self.jitter * image_h
 
-            if new_ar < 1:
-                new_h = int(net_h)
-                new_w = int(net_h * new_ar)
-            else:
-                new_w = int(net_w)
-                new_h = int(net_w / new_ar)
+        new_ar = (image_w + np.random.uniform(-dw, dw)) / \
+                    (image_h + np.random.uniform(-dh, dh))
+        scale = np.random.uniform(1 - self.scale_distr,
+                                    1 + self.scale_distr)
 
-            dx = int((net_w - new_w) // 2)
-            dy = int((net_h - new_h) // 2)
-
-            # apply scaling and cropping
-            im_sized = apply_random_scale_and_crop(
-                image, new_w, new_h, net_w, net_h, dx, dy)
-
+        if new_ar < 1:
+            new_h = int(scale * net_h)
+            new_w = int(net_h * new_ar)
         else:
-            # determine the amount of scaling and cropping
-            dw = self.jitter * image_w
-            dh = self.jitter * image_h
+            new_w = int(scale * net_w)
+            new_h = int(net_w / new_ar)
 
-            new_ar = (image_w + np.random.uniform(-dw, dw)) / \
-                (image_h + np.random.uniform(-dh, dh))
-            scale = np.random.uniform(
-                1 - self.scale_distr, 1 + self.scale_distr)
+        dx = int(np.random.uniform(0, net_w - new_w))
+        dy = int(np.random.uniform(0, net_h - new_h))
 
-            if new_ar < 1:
-                new_h = int(scale * net_h)
-                new_w = int(net_h * new_ar)
-            else:
-                new_w = int(scale * net_w)
-                new_h = int(net_w / new_ar)
+        # apply scaling and cropping
+        im_sized = apply_random_scale_and_crop(
+            image, new_w, new_h, net_w, net_h, dx, dy)
 
-            dx = int(np.random.uniform(0, net_w - new_w))
-            dy = int(np.random.uniform(0, net_h - new_h))
-
-            # apply scaling and cropping
-            im_sized = apply_random_scale_and_crop(
-                image, new_w, new_h, net_w, net_h, dx, dy)
-
+        if self.infer_sz is None:
             # randomly distort hsv space
-            im_sized = random_distort_image(
-                im_sized, hue=18, saturation=1.1, exposure=1.1)
+            im_sized = random_distort_image(im_sized, hue=18, saturation=1.1, exposure=1.1)
 
             # randomly flip
             if self.flip:
@@ -291,8 +267,7 @@ class BatchGenerator(Sequence):
                 im_sized = random_flip(im_sized, flip)
 
         # correct the size and pos of bounding boxes
-        all_objs = correct_bounding_boxes(
-            instance['object'], new_w, new_h, net_w, net_h, dx, dy, flip, image_w, image_h)
+        all_objs = correct_bounding_boxes(instance['object'], new_w, new_h, net_w, net_h, dx, dy, flip, image_w, image_h)
 
         return im_sized, all_objs
 

@@ -162,12 +162,40 @@ def print_predicted_average_precisions(av_precs):
 def get_tiled_image_sz(img_sz, tile_cnt):
     img_h, img_w = img_sz
 
-    while tile_cnt > 1:
-        if img_h > img_w:
-            img_h /= 2
-        else:
-            img_w /= 2
-        
-        tile_cnt /= 2
+    if tile_cnt > 2:
+        raise NotImplementedError('Tile count > 2 - not supported yet!')
 
-    return img_h, img_w
+    # TODO - Really not dividing by tile count, just hack
+    return img_h, img_w/tile_cnt
+
+def get_embedded_img_sz(image, input_hw):
+    new_h, new_w, _ = image.shape
+    net_h, net_w = input_hw
+
+    # determine the new size of the image
+    if (float(net_w) / new_w) < (float(net_h) / new_h):
+        new_h = (new_h * net_w) // new_w
+        new_w = net_w
+    else:
+        new_w = (new_w * net_h) // new_h
+        new_h = net_h
+
+    return new_h, new_w
+
+def image_normalize(image):
+    return image / 255
+
+def image2net_input_sz(image, net_h, net_w):
+
+    new_h, new_w = get_embedded_img_sz(image, (net_h, net_w))
+
+    resized = cv2.resize(image, (new_w, new_h))
+
+    # embed the image into the standard letter box
+    new_image = np.zeros((net_h, net_w, 3), np.uint8)
+    new_image.fill(127)
+
+    new_image[(net_h-new_h)//2:(net_h+new_h)//2,
+              (net_w-new_w)//2:(net_w+new_w)//2, :] = resized
+
+    return new_image

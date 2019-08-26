@@ -4,6 +4,9 @@ import tensorflow as tf
 from tensorflow.keras.layers import Layer, Input, Conv2D
 from tensorflow.keras.models import Model
 
+import utils.utils as utils
+import _common.utils as cutls
+
 import backend
 import os
 
@@ -14,12 +17,12 @@ def dummy_loss(y_true, y_pred):
 
 class YoloLayer(Layer):
     def __init__(self, anchors, max_grid_hw,
-                 batch_size, warmup_batches, ignore_thresh,
+                 batch_size, warmup_batches, iou_thresh,
                  grid_scale, obj_scale, noobj_scale,
                  xywh_scale, class_scale, debug=False,
                  **kwargs):
         # make the model settings persistent
-        self.ignore_thresh = ignore_thresh
+        self.iou_thresh = iou_thresh
         self.warmup_batches = warmup_batches
         self.anchors = tf.constant(
             anchors, dtype='float', shape=[1, 1, 1, len(anchors)/2, 2])
@@ -160,7 +163,7 @@ class YoloLayer(Layer):
 
         best_ious = tf.reduce_max(iou_scores, axis=4)
         conf_delta *= tf.expand_dims(
-            tf.cast(best_ious < self.ignore_thresh, tf.float32),
+            tf.cast(best_ious < self.iou_thresh, tf.float32),
             4
         )
 
@@ -299,199 +302,321 @@ class YoloLayer(Layer):
         return [(None, 1)]
 
 
-def create_yolo_head_models(
-    done_backend,
-    nb_class,
-    anchors,
-    anchors_per_output,
-    max_input_size,
-    max_box_per_image=1,
-    batch_size=1,
-    warmup_batches=0,
-    ignore_thresh=0.5,
-    grid_scales=[1, 1, 1],
-    obj_scale=1,
-    noobj_scale=1,
-    xywh_scale=1,
-    class_scale=1,
-):
-    true_boxes = Input(shape=(1, 1, 1, max_box_per_image, 4),
-                       name='input_true_boxes')
-    true_yolos = []
-    for i in range(len(done_backend.outputs)):
-        # grid_h, grid_w, nb_anchor, 5+nb_class
-        true_yolo = Input(shape=(None, None, anchors_per_output, 4+1+nb_class),
-                          name='input_true_yolo_{}_x{}'.format(i, done_backend.downgrades[i]))
+class YOLO_Model:
+    def __init__(
+        self,
+        model_config: dict,
+        train_config=None
+    ):
+        self.model_config = model_config
+        self.train_config = train_config
 
-        true_yolos += [true_yolo]
+        self.labels = model_config['labels']
+        self.anchors = model_config['anchors']
+        self.downsample = model_config['downsample']
+        self.anchors_per_output = int(len(self.anchors) / 2 / len(self.downsample))
 
-    yolo_anchors = []
-    for i in reversed(range(len(done_backend.outputs))):
-        yolo_anchors += [anchors[i*2 *
-                                 anchors_per_output:(i+1)*2*anchors_per_output]]
+        self.nms_thresh = 0.5
+        self.obj_thresh = 0.5
 
-    image_input = done_backend.inputs[0]
-    loss_yolos = []
-    pred_layers = []
-    for idx, out in enumerate(done_backend.outputs):
-        max_grid_hw = np.array([max_input_size[0] // done_backend.downgrades[idx],
-                                max_input_size[1] // done_backend.downgrades[idx]])
+        self.nb_classes = int(len(self.labels))
+        self.infer_sz = model_config['infer_shape']
+
+        backends = {
+                    'TinyV3':           (backend.Tiny_YOLOv3,       "yolov3-tiny.h5"),
+                    'SmallTinyV3':      (backend.Small_Tiny_YOLOv3, ""),
+                    'Darknet53':        (backend.Darknet53,         "yolov3_exp.h5"),
+                    'Darknet19':        (backend.Darknet19,         "yolov2.h5"),
+                    'MobileNetv2':      (backend.MobileNetV2,       ""),
+                    'NewMobileNetv2':   (backend.NewMobileNetV2,    ""),
+                    'MadNetv1':         (backend.MadNetv1,          ""),
+                    'SqueezeNet':       (backend.SqueezeNet,        ""),
+                    'Xception':         (backend.Xception,          "")
+                    }
+
+        base = model_config['base']
+
+        if base not in backends:
+            print('No such base: {}'.format(base))
+            return None
+
+        print('Loading "{}" model'.format(base))
+
+        # If we gonna train - set input (None, None, 3)
+        train_shape = (None, None, 3) if self.train_config else (*self.infer_sz, 3)
+
+        backend_options = {
+            'train_shape':  train_shape,
+            'base_params':  model_config['base_params']
+        }
+
+        self.backend = backends[base][0](**backend_options)
+
+        weights_path = os.path.join('src_weights', backends[base][1])
+        if backends[base][1] and os.path.exists(weights_path) and model_config['load_src_weights']:
+            print('Loading {}'.format(backends[base][1]))
+            self.backend.model.load_weights(
+                weights_path,
+                by_name=True
+            )
+
+        # Create infer model
+        self.pred_layers = []
+        for idx, out in enumerate(self.backend.outputs):
+            pred_yolo = Conv2D(filters=self.anchors_per_output*(4+1+self.nb_classes),
+                            kernel_size=(1, 1),
+                            strides=(1, 1),
+                            padding='same',
+                            name='PredictionLayer_'+str(idx),
+                            kernel_initializer='lecun_normal'
+                            )(out)
+            self.pred_layers += [pred_yolo]
+
+        self.infer_model = Model(self.backend.inputs[0], self.pred_layers)
+
+        if self.train_config:
+            self._setup_trainer()
+
+    def _setup_trainer(self):
+        apo = self.anchors_per_output
+
+        max_box_per_image = self.train_config['mbpi']
+
+        true_boxes = Input(shape=(1, 1, 1, max_box_per_image, 4), name='input_true_boxes')
+        true_yolos = []
+        for i in range(len(self.backend.outputs)):
+            # grid_h, grid_w, nb_anchor, 5+nb_class
+            true_yolo = Input(shape=(None, None, apo, 4+1+self.nb_classes),
+                            name='input_true_yolo_{}_x{}'.format(i, self.backend.downgrades[i]))
+            true_yolos += [true_yolo]
+
+        yolo_anchors = []
+        for i in reversed(range(len(self.backend.outputs))):
+            anchors_start_idx = i*2*apo
+            anchors_end_idx = (i+1)*2*apo
+            yolo_anchors += [self.anchors[anchors_start_idx:anchors_end_idx]]
+
+        image_input = self.backend.inputs[0]
+        loss_yolos = []
+        for idx, out in enumerate(self.backend.outputs):
+            max_grid_hw = np.array([self.train_config['max_input_size'][0] // self.backend.downgrades[idx],
+                                    self.train_config['max_input_size'][1] // self.backend.downgrades[idx]])
+
+            loss_yolo = YoloLayer(yolo_anchors[idx],
+                                  max_grid_hw,
+                                  self.train_config['batch_size'],
+                                  0,
+                                  self.train_config['iou_thresh'],
+                                  self.train_config['grid_scales'][idx],
+                                  self.train_config['obj_scale'],
+                                  self.train_config['noobj_scale'],
+                                  self.train_config['xywh_scale'],
+                                  self.train_config['class_scale'])([image_input, self.pred_layers[idx], true_yolos[idx], true_boxes])
+
+            loss_yolos += [loss_yolo]
+
+        self.train_model = Model([image_input, true_boxes] + true_yolos, loss_yolos)
 
         # import tensorflow.keras.backend as K
         # print('>>>> {}'.format(K.shape(out)[1]))
 
-        pred_yolo = Conv2D(filters=anchors_per_output*(4+1+nb_class),
-                           kernel_size=(1, 1),
-                           strides=(1, 1),
-                           padding='same',
-                           name='PredictionLayer_'+str(idx),
-                           kernel_initializer='lecun_normal'
-                           )(out)
-        pred_layers += [pred_yolo]
+    def load_weights(self, weights_fpath: str):
+        if os.path.exists(weights_fpath):
+            print("\nLoading weights {}".format(weights_fpath))
+            self.infer.load_weights(initial_weights, by_name=True)
 
-        loss_yolo = YoloLayer(yolo_anchors[idx],
-                              max_grid_hw,
-                              batch_size,
-                              warmup_batches,
-                              ignore_thresh,
-                              grid_scales[idx],
-                              obj_scale,
-                              noobj_scale,
-                              xywh_scale,
-                              class_scale)([image_input, pred_yolo, true_yolos[idx], true_boxes])
+    def infer_image(self, image):
+        if self.model_config['tiles'] > 1:
+            images_batch = self._image2tiles_batch(image)
+            self._infer_on_batch(images_batch)
+        else:
+            self._infer_on_image(image)
 
-        loss_yolos += [loss_yolo]
+    def evaluate_generator(self,
+                           generator,
+                           iou_threshold=0.5,
+                           save_path=None,
+                           verbose=False):
+        """ Evaluate a given dataset using a given model.
+        code originally from https://github.com/fizyr/keras-retinanet
 
-    train_model = Model([image_input, true_boxes] + true_yolos, loss_yolos)
-    infer_model = Model(image_input, pred_layers)
-    mvnc_model = infer_model
+        # Arguments
+            model           : The model to evaluate.
+            generator       : The generator that represents the dataset to evaluate.
+            iou_threshold   : The threshold used to consider when a detection is positive or negative.
+            obj_thresh      : The threshold used to distinguish between object and non-object
+            nms_thresh      : The threshold used to determine whether two detections are duplicates
+            save_path       : The path to save images with visualized detections to.
+        # Returns
+            A dict mapping class names to mAP scores.
+        """
+        print(">>>>>")
+        # gather all detections and annotations
+        all_detections = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
+        all_annotations = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
 
-    # import tensorflow.keras.backend as K
-    # print('>>>> {}'.format(K.shape(out)[1]))
+        iterator = range(generator.size())
+        if verbose:
+            # Modify with rendering
+            iterator = tqdm(iterator)
 
-    return train_model, infer_model, mvnc_model
+        for i in iterator:
+            raw_image = generator.load_image(i)
 
+            # make the boxes and the labels
+            pred_boxes = self._infer_on_image(raw_image)
 
-def create_model_new(
-    nb_class,
-    anchors,
-    max_input_size,
-    anchors_per_output,
-    max_box_per_image=1,
-    batch_size=1,
-    base='Tiny',
-    warmup_batches=0,
-    ignore_thresh=0.5,
-    multi_gpu=1,
-    grid_scales=[1, 1, 1],
-    obj_scale=1,
-    noobj_scale=1,
-    xywh_scale=1,
-    class_scale=1,
-    train_shape=(None, None, 3),
-    load_src_weights=True,
-    is_freezed=False,
-    base_params={}
-):
-    backend_options = {
-        # 'pred_filters':         anchors_per_output*(4+1+nb_class),
-        'train_shape':  train_shape,
-        'base_params':  base_params
-    }
+            score = np.array([box.get_best_class_score() for box in pred_boxes])
+            pred_labels = np.array([box.label for box in pred_boxes])
 
-    backends = {
-                'TinyV3':           (backend.Tiny_YOLOv3,       "yolov3-tiny.h5"),
-                'SmallTinyV3':      (backend.Small_Tiny_YOLOv3, ""),
-                'Darknet53':        (backend.Darknet53,         "yolov3_exp.h5"),
-                'Darknet19':        (backend.Darknet19,         "yolov2.h5"),
-                'MobileNetv2':      (backend.MobileNetV2,       ""),
-                'NewMobileNetv2':   (backend.NewMobileNetV2,    ""),
-                'MadNetv1':         (backend.MadNetv1,          ""),
-                'SqueezeNet':       (backend.SqueezeNet,        ""),
-                'Xception':         (backend.Xception,          "")
-                }
+            if len(pred_boxes) > 0:
+                pred_boxes = np.array(
+                    [[box.xmin, box.ymin, box.xmax, box.ymax, box.get_best_class_score()] 
+                        for box in pred_boxes])
+            else:
+                pred_boxes = np.array([[]])
 
-    if base not in backends:
-        print('No such base: {}'.format(base))
-        return None
+            # sort the boxes and the labels according to scores
+            score_sort = np.argsort(-score)
+            pred_labels = pred_labels[score_sort]
+            pred_boxes = pred_boxes[score_sort]
 
-    print('Loading "{}" model'.format(base))
+            # copy detections to all_detections
+            for label in range(generator.num_classes()):
+                all_detections[i][label] = pred_boxes[pred_labels == label, :]
 
-    new_backend = backends[base][0](**backend_options)
+            annotations = generator.load_annotation(i)
 
-    weights_path = os.path.join('src_weights', backends[base][1])
-    if backends[base][1] and os.path.exists(weights_path) and load_src_weights:
-        print('Loading {}'.format(backends[base][1]))
-        new_backend.model.load_weights(
-            weights_path,
-            by_name=True
-        )
+            try:
+                for label in range(generator.num_classes()):
+                    all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()
+            except IndexError:
+                # IndexError - generator returned empty annotations
+                for label in range(generator.num_classes()):
+                    all_annotations[i][label] = np.array([])
 
+        # compute mAP by comparing all detections and all annotations
+        average_precisions = {}
 
-    train_model, infer_model, mvnc_model = create_yolo_head_models(
-        new_backend,
-        nb_class,
-        anchors,
-        anchors_per_output,
-        max_input_size,
-        max_box_per_image,
-        batch_size,
-        warmup_batches,
-        ignore_thresh,
-        grid_scales,
-        obj_scale,
-        noobj_scale,
-        xywh_scale,
-        class_scale
-    )
+        for label_idx in range(generator.num_classes()):
+            false_positives = np.zeros((0,))
+            true_positives = np.zeros((0,))
+            scores = np.zeros((0,))
+            num_annotations = 0.0
 
-    if is_freezed and new_backend.head_layers_cnt > 0:
-        freeze_layers_cnt = len(infer_model.layers) - \
-            new_backend.head_layers_cnt
+            iterator = range(generator.size())
+            if verbose:
+                print('Processing label: {} - {}'.format(label_idx, generator.get_class_name(label_idx)))
+                # Modify with rendering
+                iterator = tqdm(iterator)
 
-        print('Freezing %d layers of %d' %
-              (freeze_layers_cnt, len(infer_model.layers)))
-        for l in range(freeze_layers_cnt):
-            infer_model.layers[l].trainable = False
+            for i in iterator:
+                detections = all_detections[i][label_idx]
+                annotations = all_annotations[i][label_idx]
+                num_annotations += annotations.shape[0]
+                detected_annotations = []
 
-    return train_model, infer_model, mvnc_model
+                if save_path:
+                    fpath = os.path.join(save_path, 'det_{}.png'.format(i))
+                    render_image = generator.load_image(i)
+                    for annot in annotations:
+                        cv2.rectangle(render_image,
+                                    (annot[0], annot[1]),
+                                    (annot[2], annot[3]),
+                                    (0, 255, 0), 3)
 
+                for d in detections:
+                    scores = np.append(scores, d[4])
 
-class YOLO:
-    def __init__(self, 
-        new_backend,
-        nb_class,
-        anchors,
-        anchors_per_output,
-        max_input_size,
-        max_box_per_image,
-        batch_size,
-        warmup_batches,
-        ignore_thresh,
-        grid_scales,
-        obj_scale,
-        noobj_scale,
-        xywh_scale,
-        class_scale):
-        self.model = model
-        self.net_sz = [net_h, net_w]
-        self.anchors = anchors
-        self.anchor_count = len(self.anchors) // 2
+                    if save_path:
+                        cv2.rectangle(render_image,
+                                    (int(d[0]), int(d[1])),
+                                    (int(d[2]), int(d[3])),
+                                    (255, 0, 0), 2)
 
-        self.obj_thresh = obj_thresh
-        self.nms_thresh = nms_thresh
+                    if annotations.shape[0] == 0:
+                        false_positives = np.append(false_positives, 1)
+                        true_positives = np.append(true_positives, 0)
+                        continue
 
-    def make_infer(self, images):
-        # anchors - raw format
+                    overlaps = compute_overlap(np.expand_dims(d, axis=0), annotations)
+                    assigned_annotation = np.argmax(overlaps, axis=1)
+                    max_overlap = overlaps[0, assigned_annotation]
 
+                    if max_overlap >= iou_threshold and assigned_annotation not in detected_annotations:
+                        false_positives = np.append(false_positives, 0)
+                        true_positives = np.append(true_positives, 1)
+                        detected_annotations.append(assigned_annotation)
+                    else:
+                        false_positives = np.append(false_positives, 1)
+                        true_positives = np.append(true_positives, 0)
+        
+                if save_path:
+                    cv2.imwrite(fpath, render_image)
+
+            # no annotations -> AP for this class is 0 (is this correct?)
+            if num_annotations == 0:
+                average_precisions[label_idx] = 0
+                continue
+
+            # sort by score
+            indices = np.argsort(-scores)
+            false_positives = false_positives[indices]
+            true_positives = true_positives[indices]
+
+            # compute false positives and true positives
+            false_positives = np.cumsum(false_positives)
+            true_positives = np.cumsum(true_positives)
+
+            # compute recall and precision
+            recall = true_positives / num_annotations
+            precision = true_positives / \
+                np.maximum(true_positives + false_positives,
+                        np.finfo(np.float64).eps)
+
+            # compute average precision
+            average_precision = utils.compute_ap(recall, precision)
+            average_precisions[generator.get_class_name(label_idx)] = average_precision
+
+        return average_precisions
+
+    def _image2tiles_batch(self, image):
+        image_h, image_w, image_c = image.shape
+        batch_input = np.zeros((self.model_config['tiles'], *images[0].shape))
+
+        tile_h, tile_w = cutls.get_tiled_image_sz((image_h, image_w), self.model_config['tiles'])
+        tile_line_cnt = image_w/tile_w
+        tile_idx_x = 0
+        tile_idx_y = 0
+
+        tile_idx = 0
+
+        while tile_idx < self.model_config['tiles']:
+            batch_input[tile_idx] = image[tile_idx_y*tile_h:(tile_idx_y+1)*tile_h, 
+                                          tile_idx_x*tile_w:(tile_idx_x+1)*tile_w]
+            
+            tile_idx_x += 1
+            if tile_idx_x >= tile_line_cnt:
+                tile_idx_y += 1
+                tile_idx_x = 0
+            
+            tile_idx = tile_idx_y * tile_line_cnt + tile_idx_x
+
+        return batch_input
+
+    def _infer_on_image(self, image):
+        return self._infer_on_batch(np.expand_dims(image, axis=0))[0]
+
+    def _infer_on_batch(self, images):
         image_h, image_w, _ = images[0].shape
         nb_images = len(images)
-        batch_input = np.zeros((nb_images, self.net_sz[0], self.net_sz[1], 3))
+        batch_input = np.zeros((nb_images, self.infer_sz[0], self.infer_sz[1], 3))
 
         for i in range(nb_images):
-            batch_input[i] = preprocess_input(images[i], self.net_sz[0], self.net_sz[1])
+            batch_input[i] = cutls.image2net_input_sz(images[i], self.infer_sz[0], self.infer_sz[1])
+            batch_input[i] = cutls.image_normalize(batch_input[i])
 
-        batch_output = self.model.predict_on_batch(batch_input)
+        batch_output = self.infer_model.predict_on_batch(batch_input)
         batch_boxes = [None] * nb_images
 
         net_output_count = len(batch_output)
@@ -510,15 +635,14 @@ class YOLO:
                 r_idx = net_output_count
 
                 yolo_anchors = self.anchors[(l_idx - j) * 6:(r_idx - j) * 6]
+                boxes += utils.decode_netout(yolos[j], yolo_anchors, self.obj_thresh, self.infer_sz[0], self.infer_sz[1])
 
-                boxes += decode_netout(yolos[j], yolo_anchors, self.obj_thresh, self.net_sz[0], self.net_sz[1])
-
-            correct_yolo_boxes(boxes, image_h, image_w, self.net_sz[0], self.net_sz[1])
+            utils.correct_yolo_boxes(boxes, image_h, image_w, self.infer_sz[0], self.infer_sz[1])
 
             # for yolo_bbox in boxes:
                 # print("Before NMS: {}",format(yolo_bbox.get_str()))
 
-            do_nms(boxes, self.nms_thresh)
+            utils.do_nms(boxes, self.nms_thresh)
 
             # for yolo_bbox in boxes:
                 # print("After NMS: {}",format(yolo_bbox.get_str()))
@@ -526,4 +650,3 @@ class YOLO:
             batch_boxes[i] = boxes
 
         return batch_boxes
-

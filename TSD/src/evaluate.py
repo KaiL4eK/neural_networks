@@ -35,6 +35,8 @@ def _main_(args):
     valid_ints, labels = replace_all_labels_2_one(valid_ints, 'sign')
     labels = list(labels.keys())
     
+    config['model']['labels'] = labels
+    
     # labels = labels.keys() if len(config['model']['labels']) == 0 else config['model']['labels']
     # labels = sorted(labels)
    
@@ -45,45 +47,20 @@ def _main_(args):
         downsample          = config['model']['downsample'], # ratio between network input's size and network output's size, 32 for YOLOv3
         max_box_per_image   = 0,
         batch_size          = config['train']['batch_size'],
-        min_net_size        = config['model']['min_input_size'],
-        max_net_size        = config['model']['max_input_size'],   
+        min_net_size        = config['train']['min_input_size'],
+        max_net_size        = config['train']['max_input_size'],   
         shuffle             = False, 
         jitter              = 0.0, 
         norm                = normalize
     )
 
-    _, infer_model, _ = yolo.create_model_new(
-        nb_class=len(labels),
-        anchors=config['model']['anchors'],
-        max_box_per_image=0,
-        max_input_size=config['model']['max_input_size'],
-        batch_size=config['train']['batch_size'],
-        warmup_batches=0,
-        ignore_thresh=config['train']['ignore_thresh'],
-        multi_gpu='0',
-        grid_scales=config['train']['grid_scales'],
-        obj_scale=config['train']['obj_scale'],
-        noobj_scale=config['train']['noobj_scale'],
-        xywh_scale=config['train']['xywh_scale'],
-        class_scale=config['train']['class_scale'],
-        base=config['model']['base'],
-        anchors_per_output=config['model']['anchors_per_output'],
-        is_freezed=False,
-        load_src_weights=config['train'].get('load_src_weights', True)
+    yolo_model = yolo.YOLO_Model(
+        config['model'],
     )
 
-    infer_model.load_weights(weights)
+    yolo_model.load_weights(weights)
 
-    # compute mAP for all the classes
-    average_precisions = evaluate(infer_model, 
-                                  valid_generator,
-                                  iou_threshold=0.5,
-                                  obj_thresh=0.5,
-                                  nms_thresh=0.45,
-                                  net_h=config['model']['infer_shape'][0],
-                                  net_w=config['model']['infer_shape'][1],
-                                  verbose=True,
-                                  save_path=None)
+    average_precisions = yolo_model.evaluate_generator(valid_generator, verbose=True)
     c_ut.print_predicted_average_precisions(average_precisions)
     
 if __name__ == '__main__':
