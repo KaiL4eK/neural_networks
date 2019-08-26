@@ -82,30 +82,30 @@ class MadNetv1(DetBackend):
         x = image_input
 
         x2 = dnu.compose(
-            dnu.DarknetConv2D_BN_Leaky(8, 7),
-            MaxPooling2D(pool_size=2, strides=2, padding='same')
+            dnu.DarknetConv2D_BN_Leaky(4, 5, strides=(4, 4)),
+            # MaxPooling2D(pool_size=2, strides=2, padding='same')
             )(x)
 
-        x16 = compose(
-            DarknetConv2D_BN_Leaky(16, 3),
+        x16 = dnu.compose(
+            # dnu.DarknetConv2D_BN_Leaky(16, 3),
+            # MaxPooling2D(pool_size=2, strides=2, padding='same'),
+            dnu.DarknetConv2D_BN_Leaky(32, 3),
             MaxPooling2D(pool_size=2, strides=2, padding='same'),
-            DarknetConv2D_BN_Leaky(32, 3),
-            MaxPooling2D(pool_size=2, strides=2, padding='same'),
-            DarknetConv2D_BN_Leaky(64, 3),
+            dnu.DarknetConv2D_BN_Leaky(64, 3),
             MaxPooling2D(pool_size=2, strides=2, padding='same'),
         )(x2)
 
-        x32 = compose(
-            DarknetConv2D_BN_Leaky(128, 3, dilation_rate=1),
-            DarknetConv2D_BN_Leaky(128, 3, dilation_rate=2),
-            DarknetConv2D_BN_Leaky(128, 3, dilation_rate=2),
+        x32 = dnu.compose(
+            dnu.DarknetConv2D_BN_Leaky(128, 3, dilation_rate=1),
+            dnu.DarknetConv2D_BN_Leaky(128, 3, dilation_rate=2),
+            # dnu.DarknetConv2D_BN_Leaky(128, 3, dilation_rate=2),
             MaxPooling2D(pool_size=2, strides=2, padding='same'),
         )(x16)
 
-        x32 = compose(
-            DarknetConv2D_BN_Leaky(256, 3, dilation_rate=2),
-            DarknetConv2D_BN_Leaky(256, 3, dilation_rate=4),
-            DarknetConv2D_BN_Leaky(256, 3, dilation_rate=4),
+        x32 = dnu.compose(
+            dnu.DarknetConv2D_BN_Leaky(256, 3, dilation_rate=2),
+            dnu.DarknetConv2D_BN_Leaky(256, 3, dilation_rate=4),
+            # dnu.DarknetConv2D_BN_Leaky(256, 3, dilation_rate=4),
 
             # DarknetConv2D_BN_Leaky(512, 3),
             # MaxPooling2D(pool_size=2, strides=1, padding='same'),
@@ -133,7 +133,7 @@ class MadNetv1(DetBackend):
             dnu.DarknetConv2D_BN_Leaky(128, 1),
             UpSampling2D(2)
             # )(y2)
-            )(x32u)
+            )(x32)
 
         y3 = dnu.compose(
             Concatenate(),

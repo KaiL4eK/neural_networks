@@ -8,7 +8,8 @@ def DarknetConv2D(*args, **kwargs):
     """Wrapper to set Darknet parameters for Convolution2D."""
     # darknet_conv_kwargs = {'kernel_regularizer': l2(5e-4)}
     conv_kwargs = {}
-    conv_kwargs['padding'] = 'valid' if kwargs.get('strides') == (2, 2) else 'same'
+    # conv_kwargs['padding'] = 'valid' if kwargs.get('strides') == (2, 2) else 'same'
+    conv_kwargs['padding'] = 'same'
     conv_kwargs.update(kwargs)
     return Conv2D(*args, **conv_kwargs)
 

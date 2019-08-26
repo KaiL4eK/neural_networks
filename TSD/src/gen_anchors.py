@@ -3,6 +3,7 @@ import argparse
 import numpy as np
 
 from _common.voc import parse_voc_annotation
+import _common.utils as utls
 import json
 
 
@@ -151,17 +152,19 @@ def _main_():
             a_width = float(obj['xmax']) - float(obj['xmin'])
             a_height = float(obj["ymax"]) - float(obj['ymin'])
 
-            new_width = 0
-            new_height = 0
+            img_sz = (image['height'], image['width'])
+            image_width = image['width']
+            image_height = image['height']
 
-            new_ar = image['width'] * 1. / image['height']
-            if new_ar > 1.:
-                scale_rate = infer_sz[1] * 1. / image['width']
+            if config['model']['tiles'] > 1:
+                img_sz = utls.get_tiled_image_sz(img_sz, config['model']['tiles'])
+
+            if image_width > image_height:
+                scale_rate = infer_sz[1] * 1. / img_sz[1]
             else:
-                scale_rate = infer_sz[0] * 1. / image['height']
+                scale_rate = infer_sz[0] * 1. / img_sz[0]
 
-            new_width = a_width * scale_rate
-            new_height = a_height * scale_rate
+            new_obj_sz = (a_width * scale_rate, a_height * scale_rate)
 
 #             print(image['filename'])
 #             print( int(a_width / image['width'] * infer_sz[1]), int(a_height / image['height'] * infer_sz[0]) )
@@ -169,7 +172,7 @@ def _main_():
 #             relative_w = a_width/image['width']
 #             relative_h = a_height/image['height']
 
-            annotation_dims.append(tuple(map(float, (new_width, new_height))))
+            annotation_dims.append(tuple(map(float, new_obj_sz)))
 
     annotation_dims = np.array(annotation_dims)
     centroids = run_kmeans(annotation_dims, num_anchors)

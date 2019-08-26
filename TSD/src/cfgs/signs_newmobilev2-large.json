@@ -1,10 +1,14 @@
 {
     "model" : {
         "main_name":            "TSD_NewMbNv2",
+        "base":                 "NewMobileNetv2",
+        "base_params": {
+            "alpha": 0.35
+        },
         "min_input_size":       [608, 608],
         "max_input_size":       [608, 608],
-        "base":                 "NewMobileNetv2",
-        "anchors":              [11,11, 20,19, 36,35],
+        "downsample":           [16, 8],
+        "anchors":              [9,9, 12,12, 15,15, 20,20, 29,28, 45,43],
         "anchors_per_output":   3,
         "labels":               [],
         "infer_shape":          [608, 608]

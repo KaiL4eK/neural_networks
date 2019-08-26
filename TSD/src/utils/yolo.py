@@ -2,7 +2,21 @@ import numpy as np
 from .utils import preprocess_input, decode_netout, correct_yolo_boxes, do_nms
 
 class YOLO:
-    def __init__(self, model, net_h, net_w, anchors, obj_thresh, nms_thresh):
+    def __init__(self, 
+        new_backend,
+        nb_class,
+        anchors,
+        anchors_per_output,
+        max_input_size,
+        max_box_per_image,
+        batch_size,
+        warmup_batches,
+        ignore_thresh,
+        grid_scales,
+        obj_scale,
+        noobj_scale,
+        xywh_scale,
+        class_scale):
         self.model = model
         self.net_sz = [net_h, net_w]
         self.anchors = anchors

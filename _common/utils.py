@@ -158,3 +158,16 @@ def print_predicted_average_precisions(av_precs):
     print('mAP: {:.4f}'.format(mAP))
 
     return mAP
+
+def get_tiled_image_sz(img_sz, tile_cnt):
+    img_h, img_w = img_sz
+
+    while tile_cnt > 1:
+        if img_h > img_w:
+            img_h /= 2
+        else:
+            img_w /= 2
+        
+        tile_cnt /= 2
+
+    return img_h, img_w
