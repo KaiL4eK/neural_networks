@@ -159,14 +159,49 @@ def print_predicted_average_precisions(av_precs):
 
     return mAP
 
-def get_tiled_image_sz(img_sz, tile_cnt):
+import utils.bbox as bbox
+
+def tiles_get_bbox(img_sz, tile_cnt, tile_idx):
+    tile_sz = tiles_get_sz(img_sz, tile_cnt)
+
+    tile_y = 0
+    tile_x = tile_idx*tile_sz[1]
+
+    return bbox.BoundBox(tile_x, tile_y, tile_x+tile_sz[1], tile_y+tile_sz[0])
+
+def tiles_get_sz(img_sz, tile_cnt):
     img_h, img_w = img_sz
 
     if tile_cnt > 2:
         raise NotImplementedError('Tile count > 2 - not supported yet!')
 
     # TODO - Really not dividing by tile count, just hack
-    return img_h, img_w/tile_cnt
+    return int(img_h), int(img_w/tile_cnt)
+
+def tiles_image2batch(image, tile_cnt):
+    image_h, image_w, image_c = image.shape
+    
+    tile_h, tile_w = tiles_get_sz((image_h, image_w), tile_cnt)
+    tile_line_cnt = image_w/tile_w
+    tile_idx_x = 0
+    tile_idx_y = 0
+
+    batch_input = np.zeros((tile_cnt, tile_h, tile_w, image_c))
+
+    tile_idx = 0
+
+    while tile_idx < tile_cnt:
+        batch_input[tile_idx] = image[tile_idx_y*tile_h:(tile_idx_y+1)*tile_h, 
+                                        tile_idx_x*tile_w:(tile_idx_x+1)*tile_w]
+        
+        tile_idx_x += 1
+        if tile_idx_x >= tile_line_cnt:
+            tile_idx_y += 1
+            tile_idx_x = 0
+        
+        tile_idx = tile_idx_y * tile_line_cnt + tile_idx_x
+
+    return batch_input
 
 def get_embedded_img_sz(image, input_hw):
     new_h, new_w, _ = image.shape

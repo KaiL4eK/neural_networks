@@ -4,14 +4,19 @@ from .colors import get_color
 
 
 class BoundBox:
-    def __init__(self, xmin, ymin, xmax, ymax, c = None, classes = None):
+    def __init__(self, xmin, ymin, xmax, ymax, c = None, classes = None, label_name = None, label_idx = None):
         self.xmin = xmin
         self.ymin = ymin
         self.xmax = xmax
         self.ymax = ymax
 
+        self.width = self.xmax - self.xmin
+        self.height = self.ymax - self.ymin
+
         self.c       = c
         self.classes = classes
+        self.class_name = label_name
+        self.class_idx = label_idx
 
         # Means score of best class
         if self.classes:
@@ -33,6 +38,13 @@ class BoundBox:
     def get_str(self):
         return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.c, self.classes)
 
+    def intersect(self, bbox):
+        x = max(self.xmin, bbox.xmin)
+        y = max(self.ymin, bbox.ymin)
+        w = min(self.xmax, bbox.xmax) - x
+        h = min(self.ymax, bbox.ymax) - y
+        if w < 0 or h < 0: return None
+        return BoundBox(x, y, x+w, y+h)
 
 def _interval_overlap(interval_a, interval_b):
     x1, x2 = interval_a

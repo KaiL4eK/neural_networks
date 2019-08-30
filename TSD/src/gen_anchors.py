@@ -119,11 +119,11 @@ argparser.add_argument(
     '--conf',
     default='config.json',
     help='path to configuration file')
-# argparser.add_argument(
-#     '-a',
-#     '--anchors',
-#     default=9,
-#     help='number of anchors to use')
+argparser.add_argument(
+    '-a',
+    '--anchors',
+    default=9,
+    help='number of anchors to use')
 
 args = argparser.parse_args()
 
@@ -134,7 +134,8 @@ def _main_():
     with open(config_path) as config_buffer:
         config = json.loads(config_buffer.read())
 
-    num_anchors = config['model']['anchors_per_output'] * len(config['model']['downsample'])
+    # num_anchors = config['model']['anchors_per_output'] * len(config['model']['downsample'])
+    num_anchors = int(args.anchors)
 
     infer_sz = config['model']['infer_shape']
 
@@ -157,7 +158,7 @@ def _main_():
             image_height = image['height']
 
             if config['model']['tiles'] > 1:
-                img_sz = utls.get_tiled_image_sz(img_sz, config['model']['tiles'])
+                img_sz = utls.tiles_get_sz(img_sz, config['model']['tiles'])
 
             if image_width > image_height:
                 scale_rate = infer_sz[1] * 1. / img_sz[1]

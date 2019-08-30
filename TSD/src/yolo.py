@@ -423,11 +423,11 @@ class YOLO_Model:
     def load_weights(self, weights_fpath: str):
         if os.path.exists(weights_fpath):
             print("\nLoading weights {}".format(weights_fpath))
-            self.infer.load_weights(initial_weights, by_name=True)
+            self.infer_model.load_weights(weights_fpath, by_name=True)
 
     def infer_image(self, image):
         if self.model_config['tiles'] > 1:
-            images_batch = self._image2tiles_batch(image)
+            images_batch = cutls.tiles_image2batch(image, self.model_config['tiles'])
             self._infer_on_batch(images_batch)
         else:
             self._infer_on_image(image)
@@ -485,15 +485,13 @@ class YOLO_Model:
             for label in range(generator.num_classes()):
                 all_detections[i][label] = pred_boxes[pred_labels == label, :]
 
-            annotations = generator.load_annotation(i)
+            annotations = generator.load_annotation_bboxes(i)
 
-            try:
-                for label in range(generator.num_classes()):
-                    all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()
-            except IndexError:
-                # IndexError - generator returned empty annotations
-                for label in range(generator.num_classes()):
-                    all_annotations[i][label] = np.array([])
+            for label in range(generator.num_classes()):
+                all_annotations[i][label] = np.array([[box.xmin, box.ymin, box.xmax, box.ymax] 
+                                                     for box in annotations if box.class_idx == label])
+                
+
 
         # compute mAP by comparing all detections and all annotations
         average_precisions = {}
@@ -539,7 +537,7 @@ class YOLO_Model:
                         true_positives = np.append(true_positives, 0)
                         continue
 
-                    overlaps = compute_overlap(np.expand_dims(d, axis=0), annotations)
+                    overlaps = utils.compute_overlap(np.expand_dims(d, axis=0), annotations)
                     assigned_annotation = np.argmax(overlaps, axis=1)
                     max_overlap = overlaps[0, assigned_annotation]
 
@@ -579,30 +577,6 @@ class YOLO_Model:
             average_precisions[generator.get_class_name(label_idx)] = average_precision
 
         return average_precisions
-
-    def _image2tiles_batch(self, image):
-        image_h, image_w, image_c = image.shape
-        batch_input = np.zeros((self.model_config['tiles'], *images[0].shape))
-
-        tile_h, tile_w = cutls.get_tiled_image_sz((image_h, image_w), self.model_config['tiles'])
-        tile_line_cnt = image_w/tile_w
-        tile_idx_x = 0
-        tile_idx_y = 0
-
-        tile_idx = 0
-
-        while tile_idx < self.model_config['tiles']:
-            batch_input[tile_idx] = image[tile_idx_y*tile_h:(tile_idx_y+1)*tile_h, 
-                                          tile_idx_x*tile_w:(tile_idx_x+1)*tile_w]
-            
-            tile_idx_x += 1
-            if tile_idx_x >= tile_line_cnt:
-                tile_idx_y += 1
-                tile_idx_x = 0
-            
-            tile_idx = tile_idx_y * tile_line_cnt + tile_idx_x
-
-        return batch_input
 
     def _infer_on_image(self, image):
         return self._infer_on_batch(np.expand_dims(image, axis=0))[0]

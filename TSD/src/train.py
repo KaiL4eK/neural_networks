@@ -55,7 +55,8 @@ def prepare_generators(config):
         max_net_size=config['train']['max_input_size'],
         shuffle=True,
         jitter=0.1,
-        norm=normalize
+        norm=normalize,
+        tile_count=config['model']['tiles']
     )
 
     valid_generator = BatchGenerator(
@@ -66,7 +67,8 @@ def prepare_generators(config):
         max_box_per_image=max_box_per_image,
         batch_size=config['train']['batch_size'],
         norm=normalize,
-        infer_sz=config['model']['infer_shape']
+        infer_sz=config['model']['infer_shape'],
+        tile_count=config['model']['tiles']
     )
 
     config['train']['mbpi'] = max_box_per_image
