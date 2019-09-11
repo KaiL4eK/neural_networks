@@ -34,7 +34,13 @@ class BoundBox:
             self.classes[class_idx] = 0
             self.label = np.argmax(self.classes)
             self.score = self.classes[self.label]
-
+    
+    def __str__(self):
+        return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.c, self.classes)
+        
+    def __repr__(self):
+        return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.c, self.classes)
+    
     def get_str(self):
         return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.c, self.classes)
 

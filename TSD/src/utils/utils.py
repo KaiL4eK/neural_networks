@@ -44,19 +44,20 @@ def correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w):
         new_h = net_w
         new_w = (image_w*net_h)/image_h
 
+    x_offset, x_scale = (net_w - new_w)/2./net_w, float(new_w)/net_w
+    y_offset, y_scale = (net_h - new_h)/2./net_h, float(new_h)/net_h
+
     for i in range(len(boxes)):
-        x_offset, x_scale = (net_w - new_w)/2./net_w, float(new_w)/net_w
-        y_offset, y_scale = (net_h - new_h)/2./net_h, float(new_h)/net_h
+
+        # print(boxes[i].get_str(), x_offset, y_offset, x_scale, y_scale)
 
         boxes[i].xmin = int((boxes[i].xmin - x_offset) / x_scale * image_w)
         boxes[i].xmax = int((boxes[i].xmax - x_offset) / x_scale * image_w)
         boxes[i].ymin = int((boxes[i].ymin - y_offset) / y_scale * image_h)
         boxes[i].ymax = int((boxes[i].ymax - y_offset) / y_scale * image_h)
 
-        boxes[i].xmin, boxes[i].xmax = np.clip(
-            [boxes[i].xmin, boxes[i].xmax], 0, image_w)
-        boxes[i].ymin, boxes[i].ymax = np.clip(
-            [boxes[i].ymin, boxes[i].ymax], 0, image_h)
+        boxes[i].xmin, boxes[i].xmax = np.clip([boxes[i].xmin, boxes[i].xmax], 0, image_w)
+        boxes[i].ymin, boxes[i].ymax = np.clip([boxes[i].ymin, boxes[i].ymax], 0, image_h)
 
 
 def do_nms(boxes, nms_thresh):

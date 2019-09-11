@@ -424,13 +424,86 @@ class YOLO_Model:
         if os.path.exists(weights_fpath):
             print("\nLoading weights {}".format(weights_fpath))
             self.infer_model.load_weights(weights_fpath, by_name=True)
+        else:
+            print('\nInvalid weights path" {}'.format(weights_fpath))
 
     def infer_image(self, image):
-        if self.model_config['tiles'] > 1:
-            images_batch = cutls.tiles_image2batch(image, self.model_config['tiles'])
-            self._infer_on_batch(images_batch)
+        tile_count = self.model_config.get('tiles', 1)
+
+        if tile_count == 1:
+            return self._infer_on_batch(np.expand_dims(image, axis=0))[0]
         else:
-            self._infer_on_image(image)
+            images_batch = cutls.tiles_image2batch(image, tile_count)
+            pred_batch_boxes = self._infer_on_batch(images_batch)
+
+            corrected_boxes = []
+            for tile_idx, pred_boxes in enumerate(pred_batch_boxes):
+                tile_bbox = cutls.tiles_get_bbox(image.shape[0:2], tile_count, tile_idx)
+
+                for pred_box in pred_boxes:
+                    pred_box.xmin += tile_bbox.xmin
+                    pred_box.xmax += tile_bbox.xmin
+                    pred_box.ymin += tile_bbox.ymin
+                    pred_box.ymax += tile_bbox.ymin
+
+                    corrected_boxes += [pred_box]
+
+            return corrected_boxes
+        
+    def test_infer_image(self, image):
+        tile_count = self.model_config.get('tiles', 1)
+
+        images_batch = cutls.tiles_image2batch(image, tile_count)
+        self._infer_on_batch(images_batch, return_boxes=False)
+#         self._infer_on_batch(np.expand_dims(image, axis=0), return_boxes=False)
+        return None
+
+    def _infer_on_batch(self, images, return_boxes=True):
+        image_h, image_w, image_c = images[0].shape
+        nb_images = len(images)
+        batch_input = np.zeros((nb_images, self.infer_sz[0], self.infer_sz[1], image_c))
+
+        for i in range(nb_images):
+            batch_input[i] = cutls.image2net_input_sz(images[i], self.infer_sz[0], self.infer_sz[1])
+            
+        batch_input = cutls.image_normalize(batch_input)
+
+        batch_output = self.infer_model.predict_on_batch(batch_input)        
+        batch_boxes = [None] * nb_images
+        if not return_boxes:
+            return None
+
+        net_output_count = len(batch_output)
+
+        for i in range(nb_images):
+
+            if net_output_count > 1:
+                yolos = [batch_output[o][i] for o in range(net_output_count)]
+            else:
+                yolos = [batch_output[i]]
+
+            boxes = []
+
+            for j in range(len(yolos)):
+                l_idx = net_output_count - 1
+                r_idx = net_output_count
+
+                yolo_anchors = self.anchors[(l_idx - j) * 6:(r_idx - j) * 6]
+                boxes += utils.decode_netout(yolos[j], yolo_anchors, self.obj_thresh, self.infer_sz[0], self.infer_sz[1])
+
+            # for yolo_bbox in boxes:
+                # print("Before NMS: {}",format(yolo_bbox.get_str()))
+
+            utils.do_nms(boxes, self.nms_thresh)
+
+            # for yolo_bbox in boxes:
+                # print("After NMS: {}",format(yolo_bbox.get_str()))
+
+            utils.correct_yolo_boxes(boxes, image_h, image_w, self.infer_sz[0], self.infer_sz[1])
+
+            batch_boxes[i] = boxes
+
+        return batch_boxes
 
     def evaluate_generator(self,
                            generator,
@@ -450,7 +523,6 @@ class YOLO_Model:
         # Returns
             A dict mapping class names to mAP scores.
         """
-        print(">>>>>")
         # gather all detections and annotations
         all_detections = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
         all_annotations = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
@@ -461,10 +533,10 @@ class YOLO_Model:
             iterator = tqdm(iterator)
 
         for i in iterator:
-            raw_image = generator.load_image(i)
+            raw_image = generator.load_full_image(i)
 
             # make the boxes and the labels
-            pred_boxes = self._infer_on_image(raw_image)
+            pred_boxes = self.infer_image(raw_image)
 
             score = np.array([box.get_best_class_score() for box in pred_boxes])
             pred_labels = np.array([box.label for box in pred_boxes])
@@ -485,14 +557,12 @@ class YOLO_Model:
             for label in range(generator.num_classes()):
                 all_detections[i][label] = pred_boxes[pred_labels == label, :]
 
-            annotations = generator.load_annotation_bboxes(i)
+            annotations = generator.load_full_annotation_bboxes(i)
 
             for label in range(generator.num_classes()):
                 all_annotations[i][label] = np.array([[box.xmin, box.ymin, box.xmax, box.ymax] 
                                                      for box in annotations if box.class_idx == label])
                 
-
-
         # compute mAP by comparing all detections and all annotations
         average_precisions = {}
 
@@ -577,50 +647,3 @@ class YOLO_Model:
             average_precisions[generator.get_class_name(label_idx)] = average_precision
 
         return average_precisions
-
-    def _infer_on_image(self, image):
-        return self._infer_on_batch(np.expand_dims(image, axis=0))[0]
-
-    def _infer_on_batch(self, images):
-        image_h, image_w, _ = images[0].shape
-        nb_images = len(images)
-        batch_input = np.zeros((nb_images, self.infer_sz[0], self.infer_sz[1], 3))
-
-        for i in range(nb_images):
-            batch_input[i] = cutls.image2net_input_sz(images[i], self.infer_sz[0], self.infer_sz[1])
-            batch_input[i] = cutls.image_normalize(batch_input[i])
-
-        batch_output = self.infer_model.predict_on_batch(batch_input)
-        batch_boxes = [None] * nb_images
-
-        net_output_count = len(batch_output)
-
-        for i in range(nb_images):
-
-            if net_output_count > 1:
-                yolos = [batch_output[o][i] for o in range(net_output_count)]
-            else:
-                yolos = [batch_output[i]]
-
-            boxes = []
-
-            for j in range(len(yolos)):
-                l_idx = net_output_count - 1
-                r_idx = net_output_count
-
-                yolo_anchors = self.anchors[(l_idx - j) * 6:(r_idx - j) * 6]
-                boxes += utils.decode_netout(yolos[j], yolo_anchors, self.obj_thresh, self.infer_sz[0], self.infer_sz[1])
-
-            utils.correct_yolo_boxes(boxes, image_h, image_w, self.infer_sz[0], self.infer_sz[1])
-
-            # for yolo_bbox in boxes:
-                # print("Before NMS: {}",format(yolo_bbox.get_str()))
-
-            utils.do_nms(boxes, self.nms_thresh)
-
-            # for yolo_bbox in boxes:
-                # print("After NMS: {}",format(yolo_bbox.get_str()))
-
-            batch_boxes[i] = boxes
-
-        return batch_boxes

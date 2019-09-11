@@ -61,6 +61,51 @@ class BatchGenerator(Sequence):
         self.anchors_per_output = 3
         self.output_layers_count = len(self.anchors) // self.anchors_per_output
 
+        self._bboxes_key = '__bboxes'
+        self._tile_ann_bboxes_key = '__tile_annot_bboxes'
+        self._tile_img_bboxes_key = '__tile_img_bboxes'
+
+        ### Prepare BoundingBoxes ###
+        for sample_idx in range(len(self.instances)):
+            img_sz = (self.instances[sample_idx]['height'], self.instances[sample_idx]['width'])
+
+            # Create base bboxes
+            self.instances[sample_idx][self._bboxes_key] = []
+
+            for obj in self.instances[sample_idx]['object']:
+                annot_bbox = BoundBox(obj['xmin'], obj['ymin'], 
+                                      obj['xmax'], obj['ymax'], 
+                                      label_name=obj['name'], 
+                                      label_idx=self.labels.index(obj['name']))
+
+                self.instances[sample_idx][self._bboxes_key] += [annot_bbox]
+
+            # Create tiled bboxes
+            self.instances[sample_idx][self._tile_ann_bboxes_key] = [[] for _ in range(self.tile_count)]
+            self.instances[sample_idx][self._tile_img_bboxes_key] = []
+
+            for tile_idx in range(self.tile_count):
+                tile_bbox = cutls.tiles_get_bbox(img_sz, self.tile_count, tile_idx)
+                self.instances[sample_idx][self._tile_img_bboxes_key] += [tile_bbox]
+
+                for obj in self.instances[sample_idx]['object']:
+                    annot_bbox = BoundBox(obj['xmin'], obj['ymin'], 
+                                          obj['xmax'], obj['ymax'], 
+                                          label_name=obj['name'], 
+                                          label_idx=self.labels.index(obj['name']))
+
+                    if tile_bbox.intersect(annot_bbox) is None:
+                        continue
+
+                    # Correct annot tile bbox
+                    annot_bbox.xmin -= tile_bbox.xmin
+                    annot_bbox.xmax -= tile_bbox.xmin
+                    annot_bbox.ymin -= tile_bbox.ymin
+                    annot_bbox.ymax -= tile_bbox.ymin
+
+                    self.instances[sample_idx][self._tile_ann_bboxes_key][tile_idx] += [annot_bbox]
+        ### Prepare BoundingBoxes ###
+        
         if self.output_layers_count not in [1, 2, 3]:
             assert False, "Unchecked network output"
 
@@ -207,25 +252,16 @@ class BatchGenerator(Sequence):
         if self.infer_sz:
             self.net_size_h, self.net_size_w = self.infer_sz
         elif idx % 10 == 0 or self.net_size_w == 0:
-            # rate = float(self.max_net_size[1]) / self.max_net_size[0]
-
-            # new_h = self.downsample * np.random.randint(self.min_net_size[0] / self.downsample - 2,
-            #                                             self.max_net_size[0] / self.downsample + 2 + 1)
-
-            # new_w = new_h * rate
-
             net_size_h = self.max_downsample * np.random.randint(self.min_net_size[0] / self.max_downsample,
                                                                  self.max_net_size[0] / self.max_downsample + 1)
             net_size_w = self.max_downsample * np.random.randint(self.min_net_size[1] / self.max_downsample,
                                                                  self.max_net_size[1] / self.max_downsample + 1)
             self.net_size_h, self.net_size_w = net_size_h, net_size_w
-            # self.net_size_h = int(new_h)
-            # self.net_size_w = int(new_w)
 
         return self.net_size_h, self.net_size_w
 
     def _aug_image(self, idx, net_h, net_w):
-        image = self.load_image(idx)
+        image = self._load_image(idx)
 
         if image is None:
             print('Cannot find ', image_name)
@@ -276,13 +312,13 @@ class BatchGenerator(Sequence):
         # print('  Correected sz: {}x{}'.format(im_sized.shape[1], im_sized.shape[0]))
 
         # boxes = instance['object']
-        boxes = self.load_annotation_bboxes(idx)
+        boxes = self._load_annotation_bboxes(idx)
         
         # for objbox in boxes:
         #     print('    Bbox for {}: {}'.format(idx, objbox.get_str()))
 
         # correct the size and pos of bounding boxes
-        all_objs = self.correct_bounding_boxes(boxes, new_w, new_h, net_h, net_w, dx, dy, flip, image_w, image_h)
+        all_objs = self._correct_bounding_boxes(boxes, new_w, new_h, net_h, net_w, dx, dy, flip, image_w, image_h)
 
         # for objbox in all_objs:
         #     print('    Corrected bbox for {}: {}'.format(idx, objbox.get_str()))
@@ -313,7 +349,7 @@ class BatchGenerator(Sequence):
 
         return anchors
 
-    def correct_bounding_boxes(self, boxes, new_w, new_h, net_h, net_w, dx, dy, flip, image_w, image_h):
+    def _correct_bounding_boxes(self, boxes, new_w, new_h, net_h, net_w, dx, dy, flip, image_w, image_h):
         # randomize boxes' order
         np.random.shuffle(boxes)
 
@@ -345,81 +381,27 @@ class BatchGenerator(Sequence):
 
         return corrected_boxes
 
-    def load_image(self, i):
-        img_idx = i
-        if self.tile_count > 1:
-            # Correct idx
-            img_idx = int(i / self.tile_count)
-            tile_idx = i % self.tile_count
+    def load_full_image(self, i):
+        img_idx = int(i / self.tile_count)
+        return cv2.imread(self.instances[img_idx]['filename'])
 
-        image = cv2.imread(self.instances[img_idx]['filename'])
+    def load_full_annotation_bboxes(self, i):
+        img_idx = int(i / self.tile_count)
+        return copy.deepcopy(self.instances[img_idx][self._bboxes_key])
 
-        if self.tile_count > 1:
-            img_h, img_w, _ = image.shape
-            tile_bbox = cutls.tiles_get_bbox((img_h, img_w), self.tile_count, tile_idx)
+    def _load_image(self, i):
+        img_idx = int(i / self.tile_count)
+        tile_idx = i % self.tile_count
 
-            image = image[tile_bbox.ymin:tile_bbox.ymax, tile_bbox.xmin:tile_bbox.xmax, :]
+        image = self.load_full_image(i)
+        tile_bbox = self.instances[img_idx][self._tile_img_bboxes_key][tile_idx]
 
-        return image
+        # print(i, tile_idx, tile_bbox.get_str())
 
-    def load_annotation_bboxes(self, i):
-        annots = []
+        return image[tile_bbox.ymin:tile_bbox.ymax, tile_bbox.xmin:tile_bbox.xmax, :]
 
-        # print('Loading bboxes for {}'.format(i))
-            
-        if self.tile_count > 1:
-            img_idx = int(i / self.tile_count)
-            tile_idx = i % self.tile_count
+    def _load_annotation_bboxes(self, i):
+        img_idx = int(i / self.tile_count)
+        tile_idx = i % self.tile_count
 
-        for obj in self.instances[img_idx]['object']:
-            annot_bbox = BoundBox(obj['xmin'], obj['ymin'], obj['xmax'], obj['ymax'], 
-                                  label_name=obj['name'], 
-                                  label_idx=self.labels.index(obj['name']))
-            
-            if self.tile_count > 1:
-                img_h, img_w = self.instances[img_idx]['height'], self.instances[img_idx]['width']
-
-                tile_bbox = cutls.tiles_get_bbox((img_h, img_w), self.tile_count, tile_idx)
-
-                if tile_bbox.intersect(annot_bbox) is None:
-                    continue
-                
-                # print('Indx: {} / {} / {}'.format(i, img_idx, tile_idx))
-                # print(tile_bbox.get_str(), annot_bbox.get_str())
-
-                # Correct annot tile bbox
-                annot_bbox.xmin -= tile_bbox.xmin
-                annot_bbox.xmax -= tile_bbox.xmin
-                annot_bbox.ymin -= tile_bbox.ymin
-                annot_bbox.ymax -= tile_bbox.ymin
-
-            annots += [annot_bbox]
-
-        return annots
-
-    # def load_annotation(self, i):
-    #     annots = []
-
-    #     for obj in self.instances[i]['object']:
-    #         annot = [obj['xmin'], obj['ymin'], obj['xmax'],
-    #                  obj['ymax'], self.labels.index(obj['name'])]
-            
-    #         if self.tile_count > 1:
-    #             img_idx = int(i / self.tile_count)
-    #             tile_idx = i % self.tile_count
-
-    #             img_h, img_w = self.instances[img_idx]['height'], self.instances[img_idx]['width']
-
-    #             annot_bbox = BoundBox(obj['xmin'], obj['ymin'], obj['xmax'], obj['ymax'])
-    #             tile_bbox = cutls.tiles_get_bbox((img_h, img_w), self.tile_count, tile_idx)
-
-    #             if tile_bbox.intersect(annot_bbox) is None:
-    #                 print(tile_bbox, annot_bbox)
-    #                 continue
-
-    #         annots += [annot]
-
-    #     if len(annots) == 0:
-    #         annots = [[]]
-
-    #     return np.array(annots)
+        return copy.deepcopy(self.instances[img_idx][self._tile_ann_bboxes_key][tile_idx])

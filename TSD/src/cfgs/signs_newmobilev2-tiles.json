@@ -1,0 +1,61 @@
+{
+    "model" : {
+        "main_name":            "TSD_NewMbNv2_10",
+        "base":                 "NewMobileNetv2",
+        "base_params": {
+            "alpha": 1.0
+        },
+        "downsample":           [16, 8],
+        "anchors":              [10,11, 14,14, 18,20, 27,27, 40,40, 65,62],
+        "labels":               [],
+        "infer_shape":          [416, 416],
+        "tiles":                2,
+        "load_src_weights":     false
+    },
+
+    "train": {
+        "image_folder":         ["../data/RTSD_VOC_Train/Images/", "../data/GTSDB_VOC_Full/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Train/Annotations/", "../data/GTSDB_VOC_Full/Annotations/"],
+        "cache_name":           "",
+
+        "min_input_size":       [288, 288],
+        "max_input_size":       [448, 448],
+
+        "train_times":          1,
+        "batch_size":           4,
+        "nb_epochs":            500,
+        "warmup_epochs":        0,
+        "obj_thresh":           0.5,
+        "iou_thresh":           0.5,
+        "nms_thresh":           0.5,
+        "gpus":                 "0",
+        
+        "optimizer":            "Nadam",
+        "learning_rate":        1e-3,
+        "lr_decay":             0,
+        "clipnorm":             0,
+        
+        "grid_scales":          [1,1,1],
+        "obj_scale":            5,
+        "noobj_scale":          1,
+        "xywh_scale":           1,
+        "class_scale":          1,
+
+        "debug":                false,
+        "freeze":               false
+    },
+
+    "valid": {
+        "image_folder":         [],
+        "annot_folder":         [],
+        "cache_name":           "",
+
+        "valid_times":          1
+    },
+
+    "eval": {
+        "image_folder":         ["../data/RTSD_VOC_Test/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Test/Annotations/"],
+        "cache_name":           ""
+    }
+}

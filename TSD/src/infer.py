@@ -5,7 +5,6 @@ import argparse
 from _common import utils
 import json
 import yolo
-from utils.utils import get_yolo_boxes
 from utils.bbox import draw_boxes
 from tensorflow.keras.models import load_model
 
@@ -36,48 +35,31 @@ def _main_():
 
     if graph_fpath:
         model = ncs.InferNCS(graph_fpath, fp16=False)
-    elif weights_path:
-        model = load_model(weights_path)
     else:
-        _, model, _ = yolo.create_model_new(
-            nb_class=len(labels),
-            anchors=config['model']['anchors'],
-            max_box_per_image=0,
-            max_input_size=config['model']['max_input_size'],
-            batch_size=config['train']['batch_size'],
-            warmup_batches=0,
-            ignore_thresh=config['train']['ignore_thresh'],
-            grid_scales=config['train']['grid_scales'],
-            obj_scale=config['train']['obj_scale'],
-            noobj_scale=config['train']['noobj_scale'],
-            xywh_scale=config['train']['xywh_scale'],
-            class_scale=config['train']['class_scale'],
-            base=config['model']['base'],
-            base_params=config['model']['base_params'],
-            anchors_per_output=config['model']['anchors_per_output'],
-            is_freezed=False,
-            load_src_weights=False
+        config['model']['labels'] = labels
+        yolo_model = yolo.YOLO_Model(
+            config['model']
         )
+
+    if weights_path:
+        yolo_model.load_weights(weights_path)
 
     data_generator = utils.data_generator(input_path)
 
     full_time = 0
     processing_cnt = 0
     skip = 0
-
+    
     for type, image_src in data_generator:
 
         image = image_src.copy()
 
         start = time.time()
-
-        # print(image_src.shape)
-        # image = cv2.resize(image_src, (0,0), fx=2, fy=2)
-
-        #n_image = utils.normalize_ycrcb(image)
-        #boxes = get_yolo_boxes(model, [n_image], net_h, net_w, anchors, obj_thresh, nms_thresh)[0]
-
-        boxes = get_yolo_boxes(model, [image], net_h, net_w, anchors, obj_thresh, nms_thresh, no_boxes=args.fps)[0]
+        
+        if args.fps:
+            yolo_model.test_infer_image(image)
+        else:
+            boxes = yolo_model.infer_image(image)
 
         full_time += time.time() - start
         processing_cnt += 1
@@ -92,7 +74,6 @@ def _main_():
         
         if not args.fps:
             draw_boxes(image, boxes, labels, obj_thresh) 
-            draw_boxes(n_image, boxes, labels, obj_thresh) 
 
             cv2.imshow('1', n_image)
             cv2.imshow('2', image)

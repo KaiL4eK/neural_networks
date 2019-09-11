@@ -5,13 +5,12 @@
         "base_params": {
             
         },
-        "min_input_size":       [288, 288],
-        "max_input_size":       [448, 448],
         "downsample":           [32, 16, 8],
         "anchors":              [4,4, 5,5, 6,6, 6,10, 8,8, 10,10, 14,14, 21,20, 33,32],
-        "anchors_per_output":   3,
         "labels":               [],
-        "infer_shape":          [416, 416]
+        "infer_shape":          [416, 416],
+        "tiles":                1,
+        "load_src_weights":     false
     },
 
     "aug": {
@@ -24,11 +23,16 @@
         "annot_folder":         ["../data/RTSD_VOC_Train/Annotations/", "../data/GTSDB_VOC_Full/Annotations/"],
         "cache_name":           "",
 
+        "min_input_size":       [288, 288],
+        "max_input_size":       [448, 448],
+
         "train_times":          1,
         "batch_size":           32,
         "nb_epochs":            500,
         "warmup_epochs":        0,
-        "ignore_thresh":        0.5,
+        "obj_thresh":           0.5,
+        "iou_thresh":           0.5,
+        "nms_thresh":           0.5,
         "gpus":                 "0",
         
         "optimizer":            "Nadam",
@@ -43,8 +47,7 @@
         "class_scale":          1,
 
         "debug":                false,
-        "freeze":               false,
-        "load_src_weights":     false
+        "freeze":               false
     },
 
     "valid": {

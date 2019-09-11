@@ -42,29 +42,27 @@ def get_pb_graph_fpath(config):
 
     return output_fpath
 
+def _get_root_checkpoint_name(config):
+    root = 'chk/{}_{}_{}x{}_t{}'.format(config['model']['main_name'], \
+                                    config['model']['base'], \
+                                    config['model']['infer_shape'][0], \
+                                    config['model']['infer_shape'][1],
+                                    config['model']['tiles']
+    )
+    return root
 
 def get_checkpoint_name(config):
-    root = 'chk/{}_{}_{}x{}'.format(config['model']['main_name'], \
-                                    config['model']['base'], \
-                                    config['model']['infer_shape'][0], \
-                                    config['model']['infer_shape'][1])
-    name = root + '_ep{epoch:03d}-val_loss{val_loss:.3f}-loss{loss:.3f}' + '.h5'
-    return name
-
+    return _get_root_checkpoint_name(config) + '_ep{epoch:03d}-val_loss{val_loss:.3f}-loss{loss:.3f}' + '.h5'
 
 def get_mAP_checkpoint_name(config):
-    root = 'chk/{}_{}_{}x{}'.format(config['model']['main_name'], \
-                                    config['model']['base'], \
-                                    config['model']['infer_shape'][0], \
-                                    config['model']['infer_shape'][1])
-    name = root + '_ep{epoch:03d}-val_loss{val_loss:.3f}-best_mAP{mAP:.3f}' + '.h5'
-    return name
+    return _get_root_checkpoint_name(config) + '_ep{epoch:03d}-val_loss{val_loss:.3f}-best_mAP{mAP:.3f}' + '.h5'
 
 def get_tensorboard_name(config):
     tensorboard_logdir_idx = 0
-    root = 'logs/{}_{}x{}_{}_lr{}_b{}'.format(config['model']['main_name'], \
+    root = 'logs/{}_{}x{}_t{}_{}_lr{}_b{}'.format(config['model']['main_name'], \
                                      config['model']['infer_shape'][0], \
                                      config['model']['infer_shape'][1],
+                                     config['model']['tiles'],
                                      config['train']['optimizer'],
                                      config['train']['learning_rate'],
                                      config['train']['batch_size']
@@ -175,31 +173,27 @@ def tiles_get_sz(img_sz, tile_cnt):
     if tile_cnt > 2:
         raise NotImplementedError('Tile count > 2 - not supported yet!')
 
+    TILE_REL_SZ = {
+        1 : (1, 1),
+        2 : (1, 0.5)
+    }
+
+    tile_rel_sz = TILE_REL_SZ[tile_cnt]
+    
     # TODO - Really not dividing by tile count, just hack
-    return int(img_h), int(img_w/tile_cnt)
+    return int(img_h*tile_rel_sz[0]), int(img_w*tile_rel_sz[1])
 
 def tiles_image2batch(image, tile_cnt):
     image_h, image_w, image_c = image.shape
-    
     tile_h, tile_w = tiles_get_sz((image_h, image_w), tile_cnt)
-    tile_line_cnt = image_w/tile_w
-    tile_idx_x = 0
-    tile_idx_y = 0
 
     batch_input = np.zeros((tile_cnt, tile_h, tile_w, image_c))
 
-    tile_idx = 0
+    for tile_idx in range(tile_cnt):
+        tile_bbox = tiles_get_bbox((image_h, image_w), tile_cnt, tile_idx)
 
-    while tile_idx < tile_cnt:
-        batch_input[tile_idx] = image[tile_idx_y*tile_h:(tile_idx_y+1)*tile_h, 
-                                        tile_idx_x*tile_w:(tile_idx_x+1)*tile_w]
-        
-        tile_idx_x += 1
-        if tile_idx_x >= tile_line_cnt:
-            tile_idx_y += 1
-            tile_idx_x = 0
-        
-        tile_idx = tile_idx_y * tile_line_cnt + tile_idx_x
+        batch_input[tile_idx] = image[tile_bbox.ymin:tile_bbox.ymax, 
+                                      tile_bbox.xmin:tile_bbox.xmax]
 
     return batch_input
 

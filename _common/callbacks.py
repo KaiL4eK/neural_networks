@@ -225,7 +225,7 @@ class MAP_evaluation(Callback):
                     print('\nEpoch %05d: mAP improved from %g to %g, saving model to %s' %
                           (epoch, self.bestMap, mAP, save_name))
                     self.bestMap = mAP
-                    self.model.infer_model.save(save_name)
+                    self.yolo_model.infer_model.save(save_name)
                 else:
                     print("mAP did not improve from {}.".format(self.bestMap))
 
