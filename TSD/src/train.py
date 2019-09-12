@@ -10,7 +10,6 @@ from generator import BatchGenerator
 from utils.utils import normalize, makedirs, init_session, unfreeze_model
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
 import tensorflow.keras.optimizers as opt
-from tensorflow.keras.utils import plot_model
 from tensorflow.keras.models import load_model
 from tensorflow.keras.backend import clear_session
 

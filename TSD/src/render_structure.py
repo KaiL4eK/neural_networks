@@ -16,6 +16,8 @@ def _main_(args):
 
     init_session(0.5)
 
+    labels = ['sign']
+    config['model']['labels'] = labels
     yolo_model = yolo.YOLO_Model(config['model'])
 
     model_render_file = 'images/{}.png'.format(config['model']['base'])

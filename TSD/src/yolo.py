@@ -372,7 +372,7 @@ class YOLO_Model:
                             )(out)
             self.pred_layers += [pred_yolo]
 
-        self.infer_model = Model(self.backend.inputs[0], self.pred_layers)
+        self.infer_model = Model(self.backend.inputs, self.pred_layers)
 
         if self.train_config:
             self._setup_trainer()

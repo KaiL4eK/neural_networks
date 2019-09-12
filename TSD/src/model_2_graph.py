@@ -1,15 +1,13 @@
 import tensorflow as tf
-import keras.backend as K
+import tensorflow.keras.backend as K
 from utils.utils import makedirs
 import os
 import json
-from yolo import create_model
-from keras.utils.layer_utils import print_summary
-from keras.models import load_model
+import yolo
+from tensorflow.keras.models import load_model
+from tensorflow.keras.layers import Input
+from tensorflow.keras.models import Model
 import shutil
-from keras.layers import Input
-from keras.models import Model
-import core
 from _common import utils
 
 try:
@@ -45,38 +43,35 @@ def _main_():
 
     train_sz = config['model']['infer_shape']
 
+    labels = ['sign']
+
+    config['model']['labels'] = labels
+    yolo_model = yolo.YOLO_Model(
+        config['model']
+    )
+
     if weights_path:
-        infer_model = load_model(weights_path)
-        image_input = Input(shape=(train_sz[0], train_sz[1], 3), name='input_img')
+        yolo_model.load_weights(weights_path)
 
-        infer_model = Model(image_input, infer_model(image_input))
-    else:
-        _, infer_model, _, _ = create_model(
-            nb_class=6,
-            anchors=config['model']['anchors'],
-            max_input_size=config['model']['max_input_size'],
-            base=config['model']['base'],
-            load_src_weights=False,
-            train_shape=(train_sz[0], train_sz[1], 3)
-        )
+    infer_model = yolo_model.infer_model
 
-    print_summary(infer_model)
-    from keras.utils.vis_utils import plot_model
-    model_render_file = 'images/{}.png'.format(config['model']['base'])
-    if not os.path.isdir(os.path.dirname(model_render_file)):
-        os.makedirs(os.path.dirname(model_render_file))
-    plot_model(infer_model, to_file=model_render_file, show_shapes=True)
+        # infer_model = load_model(weights_path)
+        # image_input = Input(shape=(train_sz[0], train_sz[1], 3), name='input_img')
+        # infer_model = Model(image_input, infer_model(image_input))
+    # else:
 
     model_input_names = [infer_model.input.name.split(':')[0]]
-    model_output_names = [infer_model.output.name.split(':')[0]]
+    model_output_names = [out.name.split(':')[0] for out in infer_model.output]
 
-    print('Outputs: {}'.format(model_output_names))
+    print('Model:')
+    print('  Inputs: {}'.format(model_input_names))
+    print('  Outputs: {}'.format(model_output_names))
 
     with K.get_session() as sess:
 
         graphdef = sess.graph.as_graph_def()
 
-        dirpath = os.path.join('logs', config['model']['base'])
+        dirpath = os.path.join('logs/tf_export', config['model']['base'])
 
         shutil.rmtree(dirpath, ignore_errors=True)
         makedirs(dirpath)
@@ -93,10 +88,10 @@ def _main_():
     f.close()
 
     K.clear_session()
+    print('Frozen graph done!')
 
     if uff_imported:
         uff_model = uff.from_tensorflow(frozen_graph, model_output_names)
-
 
     if ncs_flag:
         from subprocess import call

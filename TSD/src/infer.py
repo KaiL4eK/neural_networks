@@ -28,7 +28,6 @@ def _main_():
         config = json.load(config_buffer)
 
     labels = ['sign']
-    anchors = config['model']['anchors']
 
     net_h, net_w = config['model']['infer_shape']
     obj_thresh, nms_thresh = 0.5, 0.45
