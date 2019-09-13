@@ -5,14 +5,14 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2 as Keras_MobileNetV2
 from tensorflow.keras.applications.xception import Xception as Keras_Xception
 
-import mobilenet_utils as mnu
-import darknet_utils as dnu
+from . import mobilenet_utils as mnu
+from . import darknet_utils as dnu
 
 class DetBackend(object):
     def __init__(self):
         pass
         # self.outputs = []
-        # self.input_layers = []
+        # self.inputs = []
 
         # self.head_layers_cnt = -1
         # self.downgrades = [1]
@@ -21,7 +21,7 @@ class DetBackend(object):
 # 6,6, 7,7, 8,8, 10,10, 12,11, 14,14, 18,17, 23,22, 32,31
 # 6,6, 9,9, 12,12, 15,15, 21,20, 31,30
 # 8,8, 14,13, 25,24
-class NewMobileNetV2(DetBackend):
+class SmallMobileNetV2(DetBackend):
     def __init__(self, **kwargs):
         train_shape = kwargs['train_shape']
         base_params = kwargs['base_params']
@@ -221,7 +221,7 @@ class Xception(DetBackend):
                                   weights='imagenet')
 
         self.outputs = [xception.output]
-        self.input_layers = [image_input]
+        self.inputs = [image_input]
 
         self.head_layers_cnt = 1
         self.downgrades = [32]
@@ -240,7 +240,7 @@ class MobileNetV2(DetBackend):
         x = mobilenetv2.output
     
         self.outputs = [x]
-        self.input_layers = [image_input]
+        self.inputs = [image_input]
 
         self.head_layers_cnt = 1
         self.downgrades = [32]
@@ -269,7 +269,7 @@ class Tiny_YOLOv3(DetBackend):
             )([x16u, x16])
 
         self.outputs = [y1, y2]
-        self.input_layers = [image_input]
+        self.inputs = [image_input]
 
         self.head_layers_cnt = 2
         self.downgrades = [32, 16]
@@ -443,7 +443,7 @@ class Darknet53(DetBackend):
                                       ], do_skip=False)
 
         self.outputs = [pred_yolo_1, pred_yolo_2, pred_yolo_3]
-        self.input_layers = [image_input]
+        self.inputs = [image_input]
 
         self.head_layers_cnt = 3
         self.downgrades = [32, 16, 8]
@@ -499,7 +499,7 @@ class Darknet19(DetBackend):
         x = dnu.Darknet19Conv2D_BN_Leaky(1024, 3, idx=22)(x)
         
         self.outputs = [x]
-        self.input_layers = [image_input]
+        self.inputs = [image_input]
 
         self.head_layers_cnt = 1
         self.downgrades = [32]

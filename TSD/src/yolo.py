@@ -4,10 +4,9 @@ import tensorflow as tf
 from tensorflow.keras.layers import Layer, Input, Conv2D
 from tensorflow.keras.models import Model
 
-import utils.utils as utils
-import _common.utils as cutls
+from _common import utils
+from _common import backend
 
-import backend
 import os
 
 
@@ -328,7 +327,7 @@ class YOLO_Model:
                     'Darknet53':        (backend.Darknet53,         "yolov3_exp.h5"),
                     'Darknet19':        (backend.Darknet19,         "yolov2.h5"),
                     'MobileNetv2':      (backend.MobileNetV2,       ""),
-                    'NewMobileNetv2':   (backend.NewMobileNetV2,    ""),
+                    'SmallMobileNetv2': (backend.SmallMobileNetV2,  ""),
                     'MadNetv1':         (backend.MadNetv1,          ""),
                     'SqueezeNet':       (backend.SqueezeNet,        ""),
                     'Xception':         (backend.Xception,          "")
@@ -433,12 +432,12 @@ class YOLO_Model:
         if tile_count == 1:
             return self._infer_on_batch(np.expand_dims(image, axis=0))[0]
         else:
-            images_batch = cutls.tiles_image2batch(image, tile_count)
+            images_batch = utils.tiles_image2batch(image, tile_count)
             pred_batch_boxes = self._infer_on_batch(images_batch)
 
             corrected_boxes = []
             for tile_idx, pred_boxes in enumerate(pred_batch_boxes):
-                tile_bbox = cutls.tiles_get_bbox(image.shape[0:2], tile_count, tile_idx)
+                tile_bbox = utils.tiles_get_bbox(image.shape[0:2], tile_count, tile_idx)
 
                 for pred_box in pred_boxes:
                     pred_box.xmin += tile_bbox.xmin
@@ -453,7 +452,7 @@ class YOLO_Model:
     def test_infer_image(self, image):
         tile_count = self.model_config.get('tiles', 1)
 
-        images_batch = cutls.tiles_image2batch(image, tile_count)
+        images_batch = utils.tiles_image2batch(image, tile_count)
         self._infer_on_batch(images_batch, return_boxes=False)
 #         self._infer_on_batch(np.expand_dims(image, axis=0), return_boxes=False)
         return None
@@ -464,9 +463,9 @@ class YOLO_Model:
         batch_input = np.zeros((nb_images, self.infer_sz[0], self.infer_sz[1], image_c))
 
         for i in range(nb_images):
-            batch_input[i] = cutls.image2net_input_sz(images[i], self.infer_sz[0], self.infer_sz[1])
+            batch_input[i] = utils.image2net_input_sz(images[i], self.infer_sz[0], self.infer_sz[1])
             
-        batch_input = cutls.image_normalize(batch_input)
+        batch_input = utils.image_normalize(batch_input)
 
         batch_output = self.infer_model.predict_on_batch(batch_input)        
         batch_boxes = [None] * nb_images

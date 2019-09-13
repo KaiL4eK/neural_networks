@@ -6,7 +6,7 @@ import numpy as np
 import json
 from voc import parse_voc_annotation
 from generator import BatchGenerator
-from utils.utils import normalize, evaluate, makedirs
+from _common.utils import normalize, evaluate, makedirs
 
 import cv2
 

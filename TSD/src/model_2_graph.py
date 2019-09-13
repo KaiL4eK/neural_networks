@@ -1,6 +1,6 @@
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from utils.utils import makedirs
+from _common.utils import makedirs
 import os
 import json
 import yolo
@@ -17,15 +17,18 @@ except:
     uff_imported = False
     print('Failed to import UFF')
 
-import argparse
-argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
-argparser.add_argument('-w', '--weights', help='weights path')
-argparser.add_argument('-c', '--conf', help='path to configuration file')
-argparser.add_argument('-n', '--ncs', action='store_true', help='enable NCS files generation')
-args = argparser.parse_args()
+def parse_args():
+    import argparse
+    argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
+    argparser.add_argument('-w', '--weights', help='weights path')
+    argparser.add_argument('-c', '--conf', help='path to configuration file')
+    argparser.add_argument('-n', '--ncs', action='store_true', help='enable NCS files generation')
+    return argparser.parse_args()
 
 
 def _main_():
+    args = parse_args()
+    
     weights_path = args.weights
     config_path = args.conf
     ncs_flag = args.ncs
@@ -60,9 +63,16 @@ def _main_():
         # infer_model = Model(image_input, infer_model(image_input))
     # else:
 
-    model_input_names = [infer_model.input.name.split(':')[0]]
-    model_output_names = [out.name.split(':')[0] for out in infer_model.output]
-
+    if type(infer_model.input) is list:
+        model_input_names = [inp.name.split(':')[0] for inp in infer_model.input]
+    else:
+        model_input_names = [infer_model.input.name.split(':')[0]]
+        
+    if type(infer_model.output) is list:
+        model_output_names = [out.name.split(':')[0] for out in infer_model.output]
+    else:
+        model_output_names = [infer_model.output.name.split(':')[0]]
+    
     print('Model:')
     print('  Inputs: {}'.format(model_input_names))
     print('  Outputs: {}'.format(model_output_names))

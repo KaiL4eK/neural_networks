@@ -1,4 +1,4 @@
-from utils.utils import init_session
+from _common.utils import init_session
 import cv2
 import argparse
 import tensorflow as tf

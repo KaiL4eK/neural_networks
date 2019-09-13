@@ -1,0 +1,3 @@
+networkx
+test-generator==0.1.1
+defusedxml

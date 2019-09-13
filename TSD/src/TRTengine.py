@@ -16,7 +16,7 @@ import os
 
 import json
 
-from utils.utils import correct_yolo_boxes, do_nms, decode_netout
+from _common.utils import correct_yolo_boxes, do_nms, decode_netout
 
 
 class TRTengine:

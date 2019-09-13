@@ -6,7 +6,7 @@ import numpy as np
 import json
 import yolo
 from generator import BatchGenerator
-from utils.utils import normalize, evaluate, init_session
+from _common.utils import normalize, evaluate, init_session
 from tensorflow.keras.models import load_model
 
 from _common.voc import parse_voc_annotation, replace_all_labels_2_one
