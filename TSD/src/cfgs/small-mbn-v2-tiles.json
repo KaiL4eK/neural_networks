@@ -1,9 +1,9 @@
 {
     "model" : {
-        "main_name":            "TSD_SmallMbNv2_100",
+        "main_name":            "TSD_SmallMbNv2_100_Tiles",
         "base":                 "SmallMobileNetv2",
         "base_params": {
-            "alpha": 1.0
+            "alpha": 0.35
         },
         "downsample":           [16, 8],
         "anchors":              [10,11, 14,14, 18,20, 27,27, 40,40, 65,62],
