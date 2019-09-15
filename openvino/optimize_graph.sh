@@ -17,7 +17,7 @@ GRAPH_FNAME=`basename $GRAPH_PATH`
 
 echo "Optimizing $GRAPH_FNAME"
 
-python $MO_PATH --input_model $OPTIM_DIR/$GRAPH_FNAME --input_shape $INPUT_SHAPE --output_dir $OUTPUT_DIR --data_type FP16
+python $MO_PATH --input_model $OPTIM_DIR/$GRAPH_FNAME --scale 255 --input_shape $INPUT_SHAPE --output_dir $OUTPUT_DIR --data_type FP16
 
 # --model_name '$OUTPUT_MODEL'_fp32
 #  --log_level=DEBUG

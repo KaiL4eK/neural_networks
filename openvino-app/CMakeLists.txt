@@ -6,7 +6,7 @@ find_package(OpenCV 4.0.0 REQUIRED)
 find_package(InferenceEngine 2.0 REQUIRED)
 find_package(Boost 1.6.5 REQUIRED COMPONENTS program_options filesystem)
 
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(${PROJECT_NAME} 
