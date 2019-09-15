@@ -189,7 +189,9 @@ class MAP_evaluation(Callback):
                  period=1,
                  save_best=False,
                  save_name=None,
+                 save_static_name=None,
                  tensorboard=None,
+                 neptune=None
                  ):
                  
         self.yolo_model = model
@@ -197,7 +199,9 @@ class MAP_evaluation(Callback):
         self.period = period
         self.save_best = save_best
         self.save_name_fmt = save_name
+        self.save_static_name = save_static_name
         self.tensorboard = tensorboard
+        self.neptune = neptune
 
         self.bestVloss = None
         self.bestMap = 0
@@ -226,6 +230,7 @@ class MAP_evaluation(Callback):
                           (epoch, self.bestMap, mAP, save_name))
                     self.bestMap = mAP
                     self.yolo_model.infer_model.save(save_name)
+                    self.yolo_model.infer_model.save(self.save_static_name)
                 else:
                     print("mAP did not improve from {}.".format(self.bestMap))
 
@@ -236,3 +241,6 @@ class MAP_evaluation(Callback):
                 summary_value.simple_value = mAP
                 summary_value.tag = "val_mAP"
                 self.tensorboard.writer.add_summary(summary, epoch)
+
+            if self.neptune is not None:
+                self.neptune.send_metric('mAP', mAP)

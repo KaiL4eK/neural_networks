@@ -1,26 +1,40 @@
 #! /usr/bin/env python
 
-import argparse
+from _common.voc import replace_all_labels_2_one, create_training_instances
+import _common.callbacks as cbs
+from _common import utils
+
 import os
 import numpy as np
 import json
 import yolo
 import tensorflow as tf
 from generator import BatchGenerator
-from _common.utils import normalize, makedirs, init_session, unfreeze_model
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
 import tensorflow.keras.optimizers as opt
 from tensorflow.keras.models import load_model
 from tensorflow.keras.backend import clear_session
 
-from _common import utils
-import _common.callbacks as cbs
-from _common.voc import replace_all_labels_2_one, create_training_instances
+import neptune
+neptune.init('kail4ek/sandbox')
 
-# MBN2 - 149 ms/step
+
+def parse_args():
+    import argparse
+    argparser = argparse.ArgumentParser(description='train YOLO model')
+    argparser.add_argument(
+        '-c', '--conf', help='path to configuration file'
+    )
+    argparser.add_argument(
+        '-w', '--weights', help='path to pretrained model',
+        default=None
+    )
+    return argparser.parse_args()
+
+
 def prepare_generators(config):
     if config['train']['cache_name']:
-        makedirs(os.path.dirname(config['train']['cache_name']))
+        utils.makedirs(os.path.dirname(config['train']['cache_name']))
 
     train_ints, valid_ints, labels, max_box_per_image = create_training_instances(
         config['train']['annot_folder'],
@@ -47,14 +61,15 @@ def prepare_generators(config):
         instances=train_ints,
         anchors=config['model']['anchors'],
         labels=labels,
-        downsample=config['model']['downsample'],  # ratio between network input's size and network output's size, 32 for YOLOv3
+        # ratio between network input's size and network output's size, 32 for YOLOv3
+        downsample=config['model']['downsample'],
         max_box_per_image=max_box_per_image,
         batch_size=config['train']['batch_size'],
         min_net_size=config['train']['min_input_size'],
         max_net_size=config['train']['max_input_size'],
         shuffle=True,
         jitter=0.1,
-        norm=normalize,
+        norm=utils.image_normalize,
         tile_count=config['model']['tiles']
     )
 
@@ -62,10 +77,11 @@ def prepare_generators(config):
         instances=valid_ints,
         anchors=config['model']['anchors'],
         labels=labels,
-        downsample=config['model']['downsample'],  # ratio between network input's size and network output's size, 32 for YOLOv3
+        # ratio between network input's size and network output's size, 32 for YOLOv3
+        downsample=config['model']['downsample'],
         max_box_per_image=max_box_per_image,
         batch_size=config['train']['batch_size'],
-        norm=normalize,
+        norm=utils.image_normalize,
         infer_sz=config['model']['infer_shape'],
         tile_count=config['model']['tiles']
     )
@@ -128,15 +144,15 @@ def train_freezed(config, train_model, train_generator, valid_generator):
     # if multi_gpu > 1:
     #     infer_model = load_model(config['train']['saved_weights_name'])
 
-    unfreeze_model(infer_model)
+    utils.unfreeze_model(infer_model)
 
 
 def start_train(
-        config, 
-        yolo_model: yolo.YOLO_Model, 
-        train_generator, 
-        valid_generator
-    ):
+    config,
+    yolo_model: yolo.YOLO_Model,
+    train_generator,
+    valid_generator
+):
     print('Full training')
 
     ###############################
@@ -154,10 +170,10 @@ def start_train(
 
     if config['train']['clipnorm'] > 0:
         optimizer.clipnorm = config['train']['clipnorm']
-    
+
     if config['train'].get('lr_decay', 0) > 0:
         optimizer.decay = config['train']['lr_decay']
-    
+
     if config['train']['optimizer'] == 'Nadam':
         # Just to set field
         optimizer.decay = 0.0
@@ -165,7 +181,7 @@ def start_train(
     ###############################
     #   Callbacks
     ###############################
-    
+
     checkpoint_name = utils.get_checkpoint_name(config)
     utils.makedirs_4_file(checkpoint_name)
 
@@ -190,14 +206,16 @@ def start_train(
     )
 
     mAP_checkpoint_name = utils.get_mAP_checkpoint_name(config)
+    mAP_checkpoint_static_name = utils.get_mAP_checkpoint_static_name(config)
     utils.makedirs_4_file(mAP_checkpoint_name)
-
     map_evaluator_cb = cbs.MAP_evaluation(
         model=yolo_model,
         generator=valid_generator,
         save_best=True,
         save_name=mAP_checkpoint_name,
-        tensorboard=tensorboard_cb
+        save_static_name=mAP_checkpoint_static_name,
+        # tensorboard=tensorboard_cb,
+        neptune=neptune
     )
 
     reduce_on_plateau = ReduceLROnPlateau(
@@ -231,7 +249,11 @@ def start_train(
     #     tensorboard=tensorboard_cb
     # )
 
-    callbacks = [tensorboard_cb, map_evaluator_cb, early_stop]
+    callbacks = [
+        # tensorboard_cb,
+        map_evaluator_cb,
+        early_stop
+    ]
     callbacks += [reduce_on_plateau]
     # callbacks += [fps_logger]
     # callbacks += [checkpoint_vloss]
@@ -239,6 +261,19 @@ def start_train(
     ###############################
     #   Prepare fit
     ###############################
+    with open('/tmp/config.json', 'w') as f:
+        json.dump(config, f, indent=4)
+
+    sources_to_upload = [
+        'yolo.py',
+        '_common/backend.py',
+        '/tmp/config.json'
+    ]
+    neptune.create_experiment(
+        name=config['model']['main_name'],
+        upload_stdout=False,
+        upload_source_files=sources_to_upload
+    )
 
     yolo_model.train_model.compile(loss=yolo.dummy_loss, optimizer=optimizer)
     yolo_model.train_model.fit_generator(
@@ -256,15 +291,13 @@ def start_train(
         use_multiprocessing=False
     )
 
+    neptune.send_artifact(mAP_checkpoint_static_name)
+
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(
-        description='train and evaluate YOLO_v3 model on any dataset')
-    argparser.add_argument('-c', '--conf', help='path to configuration file')
-    argparser.add_argument('-w', '--weights', help='path to pretrained model', default=None)
-    args = argparser.parse_args()
+    args = parse_args()
 
-    init_session(1.0)
+    utils.init_session(1.0)
 
     config_path = args.conf
     initial_weights = args.weights
@@ -277,8 +310,9 @@ if __name__ == '__main__':
     yolo_model = prepare_model(config, initial_weights)
 
     # if freezing:
-        # train_freezed(config, train_model, train_generator, valid_generator)
+    # train_freezed(config, train_model, train_generator, valid_generator)
 
     start_train(config, yolo_model, train_generator, valid_generator)
 
+    neptune.stop()
     clear_session()

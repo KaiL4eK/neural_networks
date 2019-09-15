@@ -3,8 +3,8 @@ import copy
 import numpy as np
 import _common.utils as cutls
 from tensorflow.keras.utils import Sequence
-from utils.bbox import BoundBox, bbox_iou
-from utils.image import apply_random_scale_and_crop, random_distort_image, random_flip
+from _common.bbox import BoundBox, bbox_iou
+from _common.image import apply_random_scale_and_crop, random_distort_image, random_flip
 
 
 class BatchGenerator(Sequence):

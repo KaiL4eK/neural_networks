@@ -1,6 +1,6 @@
 {
     "model" : {
-        "main_name":            "TSD_MbNv2_035",
+        "main_name":            "TSD_MbNv2",
         "base":                 "MobileNetv2",
         "base_params": {
             "alpha": 0.35
@@ -14,15 +14,15 @@
     },
 
     "train": {
-        "image_folder":         ["../data/GTSDB_VOC_Full/Images/"],
-        "annot_folder":         ["../data/GTSDB_VOC_Full/Annotations/"],
+        "image_folder":         ["../data/RTSD_VOC_Train/Images/", "../data/GTSDB_VOC_Full/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Train/Annotations/", "../data/GTSDB_VOC_Full/Annotations/"],
         "cache_name":           "",
         
         "min_input_size":       [288, 288],
         "max_input_size":       [448, 448],
 
         "train_times":          1,
-        "batch_size":           16,
+        "batch_size":           8,
         "nb_epochs":            500,
         "warmup_epochs":        0,
         "obj_thresh":           0.5,
@@ -54,8 +54,8 @@
     },
 
     "eval": {
-        "image_folder":         ["../data/GTSDB_VOC_Full/Images/"],
-        "annot_folder":         ["../data/GTSDB_VOC_Full/Annotations/"],
+        "image_folder":         ["../data/RTSD_VOC_Test/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Test/Annotations/"],
         "cache_name":           ""
     }
 }

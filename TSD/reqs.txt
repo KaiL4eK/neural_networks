@@ -2,3 +2,4 @@ tensorflow-gpu
 scipy
 scikit-learn
 tqdm
+neptune-client

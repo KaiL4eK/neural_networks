@@ -1,7 +1,7 @@
 import os
 import cv2
 import numpy as np
-from .bbox import BoundBox, bbox_iou
+from . import bbox
 from scipy.special import expit
 from tqdm import tqdm
 
@@ -70,6 +70,10 @@ def get_checkpoint_name(config):
 
 def get_mAP_checkpoint_name(config):
     return _get_root_checkpoint_name(config) + '_ep{epoch:03d}-val_loss{val_loss:.3f}-best_mAP{mAP:.3f}' + '.h5'
+
+
+def get_mAP_checkpoint_static_name(config):
+    return _get_root_checkpoint_name(config) + '.h5'
 
 
 def get_tensorboard_name(config):
@@ -320,8 +324,8 @@ def do_nms(boxes, nms_thresh):
             for j in range(i+1, len(sorted_indices)):
                 index_j = sorted_indices[j]
 
-                if bbox_iou(boxes[index_i], boxes[index_j]) >= nms_thresh:
-                    boxes[index_j].reset_class_score(c)
+                if bbox.bbox_iou(boxes[index_i], boxes[index_j]) >= nms_thresh:
+                                 boxes[index_j].reset_class_score(c)
 
 
 def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
@@ -361,8 +365,8 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
             # last elements are class probabilities
             classes = netout[row, col, b, 5:]
 
-            boxes += [BoundBox(x-w/2, y-h/2, x+w/2, y +
-                               h/2, objectness, classes)]
+            boxes += [bbox.BoundBox(x-w/2, y-h/2, x+w/2, y +
+                                    h/2, objectness, classes)]
 
     return boxes
 
