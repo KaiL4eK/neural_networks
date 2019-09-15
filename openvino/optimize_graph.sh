@@ -1,8 +1,14 @@
 #!/bin/bash
 
+if [ -z "$MO_PATH" ]
+then
+      echo "\$MO_PATH is not set / OpenVINO env not set"
+      exit
+fi
+
 GRAPH_PATH=$1
 INPUT_SHAPE="[2,416,416,3]"
-OUTPUT_DIR="openvino_models"
+OUTPUT_DIR="models"
 
 OPTIM_DIR="for_optimization"
 
