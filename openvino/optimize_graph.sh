@@ -7,7 +7,7 @@ then
 fi
 
 GRAPH_PATH=$1
-INPUT_SHAPE="[2,416,416,3]"
+INPUT_SHAPE="[1,416,416,3]"
 OUTPUT_DIR="models"
 
 OPTIM_DIR="for_optimization"

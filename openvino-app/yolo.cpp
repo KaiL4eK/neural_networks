@@ -51,6 +51,7 @@ YOLOConfig::YOLOConfig(string cfg_path)
 
 YOLONetwork::YOLONetwork(YOLOConfig cfg, cv::Size infer_sz) : mCfg(cfg), mInferSize(infer_sz)
 {
+
 }
 
 cv::Mat YOLONetwork::preprocess(cv::Mat in_frame)
@@ -128,21 +129,84 @@ std::vector<cv::Point> YOLONetwork::get_anchors(size_t layer_idx)
     return anchors;
 }
 
-void YOLONetwork::get_inputs(cv::Mat raw_image, std::vector<cv::Mat> &inputs)
+void YOLONetwork::correct_detections(cv::Mat raw_image, std::vector<std::vector<RawDetectionBox>> &raw_dets, std::vector<DetectionBox> &corrected_dets)
 {
-    inputs.reserve( mCfg._tile_cnt );
+    cv::Size2f tile_sz;
 
     if (mCfg._tile_cnt == 1)
     {
-        inputs.insert(inputs.begin(), preprocess(raw_image));
+        tile_sz = cv::Size2f(raw_image.cols, raw_image.rows);   
     }
     else if (mCfg._tile_cnt == 2)
     {
-        cv::Rect roi_left(cv::Point(0, 0), cv::Point(raw_image.cols/2, raw_image.rows));
-        cv::Rect roi_right(cv::Point(raw_image.cols/2, 0), cv::Point(raw_image.cols, raw_image.rows));
+        tile_sz = cv::Size(raw_image.cols/2, raw_image.rows);
+    }
 
-        inputs.insert(inputs.begin(), preprocess(raw_image(roi_left)));
-        inputs.insert(inputs.begin()+1, preprocess(raw_image(roi_right)));
+    float new_w, new_h;
+
+    if ( (mInferSize.width / tile_sz.width) < (mInferSize.height / tile_sz.height) )
+    {
+        new_w = mInferSize.width;
+        new_h = mInferSize.height / tile_sz.width * mInferSize.width;
+    }
+    else
+    {
+        new_h = mInferSize.height;
+        new_w = tile_sz.width / tile_sz.height * mInferSize.height;
+    }
+
+    float x_offset = (mInferSize.width - new_w) / 2. / mInferSize.width;
+    float y_offset = (mInferSize.height - new_h) / 2. / mInferSize.height;
+
+    float x_scale = new_w / mInferSize.width;
+    float y_scale = new_h / mInferSize.height;
+
+    size_t i_tile = 0;
+    for ( vector<RawDetectionBox> &b_dets : raw_dets )
+    {
+        for ( RawDetectionBox &det : b_dets )
+        {
+            DetectionBox px_det;
+            px_det.cls = det.cls;
+            px_det.cls_idx = det.cls_idx;
+
+            px_det.box_x = (det.box_x - x_offset) / x_scale * tile_sz.width;
+            px_det.box_y = (det.box_y - y_offset) / y_scale * tile_sz.height;
+
+            px_det.box_w = det.box_w / x_scale * tile_sz.width;
+            px_det.box_h = det.box_h / y_scale * tile_sz.height;
+
+            if ( i_tile == 1 )
+            {
+                px_det.box_x += tile_sz.width;
+                px_det.box_y += 0;
+            }
+
+            corrected_dets.push_back(px_det);
+        }
+
+        i_tile++;
+    }
+}
+
+cv::Mat YOLONetwork::get_input(cv::Mat raw_image, size_t idx)
+{
+    if (mCfg._tile_cnt == 1)
+    {
+        return preprocess(raw_image);
+    }
+    else if (mCfg._tile_cnt == 2)
+    {
+        if ( idx == 0 )
+        {
+            cv::Rect roi_left(cv::Point(0, 0), cv::Point(raw_image.cols/2, raw_image.rows));
+            return preprocess(raw_image(roi_left));
+        }
+        else if ( idx == 1 )
+        {
+            cv::Rect roi_right(cv::Point(raw_image.cols/2, 0), cv::Point(raw_image.cols, raw_image.rows));
+            return preprocess(raw_image(roi_right));
+        }
     }
     else
     {

@@ -16,33 +16,40 @@ struct YOLOConfig
 
 struct RawDetectionBox
 {
-
-
     float box_x;
     float box_y;
     float box_w;
     float box_h;
-    std::vector<float> cls;
+    float cls;
+    size_t cls_idx;
 };
 
 struct DetectionBox
 {
-    cv::Rect px_rect;
-    uint32_t cls_idx;
+    int box_x;
+    int box_y;
+    int box_w;
+    int box_h;
+    float cls;
+    size_t cls_idx;
 };
+
 
 class YOLONetwork
 {
 public:
     YOLONetwork(YOLOConfig cfg, cv::Size infer_sz);
 
-    void get_inputs(cv::Mat raw_image, std::vector<cv::Mat> &inputs);
+    cv::Mat get_input(cv::Mat raw_image, size_t idx);
+    void correct_detections(cv::Mat raw_image, std::vector<std::vector<RawDetectionBox>> &raw_dets, std::vector<DetectionBox> &corrected_dets);
 
     std::vector<cv::Point> get_anchors(size_t layer_idx);
+
+    size_t get_infer_count() { return mCfg._tile_cnt; }
 
 private:
     cv::Mat preprocess(cv::Mat in_frame);
 
     YOLOConfig  mCfg;
-    cv::Size    mInferSize;
+    cv::Size2f  mInferSize;
 };
