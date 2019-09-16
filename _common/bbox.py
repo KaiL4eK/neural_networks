@@ -4,7 +4,7 @@ from .colors import get_color
 
 
 class BoundBox:
-    def __init__(self, xmin, ymin, xmax, ymax, c = None, classes = None, label_name = None, label_idx = None):
+    def __init__(self, xmin, ymin, xmax, ymax, classes = None, label_name = None, label_idx = None):
         self.xmin = xmin
         self.ymin = ymin
         self.xmax = xmax
@@ -13,7 +13,6 @@ class BoundBox:
         self.width = self.xmax - self.xmin
         self.height = self.ymax - self.ymin
 
-        self.c       = c
         self.classes = classes
         self.class_name = label_name
         self.class_idx = label_idx
@@ -36,13 +35,13 @@ class BoundBox:
             self.score = self.classes[self.label]
     
     def __str__(self):
-        return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.c, self.classes)
+        return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.classes)
         
     def __repr__(self):
-        return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.c, self.classes)
+        return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.classes)
     
     def get_str(self):
-        return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.c, self.classes)
+        return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.classes)
 
     def intersect(self, bbox):
         x = max(self.xmin, bbox.xmin)

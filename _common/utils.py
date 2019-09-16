@@ -292,18 +292,13 @@ def correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w):
     y_offset, y_scale = (net_h - new_h)/2./net_h, float(new_h)/net_h
 
     for i in range(len(boxes)):
-
-        # print(boxes[i].get_str(), x_offset, y_offset, x_scale, y_scale)
-
         boxes[i].xmin = int((boxes[i].xmin - x_offset) / x_scale * image_w)
         boxes[i].xmax = int((boxes[i].xmax - x_offset) / x_scale * image_w)
         boxes[i].ymin = int((boxes[i].ymin - y_offset) / y_scale * image_h)
         boxes[i].ymax = int((boxes[i].ymax - y_offset) / y_scale * image_h)
 
-        boxes[i].xmin, boxes[i].xmax = np.clip(
-            [boxes[i].xmin, boxes[i].xmax], 0, image_w)
-        boxes[i].ymin, boxes[i].ymax = np.clip(
-            [boxes[i].ymin, boxes[i].ymax], 0, image_h)
+        boxes[i].xmin, boxes[i].xmax = np.clip([boxes[i].xmin, boxes[i].xmax], 0, image_w)
+        boxes[i].ymin, boxes[i].ymax = np.clip([boxes[i].ymin, boxes[i].ymax], 0, image_h)
 
 
 def do_nms(boxes, nms_thresh):
@@ -325,7 +320,7 @@ def do_nms(boxes, nms_thresh):
                 index_j = sorted_indices[j]
 
                 if bbox.bbox_iou(boxes[index_i], boxes[index_j]) >= nms_thresh:
-                                 boxes[index_j].reset_class_score(c)
+                    boxes[index_j].reset_class_score(c)
 
 
 def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
@@ -339,8 +334,7 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
 
     netout[..., :2] = _sigmoid(netout[..., :2])
     netout[..., 4] = _sigmoid(netout[..., 4])
-    netout[..., 5:] = netout[..., 4][..., np.newaxis] * \
-        _softmax(netout[..., 5:])
+    netout[..., 5:] = netout[..., 4][..., np.newaxis] * _sigmoid(netout[..., 5:])
     netout[..., 5:] *= netout[..., 5:] > obj_thresh
 
     for i in range(grid_h*grid_w):
@@ -366,7 +360,7 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
             classes = netout[row, col, b, 5:]
 
             boxes += [bbox.BoundBox(x-w/2, y-h/2, x+w/2, y +
-                                    h/2, objectness, classes)]
+                                    h/2, classes)]
 
     return boxes
 
