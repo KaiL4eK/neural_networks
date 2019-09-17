@@ -1,7 +1,6 @@
 import time
 import cv2
 import argparse
-# from _common import ncs
 from _common import utils
 import json
 import yolo
@@ -10,7 +9,6 @@ from tensorflow.keras.models import load_model
 
 argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
 argparser.add_argument('-c', '--conf', help='path to configuration file')
-argparser.add_argument('-g', '--graph', help='graph path')
 argparser.add_argument('-i', '--input', help='input image path')
 argparser.add_argument('-w', '--weights', help='weights path')
 argparser.add_argument('-f', '--fps', action='store_true', help='FPS estimation mode')
@@ -20,7 +18,6 @@ args = argparser.parse_args()
 
 def _main_():
     config_path = args.conf
-    graph_fpath = args.graph
     input_path = args.input
     weights_path = args.weights
 
@@ -32,13 +29,10 @@ def _main_():
     net_h, net_w = config['model']['infer_shape']
     obj_thresh, nms_thresh = 0.5, 0.45
 
-    if graph_fpath:
-        model = ncs.InferNCS(graph_fpath, fp16=False)
-    else:
-        config['model']['labels'] = labels
-        yolo_model = yolo.YOLO_Model(
-            config['model']
-        )
+    config['model']['labels'] = labels
+    yolo_model = yolo.YOLO_Model(
+        config['model']
+    )
 
     if weights_path:
         yolo_model.load_weights(weights_path)
