@@ -285,7 +285,7 @@ def correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w):
         new_w = net_w
         new_h = (image_h*net_w)/image_w
     else:
-        new_h = net_w
+        new_h = net_h
         new_w = (image_w*net_h)/image_h
 
     x_offset, x_scale = (net_w - new_w)/2./net_w, float(new_w)/net_w
