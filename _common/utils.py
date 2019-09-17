@@ -43,7 +43,7 @@ def get_ncs_graph_fpath(config):
 
 
 def get_pb_graph_fpath(config):
-    output_dir = 'pb_graphs'
+    output_dir = '_gen/pb_graphs'
     output_fpath = os.path.join(output_dir, '{}_{}.pb'.format(
         config['model']['main_name'],
         config['model']['base']

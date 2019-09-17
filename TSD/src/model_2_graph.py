@@ -10,19 +10,13 @@ from tensorflow.keras.models import Model
 import shutil
 from _common import utils
 
-try:
-    import uff
-    uff_imported = True
-except:
-    uff_imported = False
-    print('Failed to import UFF')
-
 def parse_args():
     import argparse
     argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
     argparser.add_argument('-w', '--weights', help='weights path')
     argparser.add_argument('-c', '--conf', help='path to configuration file')
-    argparser.add_argument('-n', '--ncs', action='store_true', help='enable NCS files generation')
+    argparser.add_argument('-i', '--ir', action='store_true', help='enable IR generation')
+    argparser.add_argument('-t', '--trt', action='store_true', help='enable TRT engine generation')
     return argparser.parse_args()
 
 
@@ -31,7 +25,8 @@ def _main_():
     
     weights_path = args.weights
     config_path = args.conf
-    ncs_flag = args.ncs
+    ir_flag = args.ir
+    trt_flag = args.trt
 
     with open(config_path) as config_buffer:    
         config = json.loads(config_buffer.read())
@@ -100,28 +95,43 @@ def _main_():
     K.clear_session()
     print('Frozen graph done!')
 
-    if uff_imported:
-        uff_model = uff.from_tensorflow(frozen_graph, model_output_names)
+    if trt_flag:
+        try:
+            import uff
+            uff_imported = True
+        except:
+            uff_imported = False
+            print('TensorRT environment not found')
+            
+        if uff_imported:
+            uff_model = uff.from_tensorflow(frozen_graph, model_output_names)
 
-    if ncs_flag:
-        from subprocess import call
+    if ir_flag:
+        try:
+            import mo_tf
+            from pathlib import Path
+            from subprocess import call
+            openvino_found = True
+        except ModuleNotFoundError:
+            print('OpenVINO environment not found')
+            openvino_found = False
 
-        if weights_path:
-            graph_fpath = utils.get_ncs_graph_fpath(config)
-            print('    Writing to {}'.format(graph_fpath))
-
-            process_args = ["mvNCCompile", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12",
-                            "-o", graph_fpath]
+        if openvino_found:
+            output_folder = "_gen/ir_models"
+            result_pb_fname = Path(frozen_graph_filename).name
+            result_cfg_path = str(Path(output_folder) / Path(result_pb_fname).with_suffix('.json'))
+            
+            process_args = ["mo_tf.py", 
+                            "--input_model", frozen_graph_filename, 
+                            "--scale", "255", 
+                            "--data_type", "FP16", 
+                            "--input_shape", "[1,{},{},3]".format(*train_sz),
+                            "--output_dir", output_folder]
             call(process_args)
 
-        # print('    Compiled, check performance')
+            with open(result_cfg_path, 'w') as f:
+                json.dump(config, f, indent=4)
 
-        process_args = ["mvNCProfile", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12"]
-        call(process_args)
-
-        process_args = ["mvNCCheck", output_pb_fpath, "-in", model_input_names[0], "-on", model_output_names[0], "-s", "12"]
-        call(process_args)
-
-
+        
 if __name__ == '__main__':
     _main_()
