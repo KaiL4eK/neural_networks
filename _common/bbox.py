@@ -35,13 +35,13 @@ class BoundBox:
             self.score = self.classes[self.label]
     
     def __str__(self):
-        return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.classes)
+        return "[{}:{}, {}:{} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.classes)
         
     def __repr__(self):
-        return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.classes)
+        return "[{}:{}, {}:{} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.classes)
     
     def get_str(self):
-        return "[{}:{}, {}:{} / prob: {} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.classes)
+        return "[{}:{}, {}:{} / classes: {}]".format(self.ymin, self.ymax, self.xmin, self.xmax, self.classes)
 
     def intersect(self, bbox):
         x = max(self.xmin, bbox.xmin)

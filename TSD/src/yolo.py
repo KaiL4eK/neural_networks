@@ -491,8 +491,9 @@ class YOLO_Model:
                 yolo_anchors = self.anchors[(l_idx - j) * 6:(r_idx - j) * 6]
                 boxes += utils.decode_netout(yolos[j], yolo_anchors, self.obj_thresh, self.infer_sz[0], self.infer_sz[1])
 
-            # for yolo_bbox in boxes:
-                # print("Before NMS: {}",format(yolo_bbox.get_str()))
+            
+            for yolo_bbox in boxes:
+                print("Before NMS: {}".format(yolo_bbox))
 
             utils.do_nms(boxes, self.nms_thresh)
 

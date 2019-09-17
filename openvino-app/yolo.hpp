@@ -35,6 +35,7 @@ struct DetectionBox
 };
 
 
+
 class YOLONetwork
 {
 public:

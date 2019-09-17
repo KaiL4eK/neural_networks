@@ -348,6 +348,14 @@ void YOLONetwork::infer(cv::Mat raw_image,
 
             cv::rectangle(net_input_frame, tl, br, cv::Scalar(250, 0, 0), 2);
 
+            cout << "[" 
+                 << det.box_y-det.box_h/2 << ":" 
+                 << det.box_y+det.box_h/2 << ", " 
+                 << det.box_x-det.box_w/2 << ":" 
+                 << det.box_x+det.box_w/2 
+                 << "] " 
+                 << det.cls << endl; 
+
             DetectionBox px_det;
             px_det.cls = det.cls;
             px_det.cls_idx = det.cls_idx;
