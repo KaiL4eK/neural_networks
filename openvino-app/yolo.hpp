@@ -3,7 +3,7 @@
 #include <vector>
 
 #include <opencv2/core.hpp>
-
+#include <inference_engine.hpp>
 
 struct YOLOConfig
 {
@@ -40,15 +40,16 @@ class YOLONetwork
 public:
     YOLONetwork(YOLOConfig cfg, cv::Size infer_sz);
 
-    cv::Mat get_input(cv::Mat raw_image, size_t idx);
-    void correct_detections(cv::Mat raw_image, std::vector<std::vector<RawDetectionBox>> &raw_dets, std::vector<DetectionBox> &corrected_dets);
-
     std::vector<cv::Point> get_anchors(size_t layer_idx);
-
+    
     size_t get_infer_count() { return mCfg._tile_cnt; }
 
+    void infer(cv::Mat raw_image, 
+               InferenceEngine::ExecutableNetwork &executable_network, 
+               std::vector<DetectionBox> &detections);
+
 private:
-    cv::Mat preprocess(cv::Mat in_frame);
+    cv::Mat get_roi_tile(cv::Mat raw_image, size_t idx);
 
     YOLOConfig  mCfg;
     cv::Size2f  mInferSize;

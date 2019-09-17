@@ -4,7 +4,7 @@ import argparse
 from _common import utils
 import json
 import yolo
-from utils.bbox import draw_boxes
+from _common.bbox import draw_boxes
 from tensorflow.keras.models import load_model
 
 argparser = argparse.ArgumentParser(description='Predict with a trained yolo model')
@@ -68,7 +68,7 @@ def _main_():
         if not args.fps:
             draw_boxes(image, boxes, labels, obj_thresh) 
 
-            cv2.imshow('1', n_image)
+            # cv2.imshow('1', n_image)
             cv2.imshow('2', image)
             key = cv2.waitKey(show_delay)
             if key == 27:
