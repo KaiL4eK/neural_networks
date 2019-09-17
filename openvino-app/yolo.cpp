@@ -158,13 +158,13 @@ void YOLONetwork::infer(cv::Mat raw_image,
     if (mCfg._tile_cnt == 1)
     {
         tile_sz = cv::Size2f(raw_image.cols, raw_image.rows);
-        tile_rects.push_back( cv::Rect(cv::Point(0, 0), cv::Size(raw_image.cols, raw_image.rows)) );
+        tile_rects.push_back( cv::Rect(cv::Point(0, 0), tile_sz) );
     }
     else if (mCfg._tile_cnt == 2)
     {
         tile_sz = cv::Size(raw_image.cols/2, raw_image.rows);
-        tile_rects.push_back( cv::Rect(cv::Point(0, 0), cv::Size(raw_image.cols/2, raw_image.rows)) );
-        tile_rects.push_back( cv::Rect(cv::Point(raw_image.cols/2, 0), cv::Size(raw_image.cols/2, raw_image.rows)) );
+        tile_rects.push_back( cv::Rect(cv::Point(0, 0), tile_sz) );
+        tile_rects.push_back( cv::Rect(cv::Point(raw_image.cols/2, 0), tile_sz) );
     }
 
     uint32_t top = 0,
@@ -172,24 +172,25 @@ void YOLONetwork::infer(cv::Mat raw_image,
              left = 0,
              right = 0;
     uint32_t new_w, new_h;
+
     if ( (mInferSize.width / tile_sz.width) < (mInferSize.height / tile_sz.height) )
     {
         new_w = mInferSize.width;
-        new_h = mInferSize.height / tile_sz.width * mInferSize.width;
-
-        left = right = 0;
-        top = (mInferSize.height - new_h) / 2;
-        bottom = (mInferSize.height - new_h) - top;
+        new_h = tile_sz.height / tile_sz.width * mInferSize.width;
     }
     else
     {
         new_h = mInferSize.height;
         new_w = tile_sz.width / tile_sz.height * mInferSize.height;
-
-        top = bottom = 0;
-        left = (mInferSize.width - new_w) / 2;
-        right = (mInferSize.width - new_w) - left;
     }
+
+    top = (mInferSize.height - new_h) / 2;
+    bottom = (mInferSize.height - new_h) - top;
+    left = (mInferSize.width - new_w) / 2;
+    right = (mInferSize.width - new_w) - left;
+
+    cv::Size new_size(new_w, new_h);
+    cout << "New sz: " << new_size << endl;
 
     /* For correction */
     float x_offset = (mInferSize.width - new_w) / 2. / mInferSize.width;
@@ -207,6 +208,8 @@ void YOLONetwork::infer(cv::Mat raw_image,
     string input_name = executable_network.GetInputsInfo().begin()->first;
     // const ie::SizeVector input_dims = executable_network.GetInputsInfo().begin()->second->getTensorDesc().getDims();
     // cv::Size input_size(input_dims[3] /* w */, input_dims[2] /* h */);
+
+    cout << mInferSize << endl;
 
     for ( size_t i = 0; i < infer_requests.size(); i++ )
     {
@@ -242,7 +245,7 @@ void YOLONetwork::infer(cv::Mat raw_image,
         outputNames.push_back(info.first);
     }
 
-
+#define FULL_PROCESSING
     for ( size_t i = 0; i < infer_requests.size(); i++ )
     {
         ie::InferRequest::Ptr &request = infer_requests[i];
@@ -250,6 +253,8 @@ void YOLONetwork::infer(cv::Mat raw_image,
         request->Wait(ie::IInferRequest::WaitMode::RESULT_READY);
 
         vector<RawDetectionBox> &batch_dets = raw_detections[i];
+
+#ifdef FULL_PROCESSING
 
         for (size_t i_layer = 0; i_layer < outputNames.size(); i_layer++)
         {
@@ -325,6 +330,8 @@ void YOLONetwork::infer(cv::Mat raw_image,
             }
         }
 
+#endif //FULL_PROCESSING
+
         cv::Mat net_input_frame = input_frames[i];
 
         /* Correct each detection */
@@ -357,8 +364,7 @@ void YOLONetwork::infer(cv::Mat raw_image,
             detections.push_back(px_det);
         }
 
-        cv::imshow("net", net_input_frame);
-        cv::waitKey(0);
+        cv::imshow(to_string(i), net_input_frame);
     }
 
     chrono::duration<double> inf_elapsed = chrono::steady_clock::now() - inf_start_time;

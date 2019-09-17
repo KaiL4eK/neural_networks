@@ -1,6 +1,6 @@
 {
     "model" : {
-        "main_name":            "TSD_Small_YOLOv3_Tiny",
+        "main_name":            "TSD_SmallYOLOv3Tiny",
         "base":                 "SmallTinyV3",
         "base_params": {
             
