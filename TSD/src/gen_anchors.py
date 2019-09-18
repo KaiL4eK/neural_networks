@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 
 from _common.voc import parse_voc_annotation
-import _common.utils as utls
+import _common.utils as utils
 import json
 
 
@@ -149,21 +149,17 @@ def _main_():
     # run k_mean to find the anchors
     annotation_dims = []
     for image in train_imgs:
+        img_sz = (image['height'], image['width'])
+        image_width = image['width']
+        image_height = image['height']
+
+        img_sz = utils.tiles_get_sz(img_sz, config['model']['tiles'])
+
+        scale_rate = utils.get_embedded_img_scale(img_sz, infer_sz)
+
         for obj in image['object']:
             a_width = float(obj['xmax']) - float(obj['xmin'])
             a_height = float(obj["ymax"]) - float(obj['ymin'])
-
-            img_sz = (image['height'], image['width'])
-            image_width = image['width']
-            image_height = image['height']
-
-            if config['model']['tiles'] > 1:
-                img_sz = utls.tiles_get_sz(img_sz, config['model']['tiles'])
-
-            if image_width > image_height:
-                scale_rate = infer_sz[1] * 1. / img_sz[1]
-            else:
-                scale_rate = infer_sz[0] * 1. / img_sz[0]
 
             new_obj_sz = (a_width * scale_rate, a_height * scale_rate)
 

@@ -218,24 +218,21 @@ def tiles_image2batch(image, tile_cnt):
     return batch_input
 
 
-def get_embedded_img_sz(image, input_hw):
-    new_h, new_w, _ = image.shape
+def get_embedded_img_sz(image_sz, input_hw):
+    scale = get_embedded_img_scale(image_sz, input_hw)
+    return int(im_h*scale), int(im_w*scale)
+
+
+def get_embedded_img_scale(image_sz, input_hw):
+    im_h, im_w = image_sz
     net_h, net_w = input_hw
 
-    # determine the new size of the image
-    if (float(net_w) / new_w) < (float(net_h) / new_h):
-        new_h = (new_h * net_w) // new_w
-        new_w = net_w
-    else:
-        new_w = (new_w * net_h) // new_h
-        new_h = net_h
-
-    return new_h, new_w
+    return min(float(net_w) / im_w, float(net_h) / im_h)
 
 
 def image2net_input_sz(image, net_h, net_w):
 
-    new_h, new_w = get_embedded_img_sz(image, (net_h, net_w))
+    new_h, new_w = get_embedded_img_sz(image.shape[0:2], (net_h, net_w))
 
     resized = cv2.resize(image, (new_w, new_h))
 
