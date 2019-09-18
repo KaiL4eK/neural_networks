@@ -161,7 +161,11 @@ def _main_():
             a_width = float(obj['xmax']) - float(obj['xmin'])
             a_height = float(obj["ymax"]) - float(obj['ymin'])
 
-            new_obj_sz = (a_width * scale_rate, a_height * scale_rate)
+            new_obj_sz = (int(a_width * scale_rate), int(a_height * scale_rate))
+
+            # if new_obj_sz[0] < 5:
+                # print((a_width, a_height), scale_rate, img_sz, image['filename'], infer_sz, new_obj_sz)
+
 
 #             print(image['filename'])
 #             print( int(a_width / image['width'] * infer_sz[1]), int(a_height / image['height'] * infer_sz[0]) )

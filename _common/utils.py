@@ -220,7 +220,7 @@ def tiles_image2batch(image, tile_cnt):
 
 def get_embedded_img_sz(image_sz, input_hw):
     scale = get_embedded_img_scale(image_sz, input_hw)
-    return int(im_h*scale), int(im_w*scale)
+    return int(image_sz[0]*scale), int(image_sz[1]*scale)
 
 
 def get_embedded_img_scale(image_sz, input_hw):
