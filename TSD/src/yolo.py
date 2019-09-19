@@ -264,7 +264,7 @@ class YoloLayer(Layer):
         wh_scale = tf.expand_dims(2 - wh_scale[..., 0] * wh_scale[..., 1], axis=4) * self.xywh_scale
 
         xy_delta = object_mask * wh_scale * (pred_box_xy-true_box_xy)
-        wh_delta = object_mask * wh_scale * 0.5 * tf.math.square(pred_box_wh-true_box_wh)
+        wh_delta = object_mask * wh_scale * (pred_box_wh-true_box_wh)
         conf_delta = object_mask * tf.nn.sigmoid_cross_entropy_with_logits(labels=true_box_conf, logits=pred_box_conf) * self.obj_scale + \
                     (1-object_mask) * conf_delta * self.noobj_scale
         class_delta = object_mask * tf.nn.sigmoid_cross_entropy_with_logits(labels=true_box_class, logits=pred_box_class)

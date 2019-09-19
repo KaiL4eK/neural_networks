@@ -54,15 +54,28 @@ def get_pb_graph_fpath(config):
     return output_fpath
 
 
-def _get_root_checkpoint_name(config):
-    root = 'chk/{}_{}_{}x{}_t{}'.format(config['model']['main_name'],
-                                        config['model']['base'],
-                                        config['model']['infer_shape'][0],
-                                        config['model']['infer_shape'][1],
-                                        config['model']['tiles']
-                                        )
+def _get_root_name(config):
+    root = '{}_{}_{}x{}_t{}'.format(config['model']['main_name'],
+                                    config['model']['base'],
+                                    config['model']['infer_shape'][0],
+                                    config['model']['infer_shape'][1],
+                                    config['model']['tiles']
+                                    )
     return root
+    
+    
+def _get_root_checkpoint_name(config):
+    return 'chk/{}'.format(_get_root_name(config))
 
+
+def get_neptune_name(config):
+    root = '{}_{}x{}_t{}'.format(config['model']['base'],
+                                 config['model']['infer_shape'][0],
+                                 config['model']['infer_shape'][1],
+                                 config['model']['tiles']
+                                 )
+    return root
+    
 
 def get_checkpoint_name(config):
     return _get_root_checkpoint_name(config) + '_ep{epoch:03d}-val_loss{val_loss:.3f}-loss{loss:.3f}' + '.h5'

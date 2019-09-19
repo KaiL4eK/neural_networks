@@ -270,7 +270,7 @@ def start_train(
         '/tmp/config.json'
     ]
     neptune.create_experiment(
-        name=config['model']['main_name'],
+        name=utils.get_neptune_name(config),
         upload_stdout=False,
         upload_source_files=sources_to_upload
     )
