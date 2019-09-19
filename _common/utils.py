@@ -44,23 +44,20 @@ def get_ncs_graph_fpath(config):
 
 def get_pb_graph_fpath(config):
     output_dir = '_gen/pb_graphs'
-    output_fpath = os.path.join(output_dir, '{}_{}.pb'.format(
-        config['model']['main_name'],
-        config['model']['base']
-    ))
-
+    main_fname = _get_root_name(config)
+    
+    output_fpath = os.path.join(output_dir, main_fname)
     makedirs_4_file(output_fpath)
 
     return output_fpath
 
 
 def _get_root_name(config):
-    root = '{}_{}_{}x{}_t{}'.format(config['model']['main_name'],
-                                    config['model']['base'],
-                                    config['model']['infer_shape'][0],
-                                    config['model']['infer_shape'][1],
-                                    config['model']['tiles']
-                                    )
+    root = '{}_{}x{}_t{}'.format(config['model']['base'],
+                                 config['model']['infer_shape'][0],
+                                 config['model']['infer_shape'][1],
+                                 config['model']['tiles']
+                                 )
     return root
     
     

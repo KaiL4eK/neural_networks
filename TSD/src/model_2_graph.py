@@ -9,6 +9,8 @@ from tensorflow.keras.layers import Input
 from tensorflow.keras.models import Model
 import shutil
 from _common import utils
+from pathlib import Path
+
 
 def parse_args():
     import argparse
@@ -104,12 +106,21 @@ def _main_():
             print('TensorRT environment not found')
             
         if uff_imported:
-            uff_model = uff.from_tensorflow(frozen_graph, model_output_names)
+            output_folder = "_gen/uff_models"
+            makedirs(output_folder)
+            result_uff_fname = Path(frozen_graph_filename).name
+            result_uff_fpath = os.path.join(output_folder, Path(result_uff_fname).with_suffix('.uff'))
+            result_cfg_path = str(Path(output_folder) / Path(result_uff_fname).with_suffix('.json'))
+            
+            uff_model = uff.from_tensorflow(frozen_graph, model_output_names, output_filename=result_uff_fpath)
 
+            with open(result_cfg_path, 'w') as f:
+                json.dump(config, f, indent=4)
+            
     if ir_flag:
         try:
             import mo_tf
-            from pathlib import Path
+            
             from subprocess import call
             openvino_found = True
         except ModuleNotFoundError:
