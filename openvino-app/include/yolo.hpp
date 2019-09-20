@@ -83,6 +83,7 @@ protected:
 
 static inline double sigmoid(double x)
 {
-    return x / (1.0 + fabs(x));
+    // return x / (1.0 + fabs(x));
+    return 1/(1+exp(-x));
 }
 
