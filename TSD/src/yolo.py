@@ -1,5 +1,6 @@
 from functools import wraps, reduce
 import numpy as np
+import time
 import tensorflow as tf
 from tensorflow.keras.layers import Layer, Input, Conv2D
 from tensorflow.keras.models import Model
@@ -532,12 +533,18 @@ class YOLO_Model:
             # Modify with rendering
             iterator = tqdm(iterator)
 
+        _sum_inference_time = 0
+        _inference_cnt = 0
+        
         for i in iterator:
             raw_image = generator.load_full_image(i)
 
             # make the boxes and the labels
+            _start_inf_time = time.time()
             pred_boxes = self.infer_image(raw_image)
-
+            _sum_inference_time += time.time() - _start_inf_time
+            _inference_cnt += 1
+            
             score = np.array([box.get_best_class_score() for box in pred_boxes])
             pred_labels = np.array([box.label for box in pred_boxes])
 
@@ -646,4 +653,4 @@ class YOLO_Model:
             average_precision = utils.compute_ap(recall, precision)
             average_precisions[generator.get_class_name(label_idx)] = average_precision
 
-        return average_precisions
+        return average_precisions, (_sum_inference_time / _inference_cnt)

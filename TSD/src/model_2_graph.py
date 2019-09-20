@@ -129,6 +129,7 @@ def _main_():
 
         if openvino_found:
             output_folder = "_gen/ir_models"
+            makedirs(output_folder)
             result_pb_fname = Path(frozen_graph_filename).name
             result_cfg_path = str(Path(output_folder) / Path(result_pb_fname).with_suffix('.json'))
             

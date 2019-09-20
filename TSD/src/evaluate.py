@@ -60,7 +60,7 @@ def _main_(args):
 
     yolo_model.load_weights(weights)
 
-    average_precisions = yolo_model.evaluate_generator(valid_generator, verbose=True)
+    average_precisions, _ = yolo_model.evaluate_generator(valid_generator, verbose=True)
     c_ut.print_predicted_average_precisions(average_precisions)
     
 if __name__ == '__main__':

@@ -213,7 +213,8 @@ class MAP_evaluation(Callback):
     def on_epoch_end(self, epoch, logs={}):
 
         if epoch % self.period == 0 and self.period != 0:
-            average_precisions = self.yolo_model.evaluate_generator(generator=self.generator)
+            # TODO - time estimation of inference
+            average_precisions, average_inf_time = self.yolo_model.evaluate_generator(generator=self.generator)
             print('\n')
             mAP = c_ut.print_predicted_average_precisions(average_precisions)
 
@@ -244,3 +245,5 @@ class MAP_evaluation(Callback):
 
             if self.neptune is not None:
                 self.neptune.send_metric('mAP', mAP)
+                self.neptune.send_metric('best_mAP', self.bestMap)
+                self.neptune.send_metric('infer_time', average_inf_time)
