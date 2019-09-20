@@ -135,8 +135,18 @@ def _main_():
             
             process_args = ["mo_tf.py", 
                             "--input_model", frozen_graph_filename, 
-                            "--scale", "255", 
+                            "--scale", "255",
+                            "--model_name", str(Path(result_pb_fname).with_suffix(''))+"_FP16",
                             "--data_type", "FP16", 
+                            "--input_shape", "[1,{},{},3]".format(*train_sz),
+                            "--output_dir", output_folder]
+            call(process_args)
+
+            process_args = ["mo_tf.py", 
+                            "--input_model", frozen_graph_filename, 
+                            "--scale", "255",
+                            "--model_name", str(Path(result_pb_fname).with_suffix(''))+"_FP32",
+                            "--data_type", "FP32", 
                             "--input_shape", "[1,{},{},3]".format(*train_sz),
                             "--output_dir", output_folder]
             call(process_args)

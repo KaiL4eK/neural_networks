@@ -20,8 +20,7 @@ namespace ie = InferenceEngine;
 #include <chrono>
 
 /* Taken from intel samples */
-#include "slog.hpp"
-#include "yolo.hpp"
+#include "yolo_ov.hpp"
 
 string g_ir_path;
 string g_cfg_path;
@@ -178,31 +177,21 @@ int main(int argc, char **argv)
         outputNames.push_back(out.first);
     }
 
-    YOLOConfig main_config(g_cfg_path);
-
     cout << "Loading to device" << endl;
     ie::ExecutableNetwork executable_network = ie_core.LoadNetwork(network, g_device_type);
 
     cv::Mat input_image = cv::imread(g_image_fpath);
     cout << input_image.size() << endl;
 
-    YOLONetwork yolo(main_config, input_size);
+    YOLO_OpenVINO yolo(g_cfg_path);
+    yolo.init(executable_network);
 
     std::vector<DetectionBox> corrected_dets;
     yolo.infer(input_image, executable_network, corrected_dets);
 
     for (DetectionBox &det : corrected_dets)
     {
-        cv::Point tl(
-            (det.box_x - det.box_w/2),
-            (det.box_y - det.box_h/2));
-        cv::Point br(
-            (det.box_x + det.box_w/2),
-            (det.box_y + det.box_h/2));
-
-        cout << tl << " / " << br << endl;
-
-        cv::rectangle(input_image, tl, br, cv::Scalar(250, 0, 0), 2);
+        cv::rectangle(input_image, det.rect, cv::Scalar(250, 0, 0), 2);
     }
 
     cv::imshow("Boxes", input_image);
