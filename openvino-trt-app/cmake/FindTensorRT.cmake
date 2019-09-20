@@ -33,12 +33,14 @@ list(APPEND _TensorRT_SEARCHES _TensorRT_SEARCH_NORMAL)
 # Include dir
 foreach(search ${_TensorRT_SEARCHES})
   find_path(TensorRT_INCLUDE_DIR NAMES NvInfer.h ${${search}} PATH_SUFFIXES include)
+  find_path(TensorRT_SAMPLES_INCLUDE_DIR NAMES logging.h ${${search}} PATH_SUFFIXES samples/common)
 endforeach()
 
 if(NOT TensorRT_LIBRARY)
   foreach(search ${_TensorRT_SEARCHES})
     find_library(TensorRT_LIBRARY NAMES nvinfer ${${search}} PATH_SUFFIXES lib)
     find_library(TensorRT_PLUGIN_LIBRARY NAMES nvinfer_plugin ${${search}} PATH_SUFFIXES lib)
+    find_library(TensorRT_PARSERS_LIBRARY NAMES nvparsers ${${search}} PATH_SUFFIXES lib)
   endforeach()
 endif()
 
@@ -59,12 +61,15 @@ include(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(TensorRT REQUIRED_VARS TensorRT_LIBRARY TensorRT_INCLUDE_DIR VERSION_VAR TensorRT_VERSION_STRING)
 
 if(TensorRT_FOUND)
-  set(TensorRT_INCLUDE_DIRS ${TensorRT_INCLUDE_DIR})
+  set(TensorRT_INCLUDE_DIRS)
+  list(APPEND TensorRT_INCLUDE_DIRS ${TensorRT_INCLUDE_DIR})
+  list(APPEND TensorRT_INCLUDE_DIRS ${TensorRT_SAMPLES_INCLUDE_DIR})
 
   if(NOT TensorRT_LIBRARIES)
     set(TensorRT_LIBRARIES)
     list(APPEND TensorRT_LIBRARIES ${TensorRT_LIBRARY})
     list(APPEND TensorRT_LIBRARIES ${TensorRT_PLUGIN_LIBRARY})
+    list(APPEND TensorRT_LIBRARIES ${TensorRT_PARSERS_LIBRARY})
   endif()
 
   if(NOT TARGET TensorRT::TensorRT)

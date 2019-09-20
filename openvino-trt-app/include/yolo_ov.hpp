@@ -8,7 +8,7 @@ class YOLO_OpenVINO : public CommonYOLO
 public:
     YOLO_OpenVINO(std::string cfg_fpath);    
 
-    void init(std::string ir_fpath, std::string device_type);
+    bool init(std::string ir_fpath, std::string device_type);
 
     void infer(cv::Mat raw_image, std::vector<DetectionObject> &detections) override;
 

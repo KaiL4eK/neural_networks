@@ -49,7 +49,7 @@ YOLO_OpenVINO::YOLO_OpenVINO(std::string cfg_fpath) :
 {
 }
 
-void YOLO_OpenVINO::init(std::string ir_fpath, std::string device_type)
+bool YOLO_OpenVINO::init(std::string ir_fpath, std::string device_type)
 {
     // cout << ie_core.GetVersions(g_device_type) << endl;
     cout << "InferenceEngine: " << ie::GetInferenceEngineVersion() << endl;

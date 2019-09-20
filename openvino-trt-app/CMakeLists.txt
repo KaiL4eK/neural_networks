@@ -54,6 +54,8 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 find_package(TensorRT)
 
 if(TensorRT_FOUND)
+    find_package(CUDA REQUIRED)
+
     set(TRT_APP trt-app)
     add_executable(${TRT_APP} 
         src/main_trt.cpp
@@ -69,6 +71,7 @@ if(TensorRT_FOUND)
         ${TensorRT_INCLUDE_DIRS}
         ${Boost_INCLUDE_DIR}
         ${OpenCV_INCLUDE_DIR}
+        ${CUDA_INCLUDE_DIRS}
     )
 endif()
 

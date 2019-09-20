@@ -74,6 +74,9 @@ def _main_():
     print('  Inputs: {}'.format(model_input_names))
     print('  Outputs: {}'.format(model_output_names))
 
+    config['model']['output_names'] = model_output_names
+    config['model']['input_names'] = model_input_names
+
     with K.get_session() as sess:
 
         graphdef = sess.graph.as_graph_def()
@@ -109,7 +112,7 @@ def _main_():
             output_folder = "_gen/uff_models"
             makedirs(output_folder)
             result_uff_fname = Path(frozen_graph_filename).name
-            result_uff_fpath = os.path.join(output_folder, Path(result_uff_fname).with_suffix('.uff'))
+            result_uff_fpath = os.path.join(output_folder, str(Path(result_uff_fname).with_suffix('.uff')))
             result_cfg_path = str(Path(output_folder) / Path(result_uff_fname).with_suffix('.json'))
             
             uff_model = uff.from_tensorflow(frozen_graph, model_output_names, output_filename=result_uff_fpath)

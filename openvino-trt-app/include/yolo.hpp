@@ -17,6 +17,9 @@ struct YOLOConfig
 
     float                   _objectness_thresh;
     float                   _iou_threshold;
+
+    std::vector<std::string> _output_names;
+    std::vector<std::string> _input_names;
 };
 
 struct RawDetectionObject

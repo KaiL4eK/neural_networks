@@ -74,6 +74,16 @@ YOLOConfig::YOLOConfig(string cfg_path)
         infer_size_raw.push_back(v.second.get_value<uint32_t>());
     }
 
+    for (pt::ptree::value_type &v : model_root.get_child("output_names"))
+    {
+        _output_names.push_back(v.second.get_value<string>());
+    }
+
+    for (pt::ptree::value_type &v : model_root.get_child("input_names"))
+    {
+        _input_names.push_back(v.second.get_value<string>());
+    }
+
     if ( infer_size_raw.size() != 2 )
         throw invalid_argument("Invalid field 'model/infer_shape'");
 
