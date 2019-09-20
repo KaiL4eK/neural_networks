@@ -118,7 +118,7 @@ class MadNetv1(DetBackend):
         # TODO - x16n == (14,14,C) - ???
         x8u = UpSampling2D(2)(x16n)
         x8n = Concatenate()([x8u, x8])
-        x8n = mnu._inverted_residual_block(x16n, 32, 3, t=6, s=1, n=1, alpha=alpha, block_id=19)
+        x8n = mnu._inverted_residual_block(x8n, 32, 3, t=6, s=1, n=1, alpha=alpha, block_id=19)
 
         last_block_filters = mnu._make_divisible(1280 / 8 * alpha, 8)
         x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='out_conv3')(x8n)
