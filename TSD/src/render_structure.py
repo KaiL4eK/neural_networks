@@ -1,8 +1,5 @@
 from _common.utils import init_session
-import cv2
 import argparse
-import tensorflow as tf
-import keras.backend as K
 import yolo 
 import json
 from tensorflow.keras.utils import plot_model
