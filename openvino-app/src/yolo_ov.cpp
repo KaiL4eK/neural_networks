@@ -102,18 +102,18 @@ void YOLO_OpenVINO::infer(cv::Mat raw_image,
 
             vector<cv::Point> anchors = get_anchors(i_layer);
 
-            float grid_w = output_dims[3];
-            float grid_h = output_dims[2];
-            size_t chnl_count = output_dims[1];
+            const float grid_w = output_dims[3];
+            const float grid_h = output_dims[2];
+            const size_t chnl_count = output_dims[1];
 
             const float *detection = static_cast<ie::PrecisionTrait<ie::Precision::FP32>::value_type *>(output_blob->buffer());
-            size_t b_stride = (output_dims[1] * output_dims[2] * output_dims[3]);
-            size_t c_stride = (output_dims[2] * output_dims[3]);
-            size_t h_stride = output_dims[3];
+            const size_t b_stride = (output_dims[1] * output_dims[2] * output_dims[3]);
+            const size_t c_stride = (output_dims[2] * output_dims[3]);
+            const size_t h_stride = output_dims[3];
             size_t c_idx;
 
-            size_t class_count = output_dims[1] / anchors.size() - 5;
-            size_t box_count = class_count + 5;
+            const size_t class_count = output_dims[1] / anchors.size() - 5;
+            const size_t box_count = class_count + 5;
 
             float obj_thresh = mCfg._objectness_thresh;
 
