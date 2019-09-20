@@ -2,7 +2,11 @@
 
 using namespace std;
 
+#include <ext_list.hpp>
 namespace ie = InferenceEngine; 
+
+#include <boost/filesystem.hpp>
+namespace fs = boost::filesystem;
 
 /**
 * @brief Sets image data stored in cv::Mat object to a given Blob object.
@@ -45,23 +49,50 @@ YOLO_OpenVINO::YOLO_OpenVINO(std::string cfg_fpath) :
 {
 }
 
-void YOLO_OpenVINO::init(InferenceEngine::ExecutableNetwork &executable_network)
+void YOLO_OpenVINO::init(std::string ir_fpath, std::string device_type)
 {
-    mInputName = executable_network.GetInputsInfo().begin()->first;
+    // cout << ie_core.GetVersions(g_device_type) << endl;
+    cout << "InferenceEngine: " << ie::GetInferenceEngineVersion() << endl;
+    cout << "Loading Inference Engine" << endl;
 
-    for ( auto &info : executable_network.GetOutputsInfo() )
+    if (device_type == "CPU")
+    {
+        mIeCore.AddExtension(make_shared<ie::Extensions::Cpu::CpuExtensions>(), "CPU");
+    }
+
+    string ir_bin_path = fs::path(ir_fpath).replace_extension(".bin").string();
+
+    cout << "Loading network files:\n\t"
+         << ir_fpath << "\n\t"
+         << ir_bin_path << endl;
+
+    ie::CNNNetReader net_reader;
+    net_reader.ReadNetwork(ir_fpath);
+    net_reader.ReadWeights(ir_bin_path);
+    mNetwork = net_reader.getNetwork();
+
+    cout << "Preparing input blobs" << endl;
+
+    ie::InputsDataMap net_inputs_info(mNetwork.getInputsInfo());
+    ie::InputInfo::Ptr &input_data = net_inputs_info.begin()->second;
+    input_data->setPrecision(ie::Precision::U8);
+    mInputName = net_inputs_info.begin()->first;
+
+
+    cout << "Loading to device" << endl;
+    mExecutableNetwork = mIeCore.LoadNetwork(mNetwork, device_type);
+
+    for ( auto &info : mExecutableNetwork.GetOutputsInfo() )
         mOutputNames.push_back(info.first);
 
     for ( size_t i = 0; i < mCfg._tile_cnt; i++ )
     {
-        ie::InferRequest::Ptr request = executable_network.CreateInferRequestPtr();
+        ie::InferRequest::Ptr request = mExecutableNetwork.CreateInferRequestPtr();
         mInferRequests.push_back(request);
     }
 }
 
-void YOLO_OpenVINO::infer(cv::Mat raw_image,
-                        ie::ExecutableNetwork &executable_network,
-                        vector<DetectionBox> &detections)
+void YOLO_OpenVINO::infer(cv::Mat raw_image, vector<DetectionObject> &detections)
 {
     chrono::time_point<chrono::steady_clock> inf_start_time = chrono::steady_clock::now();
 
@@ -85,13 +116,13 @@ void YOLO_OpenVINO::infer(cv::Mat raw_image,
         request->StartAsync();
     }
 
+    vector<RawDetectionObject> global_dets;
+
 #define FULL_PROCESSING
     for ( size_t i = 0; i < mInferRequests.size(); i++ )
     {
         ie::InferRequest::Ptr &request = mInferRequests[i];
         request->Wait(ie::IInferRequest::WaitMode::RESULT_READY);
-
-        vector<RawDetectionBox> batch_dets;
 
 #ifdef FULL_PROCESSING
 
@@ -127,7 +158,7 @@ void YOLO_OpenVINO::infer(cv::Mat raw_image,
 
                         for (size_t anc_idx = 0; anc_idx < anchors.size(); anc_idx++)
                         {
-                            RawDetectionBox det;
+                            RawDetectionObject det;
                             size_t chnl_offset = anc_idx * box_count;
 
                             // size_t box_idx_x = 0;
@@ -142,26 +173,26 @@ void YOLO_OpenVINO::infer(cv::Mat raw_image,
                             if (obj < obj_thresh)
                                 continue;
 
-                            det.box_x = detection[grid_offset + c_stride * (0 + chnl_offset)];
-                            det.box_y = detection[grid_offset + c_stride * (1 + chnl_offset)];
-                            det.box_w = detection[grid_offset + c_stride * (2 + chnl_offset)];
-                            det.box_h = detection[grid_offset + c_stride * (3 + chnl_offset)];
+                            det.x = detection[grid_offset + c_stride * (0 + chnl_offset)];
+                            det.y = detection[grid_offset + c_stride * (1 + chnl_offset)];
+                            det.w = detection[grid_offset + c_stride * (2 + chnl_offset)];
+                            det.h = detection[grid_offset + c_stride * (3 + chnl_offset)];
                             
-                            det.box_w = anchors[anc_idx].x * exp(det.box_w) / mCfg._infer_sz.width;
-                            det.box_h = anchors[anc_idx].y * exp(det.box_h) / mCfg._infer_sz.height;
-                            det.box_x = (sigmoid(det.box_x) + w_idx) / grid_w;
-                            det.box_y = (sigmoid(det.box_y) + h_idx) / grid_h;
+                            det.w = anchors[anc_idx].x * exp(det.w) / mCfg._infer_sz.width;
+                            det.h = anchors[anc_idx].y * exp(det.h) / mCfg._infer_sz.height;
+                            det.x = (sigmoid(det.x) + w_idx) / grid_w;
+                            det.y = (sigmoid(det.y) + h_idx) / grid_h;
 
                             for (size_t i_cls = 0; i_cls < class_count; i_cls++)
                             {
                                 float class_val = detection[grid_offset + c_stride * ((i_cls + 5) + chnl_offset)];
-                                det.cls = sigmoid(class_val) * obj;
+                                det.conf = sigmoid(class_val) * obj;
 
-                                if ( det.cls < obj_thresh )
+                                if ( det.conf < obj_thresh )
                                     continue;
                                 
                                 det.cls_idx = i_cls;
-                                batch_dets.push_back(det);
+                                global_dets.push_back(det);
                             }
                         }
                     }
@@ -170,10 +201,12 @@ void YOLO_OpenVINO::infer(cv::Mat raw_image,
         }
 
         rsz_cfg.tile_idx = i;
-        postprocessBoxes(batch_dets, detections, rsz_cfg);
+        postprocessBoxes(global_dets, rsz_cfg);
 
 #endif //FULL_PROCESSING
     }
+
+    filterBoxes(global_dets, detections);
 
     chrono::duration<double> inf_elapsed = chrono::steady_clock::now() - inf_start_time;
     cout << "Inference time: " << chrono::duration_cast<chrono::milliseconds>(inf_elapsed).count() << " [ms]" << endl;

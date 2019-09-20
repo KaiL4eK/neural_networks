@@ -16,26 +16,49 @@ struct YOLOConfig
     cv::Size                _infer_sz;
 
     float                   _objectness_thresh;
+    float                   _iou_threshold;
 };
 
-struct RawDetectionBox
+struct RawDetectionObject
 {
+    RawDetectionObject() :
+        corrected(false)
+    {
+
+    }
+
     /* Center + size */
-    float box_x;
-    float box_y;
-    float box_w;
-    float box_h;
-    float cls;
+    float x;
+    float y;
+    float w;
+    float h;
+
+    float xm;
+    float ym;
+    float conf;
     size_t cls_idx;
+
+    bool corrected;
+
+    bool operator <(const RawDetectionObject &s2) const {
+        return this->conf < s2.conf;
+    }
+
+    bool operator >(const RawDetectionObject &s2) const {
+        return this->conf < s2.conf;
+    }
 };
 
-struct DetectionBox
+struct DetectionObject
 {
     /* TL + size */
     cv::Rect rect;
-    float cls;
+    float conf;
     size_t cls_idx;
 };
+
+double IntersectionOverUnion(const RawDetectionObject &box_1, 
+                             const RawDetectionObject &box_2);
 
 struct ImageResizeConfig
 {
@@ -64,6 +87,8 @@ public:
 
     std::vector<cv::Point> get_anchors(size_t layer_idx);
 
+    virtual void infer(cv::Mat raw_image, std::vector<DetectionObject> &detections) = 0;
+
 protected:
     void initResizeConfig(cv::Mat in_img, 
                           ImageResizeConfig &cfg);
@@ -72,9 +97,14 @@ protected:
                           cv::Mat &out_img, 
                           ImageResizeConfig &cfg);
 
-    void postprocessBoxes(std::vector<RawDetectionBox> &raw_boxes,
-                          std::vector<DetectionBox> &result_boxes,
+    /*
+        Make postprocessing of boxes (net output -> image)
+    */
+    void postprocessBoxes(std::vector<RawDetectionObject> &raw_boxes,
                           ImageResizeConfig &cfg);
+
+    void filterBoxes(std::vector<RawDetectionObject> &raw_boxes,
+                     std::vector<DetectionObject> &result_boxes);
 
     cv::Mat get_roi_tile(cv::Mat raw_image, size_t idx);
 
@@ -87,3 +117,18 @@ static inline double sigmoid(double x)
     return 1/(1+exp(-x));
 }
 
+// void softmax(float *classes, size_t sz)
+// {
+//     float sum = 0;
+
+//     for (size_t i = 0; i < sz; i++)
+//     {
+//         classes[i] = exp(classes[i]);
+//         sum += classes[i];
+//     }
+
+//     for (size_t i = 0; i < sz; i++)
+//     {
+//         classes[i] = classes[i] / sum;
+//     }
+// }

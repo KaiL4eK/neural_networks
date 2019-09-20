@@ -1,17 +1,10 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
-#include <boost/filesystem.hpp>
-namespace fs = boost::filesystem;
-
 #include <cmath>
 #include <iostream>
-#include <array>
 using namespace std;
 
-#include <ext_list.hpp>
-#include <inference_engine.hpp>
-namespace ie = InferenceEngine;
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -27,31 +20,13 @@ string g_cfg_path;
 string g_device_type;
 string g_image_fpath;
 
-ostream &operator<<(ostream &out, const vector<size_t> &c)
-{
-    out << "[";
-    for (const size_t &s : c)
-        out << s << ",";
-    out << "]";
-    return out;
-}
-
-
-
-// void softmax(float *classes, size_t sz)
+// ostream &operator<<(ostream &out, const vector<size_t> &c)
 // {
-//     float sum = 0;
-
-//     for (size_t i = 0; i < sz; i++)
-//     {
-//         classes[i] = exp(classes[i]);
-//         sum += classes[i];
-//     }
-
-//     for (size_t i = 0; i < sz; i++)
-//     {
-//         classes[i] = classes[i] / sum;
-//     }
+//     out << "[";
+//     for (const size_t &s : c)
+//         out << s << ",";
+//     out << "]";
+//     return out;
 // }
 
 int main(int argc, char **argv)
@@ -127,76 +102,21 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    cout << "InferenceEngine: " << ie::GetInferenceEngineVersion() << endl;
-    cout << "Loading Inference Engine" << endl;
-    ie::Core ie_core;
-
-    // cout << ie_core.GetVersions(g_device_type) << endl;
-
-    if (g_device_type == "CPU")
-    {
-        ie_core.AddExtension(make_shared<ie::Extensions::Cpu::CpuExtensions>(), "CPU");
-    }
-
-    string ir_bin_path = fs::path(g_ir_path).replace_extension(".bin").string();
-
-    cout << "Loading network files:\n\t"
-         << g_ir_path << "\n\t"
-         << ir_bin_path << endl;
-
-    ie::CNNNetReader net_reader;
-    net_reader.ReadNetwork(g_ir_path);
-    net_reader.ReadWeights(ir_bin_path);
-    ie::CNNNetwork network = net_reader.getNetwork();
-
-    cout << "Preparing input blobs" << endl;
-
-    ie::InputsDataMap net_inputs_info(network.getInputsInfo());
-
-    ie::InputInfo::Ptr &input_data = net_inputs_info.begin()->second;
-    input_data->setPrecision(ie::Precision::U8);
-
-    const ie::SizeVector input_dims = input_data->getTensorDesc().getDims();
-    cv::Size input_size(input_dims[3] /* w */, input_dims[2] /* h */);
-
-    vector<string> outputNames;
-
-    ie::OutputsDataMap net_outputs_info(network.getOutputsInfo());
-    cout << "Output names: " << endl;
-    for (const auto &out : net_outputs_info)
-    {
-        const ie::SizeVector dims = out.second->getTensorDesc().getDims();
-
-        // out.second->setPrecision(ie::Precision::FP16);
-
-        cout << "   " << out.first
-             << " / " << dims
-             << " / " << out.second->getPrecision()
-             << endl;
-
-        outputNames.push_back(out.first);
-    }
-
-    cout << "Loading to device" << endl;
-    ie::ExecutableNetwork executable_network = ie_core.LoadNetwork(network, g_device_type);
-
     cv::Mat input_image = cv::imread(g_image_fpath);
-    cout << input_image.size() << endl;
 
     YOLO_OpenVINO yolo(g_cfg_path);
-    yolo.init(executable_network);
+    yolo.init(g_ir_path, g_device_type);
 
-    std::vector<DetectionBox> corrected_dets;
-    yolo.infer(input_image, executable_network, corrected_dets);
+    std::vector<DetectionObject> corrected_dets;
+    yolo.infer(input_image, corrected_dets);
 
-    for (DetectionBox &det : corrected_dets)
+    for (DetectionObject &det : corrected_dets)
     {
         cv::rectangle(input_image, det.rect, cv::Scalar(250, 0, 0), 2);
     }
 
     cv::imshow("Boxes", input_image);
     cv::waitKey(0);
-
 
     return EXIT_SUCCESS;
 }

@@ -11,27 +11,30 @@ namespace pt = boost::property_tree;
 #include <chrono>
 using namespace std;
 
-/*
-Python
-    [0.575838:0.598583, 0.332272:0.353946] / classes: [0.999]]
-    [0.572906:0.601659, 0.328150:0.356894] / classes: [0.916]]
-    [0.581757:0.606235, 0.890164:0.912859] / classes: [0.999]]
-    [0.578065:0.605363, 0.885544:0.915002] / classes: [0.999]]
 
-WH - same, XY - different???
+double IntersectionOverUnion(const RawDetectionObject &box_1, 
+                             const RawDetectionObject &box_2)
+{
+    double width_of_overlap_area = fmin(box_1.x+box_1.w, 
+                                        box_2.x+box_2.w) - 
+                                   fmax(box_1.x, 
+                                        box_2.x);
+    double height_of_overlap_area = fmin(box_1.y+box_1.h, 
+                                         box_2.y+box_2.h) - 
+                                    fmax(box_1.y, 
+                                         box_2.y);
+    double area_of_overlap;
+    if (width_of_overlap_area < 0 || height_of_overlap_area < 0)
+        area_of_overlap = 0;
+    else
+        area_of_overlap = width_of_overlap_area * height_of_overlap_area;
+    
+    double box_1_area = box_1.h * box_1.w;
+    double box_2_area = box_2.h * box_2.w;
+    double area_of_union = box_1_area + box_2_area - area_of_overlap;
 
-OpenVINO
-
-[0.575838:0.598583, 0.332272:0.353947] 0.999921
-[0.572907:0.601659, 0.328151:0.356895] 0.916877
-[0.581757:0.606235, 0.890165:0.912859] 1
-[0.578066:0.605363, 0.885545:0.915003] 0.999965
-
-    [0.546249:0.568993, 0.324181:0.345855] 0.871
-    [0.543336:0.572089, 0.319987:0.348731] 0.679
-    [0.557611:0.582089, 0.865725:0.888420] 0.920
-    [0.550974:0.578271, 0.859379:0.888837] 0.888
-*/
+    return area_of_overlap / area_of_union;
+}
 
 CommonYOLO::CommonYOLO(std::string cfg_path) :
     mCfg(cfg_path)
@@ -90,6 +93,7 @@ YOLOConfig::YOLOConfig(string cfg_path)
 
     /* TODO - disable hardlink */
     _objectness_thresh = 0.5;
+    _iou_threshold = 0.5;
 }
 
 std::vector<cv::Point> CommonYOLO::get_anchors(size_t layer_idx)
@@ -173,49 +177,68 @@ void CommonYOLO::resizeForNetwork(cv::Mat in_img,
                     cv::Scalar(127, 127, 127));
 }
 
-void CommonYOLO::postprocessBoxes(std::vector<RawDetectionBox> &raw_boxes,
-                                  std::vector<DetectionBox> &result_boxes,
+void CommonYOLO::postprocessBoxes(std::vector<RawDetectionObject> &raw_boxes,
                                   ImageResizeConfig &cfg)
 {
     /* For correction */
-
-
-    for ( RawDetectionBox &det : raw_boxes )
+    for ( RawDetectionObject &det : raw_boxes )
     {
-        // cv::Point tl(
-        //     (det.box_x - det.box_w/2) * mInferSize.width,
-        //     (det.box_y - det.box_h/2) * mInferSize.height);
-        // cv::Point br(
-        //     (det.box_x + det.box_w/2) * mInferSize.width,
-        //     (det.box_y + det.box_h/2) * mInferSize.height);
+        // cout << "[" 
+        //         << det.box_y-det.box_h/2 << ":" 
+        //         << det.box_y+det.box_h/2 << ", " 
+        //         << det.box_x-det.box_w/2 << ":" 
+        //         << det.box_x+det.box_w/2 
+        //         << "] " 
+        //         << det.conf << endl; 
 
-        // cout << tl << " / " << br << endl;
+        if ( det.corrected )
+            continue;
 
-        // cv::rectangle(net_input_frame, tl, br, cv::Scalar(250, 0, 0), 2);
+        float box_x = (det.x - cfg.offset.x) / cfg.scale.x * cfg.tile_rects[cfg.tile_idx].width;
+        float box_y = (det.y - cfg.offset.y) / cfg.scale.y * cfg.tile_rects[cfg.tile_idx].height;
+        det.w = det.w / cfg.scale.x * cfg.tile_rects[cfg.tile_idx].width;
+        det.h = det.h / cfg.scale.y * cfg.tile_rects[cfg.tile_idx].height;
+        det.x = box_x - det.w/2;
+        det.y = box_y - det.h/2;
 
-        cout << "[" 
-                << det.box_y-det.box_h/2 << ":" 
-                << det.box_y+det.box_h/2 << ", " 
-                << det.box_x-det.box_w/2 << ":" 
-                << det.box_x+det.box_w/2 
-                << "] " 
-                << det.cls << endl; 
+        det.x += cfg.tile_rects[cfg.tile_idx].x;
+        det.y += cfg.tile_rects[cfg.tile_idx].y;
 
-        DetectionBox px_det;
-        px_det.cls = det.cls;
+        det.xm = det.x + det.w;
+        det.ym = det.y + det.h;
+
+        det.corrected = true;
+    }
+}
+
+void CommonYOLO::filterBoxes(std::vector<RawDetectionObject> &raw_boxes,
+                             std::vector<DetectionObject> &result_boxes)
+{
+    std::sort(raw_boxes.begin(), raw_boxes.end(), std::greater<RawDetectionObject>());
+
+    for (size_t i = 0; i < raw_boxes.size(); ++i)
+    {
+        RawDetectionObject &det = raw_boxes[i];
+
+        if (det.conf == 0)
+            continue;
+
+        for (size_t j = i + 1; j < raw_boxes.size(); ++j)
+        {
+            if (det.cls_idx == raw_boxes[j].cls_idx && 
+                IntersectionOverUnion(det, raw_boxes[j]) >= mCfg._iou_threshold)
+            {
+                raw_boxes[j].conf = 0;
+            }
+        }
+
+        DetectionObject px_det;
+        px_det.conf = det.conf;
         px_det.cls_idx = det.cls_idx;
-
-        float box_x = (det.box_x - cfg.offset.x) / cfg.scale.x * cfg.tile_rects[cfg.tile_idx].width;
-        float box_y = (det.box_y - cfg.offset.y) / cfg.scale.y * cfg.tile_rects[cfg.tile_idx].height;
-        float box_w = det.box_w / cfg.scale.x * cfg.tile_rects[cfg.tile_idx].width;
-        float box_h = det.box_h / cfg.scale.y * cfg.tile_rects[cfg.tile_idx].height;
-
-        box_x += cfg.tile_rects[cfg.tile_idx].x;
-        box_y += cfg.tile_rects[cfg.tile_idx].y;
         
         px_det.rect = cv::Rect(
-            cv::Point( box_x - box_w/2, box_y - box_h/2 ),
-            cv::Point( box_x + box_w/2, box_y + box_h/2 )
+            cv::Point( det.x, det.y ),
+            cv::Point( det.xm, det.ym )
         );
 
         result_boxes.push_back(px_det);
