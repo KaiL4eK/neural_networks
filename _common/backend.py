@@ -111,7 +111,8 @@ class MadNetv1(DetBackend):
         x = mnu.BatchNormalization(axis=channel_axis, name='pre_up_bn1')(x)
         x = mnu.ReLU(6., name='pre_up_relu1')(x)
 
-        x16u = Conv2DTranspose(pre_up_block_filters, 3, strides=2, padding='same', use_bias=False, name='up_deconv1')(x)
+        up_block_filters = mnu._make_divisible(96 * alpha, 8)
+        x16u = Conv2DTranspose(up_block_filters, 3, strides=2, padding='same', use_bias=False, name='up_deconv1')(x)
         x16u = mnu.BatchNormalization(axis=channel_axis, name='up_bn1')(x16u)
         x16u = mnu.ReLU(6., name='up_relu1')(x16u)
         # x16u = UpSampling2D(2, interpolation='bilinear')(x)
@@ -125,12 +126,13 @@ class MadNetv1(DetBackend):
         y2 = mnu.ReLU(6., name='out_relu1')(x)
 
         # Next branch
-        pre_up_block_filters = mnu._make_divisible(160 * alpha, 8)
+        pre_up_block_filters = mnu._make_divisible(80 * alpha, 8)
         x = mnu.Conv2D(pre_up_block_filters, 1, padding='same', strides=1, use_bias=False, name='pre_up_conv2')(x16u)
         x = mnu.BatchNormalization(axis=channel_axis, name='pre_up_bn2')(x)
         x = mnu.ReLU(6., name='pre_up_relu2')(x)
 
-        x8u = Conv2DTranspose(pre_up_block_filters, 3, strides=2, padding='same', use_bias=False, name='up_deconv2')(x)
+        up_block_filters = mnu._make_divisible(32 * alpha, 8)
+        x8u = Conv2DTranspose(up_block_filters, 3, strides=2, padding='same', use_bias=False, name='up_deconv2')(x)
         x8u = mnu.BatchNormalization(axis=channel_axis, name='up_bn2')(x8u)
         x8u = mnu.ReLU(6., name='up_relu2')(x8u)
         # x8u = UpSampling2D(2, interpolation='bilinear')(x16n)

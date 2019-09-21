@@ -24,6 +24,8 @@ def _main_():
     with open(config_path) as config_buffer:    
         config = json.load(config_buffer)
 
+    utils.init_session(0.3)
+
     labels = ['sign']
 
     net_h, net_w = config['model']['infer_shape']
@@ -43,6 +45,8 @@ def _main_():
     processing_cnt = 0
     skip = 0
     
+    fps_stats = {}
+
     for type, image_src in data_generator:
 
         image = image_src.copy()
@@ -50,7 +54,15 @@ def _main_():
         start = time.time()
         
         if args.fps:
-            yolo_model.test_infer_image(image)
+            boxes, times = yolo_model.timed_infer_image(image)
+            for k, v in times.items():
+                if k in fps_stats:
+                    fps_stats[k] += v
+                else:
+                    fps_stats[k] = v
+                
+                print('Op: {} / Time: {} ms'.format(k, fps_stats[k]/(processing_cnt+1)))
+            print('===============================')
         else:
             boxes = yolo_model.infer_image(image)
 

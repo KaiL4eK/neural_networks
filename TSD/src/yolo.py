@@ -316,6 +316,7 @@ class YOLO_Model:
         self.anchors = model_config['anchors']
         self.downsample = model_config['downsample']
         self.anchors_per_output = int(len(self.anchors) / 2 / len(self.downsample))
+        # self.anchors_per_output = model_config['']
 
         self.nms_thresh = 0.5
         self.obj_thresh = 0.5
@@ -452,22 +453,98 @@ class YOLO_Model:
 
             return corrected_boxes
         
-    def test_infer_image(self, image):
+    def timed_infer_image(self, image):
         tile_count = self.model_config.get('tiles', 1)
 
-        images_batch = utils.tiles_image2batch(image, tile_count)
-        self._infer_on_batch(images_batch, return_boxes=False)
-#         self._infer_on_batch(np.expand_dims(image, axis=0), return_boxes=False)
-        return None
+        result = None
+        time_stat = {
+            'infer': 0,
+            'correction': 0,
+            'im_preproc': 0,
+            'net_preproc': 0,
+            'net_postproc': 0,
+            'correct_n_nms': 0,
+            'raw_boxes_count': 0,
+            'out_boxes_count': 0
+        }
+        
+        start_time = time.time()
+        if tile_count == 1:
+        
+            images_batch = np.expand_dims(image, axis=0)
+        else:
+            images_batch = utils.tiles_image2batch(image, tile_count)
+        time_stat['im_preproc'] = time.time() - start_time
+
+        start_time = time.time()
+        nb_images, image_h, image_w, image_c = images_batch.shape
+        batch_input = np.zeros((nb_images, self.infer_sz[0], self.infer_sz[1], image_c))
+
+        for i, im_batch_smpl in enumerate(images_batch):
+            batch_input[i] = utils.image2net_input_sz(im_batch_smpl, self.infer_sz[0], self.infer_sz[1])
+
+        batch_input = utils.image_normalize(batch_input)
+        time_stat['net_preproc'] = time.time() - start_time
+
+        start_time = time.time()
+        batch_output = self.infer_model.predict_on_batch(batch_input)      
+        time_stat['infer'] = time.time() - start_time
+
+        start_time = time.time()
+        batch_boxes = [None] * nb_images
+        net_output_count = len(batch_output)
+
+        for i in range(nb_images):
+            yolos = [batch_output[b][i] for b in range(net_output_count)]
+            boxes = []
+
+            for j in range(len(yolos)):
+                l_idx = net_output_count - 1
+                r_idx = net_output_count
+
+                yolo_anchors = self.anchors[(l_idx - j) * 6:(r_idx - j) * 6]
+                boxes += utils.decode_netout(yolos[j], yolo_anchors, self.obj_thresh, self.infer_sz[0], self.infer_sz[1])
+
+            time_stat['raw_boxes_count'] += len(boxes)
+            start_time_in = time.time()
+            utils.correct_yolo_boxes(boxes, image_h, image_w, self.infer_sz[0], self.infer_sz[1])
+            utils.do_nms(boxes, self.nms_thresh)
+
+            batch_boxes[i] = boxes
+            time_stat['correct_n_nms'] += time.time() - start_time_in
+            time_stat['out_boxes_count'] += len(boxes)
+
+        pred_batch_boxes = batch_boxes
+        time_stat['net_postproc'] = time.time() - start_time
+        
+        start_time = time.time()
+        if tile_count == 1:
+            result = pred_batch_boxes[0]
+        else:
+            corrected_boxes = []
+            for tile_idx, pred_boxes in enumerate(pred_batch_boxes):
+                tile_bbox = utils.tiles_get_bbox(image.shape[0:2], tile_count, tile_idx)
+
+                for pred_box in pred_boxes:
+                    pred_box.xmin += tile_bbox.xmin
+                    pred_box.xmax += tile_bbox.xmin
+                    pred_box.ymin += tile_bbox.ymin
+                    pred_box.ymax += tile_bbox.ymin
+
+                    corrected_boxes += [pred_box]
+
+            result = corrected_boxes
+        time_stat['correction'] = time.time() - start_time
+        
+        return result, time_stat
 
     def _infer_on_batch(self, images, return_boxes=True):
-        image_h, image_w, image_c = images[0].shape
-        nb_images = len(images)
+        nb_images, image_h, image_w, image_c = images.shape
         batch_input = np.zeros((nb_images, self.infer_sz[0], self.infer_sz[1], image_c))
 
         for i in range(nb_images):
             batch_input[i] = utils.image2net_input_sz(images[i], self.infer_sz[0], self.infer_sz[1])
-            
+
         batch_input = utils.image_normalize(batch_input)
 
         batch_output = self.infer_model.predict_on_batch(batch_input)        
@@ -478,11 +555,10 @@ class YOLO_Model:
         net_output_count = len(batch_output)
 
         for i in range(nb_images):
-
-            if net_output_count > 1:
-                yolos = [batch_output[o][i] for o in range(net_output_count)]
-            else:
-                yolos = [batch_output[i]]
+            # if nb_images > 1:
+            yolos = [batch_output[b][i] for b in range(net_output_count)]
+            # else:
+                # yolos = [batch_output[i]]
 
             boxes = []
 
@@ -495,13 +571,12 @@ class YOLO_Model:
 
             # for yolo_bbox in boxes:
                 # print("Before NMS: {}".format(yolo_bbox))
+            utils.correct_yolo_boxes(boxes, image_h, image_w, self.infer_sz[0], self.infer_sz[1])
 
             utils.do_nms(boxes, self.nms_thresh)
 
             # for yolo_bbox in boxes:
                 # print("After NMS: {}",format(yolo_bbox.get_str()))
-
-            utils.correct_yolo_boxes(boxes, image_h, image_w, self.infer_sz[0], self.infer_sz[1])
 
             batch_boxes[i] = boxes
 
