@@ -470,7 +470,6 @@ class YOLO_Model:
         
         start_time = time.time()
         if tile_count == 1:
-        
             images_batch = np.expand_dims(image, axis=0)
         else:
             images_batch = utils.tiles_image2batch(image, tile_count)
@@ -507,10 +506,9 @@ class YOLO_Model:
 
             time_stat['raw_boxes_count'] += len(boxes)
             start_time_in = time.time()
-            utils.correct_yolo_boxes(boxes, image_h, image_w, self.infer_sz[0], self.infer_sz[1])
-            utils.do_nms(boxes, self.nms_thresh)
+            boxes = utils.correct_yolo_boxes(boxes, image_h, image_w, self.infer_sz[0], self.infer_sz[1])
+            batch_boxes[i] = utils.do_nms(boxes, self.nms_thresh)
 
-            batch_boxes[i] = boxes
             time_stat['correct_n_nms'] += time.time() - start_time_in
             time_stat['out_boxes_count'] += len(boxes)
 
@@ -571,9 +569,9 @@ class YOLO_Model:
 
             # for yolo_bbox in boxes:
                 # print("Before NMS: {}".format(yolo_bbox))
-            utils.correct_yolo_boxes(boxes, image_h, image_w, self.infer_sz[0], self.infer_sz[1])
-
-            utils.do_nms(boxes, self.nms_thresh)
+                
+            boxes = utils.correct_yolo_boxes(boxes, image_h, image_w, self.infer_sz[0], self.infer_sz[1])
+            boxes = utils.do_nms(boxes, self.nms_thresh)
 
             # for yolo_bbox in boxes:
                 # print("After NMS: {}",format(yolo_bbox.get_str()))

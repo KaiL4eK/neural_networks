@@ -72,6 +72,10 @@ def _main_():
         if (processing_cnt + 1) % 100 == 0:
             print("Time: %.3f [ms] / FPS: %.1f" % (full_time * 1000, processing_cnt / full_time))
 
+            for k, v in fps_stats.items():               
+                print('Op: {} / Time: {} ms'.format(k, v/processing_cnt))
+            print('===============================')
+
         if skip or type == utils.DATA_GEN_SRC_VIDEO:
             show_delay = 1
         else:

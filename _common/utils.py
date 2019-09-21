@@ -298,6 +298,17 @@ def correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w):
     x_offset, x_scale = (net_w - new_w)/2./net_w, float(new_w)/net_w
     y_offset, y_scale = (net_h - new_h)/2./net_h, float(new_h)/net_h
 
+    # if len(boxes) == 0:
+        # return
+
+    # boxes = np.array(boxes)
+    # offsets = np.array([x_offset, y_offset, x_offset, y_offset])
+    # scales = np.array([x_scale, y_scale, x_scale, y_scale])
+    # sizes = np.array([image_w, image_h, image_w, image_h])
+    # boxes[:, :4] = boxes[:, :4]-offsets / scales * sizes
+    # boxes[:, :4] = boxes[:, :4].astype(np.int)
+
+    # return boxes
     for i in range(len(boxes)):
         boxes[i].xmin = int((boxes[i].xmin - x_offset) / x_scale * image_w)
         boxes[i].xmax = int((boxes[i].xmax - x_offset) / x_scale * image_w)
@@ -307,29 +318,54 @@ def correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w):
         boxes[i].xmin, boxes[i].xmax = np.clip([boxes[i].xmin, boxes[i].xmax], 0, image_w)
         boxes[i].ymin, boxes[i].ymax = np.clip([boxes[i].ymin, boxes[i].ymax], 0, image_h)
 
+    return boxes
+
 
 def do_nms(boxes, nms_thresh):
-    if len(boxes) > 0:
-        nb_class = len(boxes[0].classes)
+    bboxes = boxes
+    # for box in boxes:
+        # bboxes += [bbox.BoundBox(*box)]
+
+    if len(bboxes) > 0:
+        nb_class = len(bboxes[0].classes)
     else:
-        return
+        return bboxes
 
     for c in range(nb_class):
-        sorted_indices = np.argsort([-box.classes[c] for box in boxes])
+        sorted_indices = np.argsort([-box.classes[c] for box in bboxes])
 
         for i in range(len(sorted_indices)):
             index_i = sorted_indices[i]
 
-            if boxes[index_i].classes[c] == 0:
+            if bboxes[index_i].classes[c] == 0:
                 continue
 
             for j in range(i+1, len(sorted_indices)):
                 index_j = sorted_indices[j]
 
-                if bbox.bbox_iou(boxes[index_i], boxes[index_j]) >= nms_thresh:
-                    boxes[index_j].reset_class_score(c)
+                if bbox.bbox_iou(bboxes[index_i], bboxes[index_j]) >= nms_thresh:
+                    bboxes[index_j].reset_class_score(c)
+
+    return bboxes
 
 
+# from numba import njit, prange
+
+
+def _softmax(x, axis=-1):
+    x = x - np.amax(x, axis, keepdims=True)
+    e_x = np.exp(x)
+
+    return e_x / e_x.sum(axis, keepdims=True)
+
+
+# @njit(nopython=True)
+def _sigmoid(x):
+    # return 1/(1+np.exp(-x))
+    return expit(x)
+
+
+# @njit(parallel=True, nopython=True)
 def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
     grid_h, grid_w = netout.shape[:2]
 
@@ -341,7 +377,9 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
 
     netout[..., :2] = _sigmoid(netout[..., :2])
     netout[..., 4] = _sigmoid(netout[..., 4])
-    netout[..., 5:] = netout[..., 4][..., np.newaxis] * _sigmoid(netout[..., 5:])
+    # obj_exp = np.expand_dims(netout[..., 4], axis=-1)
+    obj_exp = netout[..., 4][..., np.newaxis]
+    netout[..., 5:] = obj_exp * _sigmoid(netout[..., 5:])
     netout[..., 5:] *= netout[..., 5:] > obj_thresh
 
     for i in range(grid_h*grid_w):
@@ -357,6 +395,7 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
 
             # first 4 elements are x, y, w, and h
             x, y, w, h = np.clip(netout[row, col, b, :4], -1e10, 1e10)
+            # x, y, w, h = netout[row, col, b, :4]
 
             x = (col + x) / grid_w  # center position, unit: image width
             y = (row + y) / grid_h  # center position, unit: image height
@@ -366,9 +405,8 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
             # last elements are class probabilities
             classes = netout[row, col, b, 5:]
 
-            boxes += [bbox.BoundBox(x-w/2, y-h/2, x+w/2, y +
-                                    h/2, classes)]
-
+            # boxes += [[x-w/2, y-h/2, x+w/2, y+h/2, classes]]
+            boxes += [bbox.BoundBox(x-w/2, y-h/2, x+w/2, y+h/2, classes)]
     return boxes
 
 
@@ -430,13 +468,3 @@ def compute_ap(recall, precision):
     ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
     return ap
 
-
-def _softmax(x, axis=-1):
-    x = x - np.amax(x, axis, keepdims=True)
-    e_x = np.exp(x)
-
-    return e_x / e_x.sum(axis, keepdims=True)
-
-
-def _sigmoid(x):
-    return expit(x)

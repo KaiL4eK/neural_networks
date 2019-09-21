@@ -235,7 +235,7 @@ void CommonYOLO::filterBoxes(std::vector<RawDetectionObject> &raw_boxes,
 
         for (size_t j = i + 1; j < raw_boxes.size(); ++j)
         {
-            if (det.cls_idx == raw_boxes[j].cls_idx && 
+            if (/* det.cls_idx == raw_boxes[j].cls_idx && */
                 IntersectionOverUnion(det, raw_boxes[j]) >= mCfg._iou_threshold)
             {
                 raw_boxes[j].conf = 0;
