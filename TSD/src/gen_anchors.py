@@ -134,8 +134,8 @@ def _main_():
     with open(config_path) as config_buffer:
         config = json.loads(config_buffer.read())
 
-    # num_anchors = config['model']['anchors_per_output'] * len(config['model']['downsample'])
-    num_anchors = int(args.anchors)
+    num_anchors = config['model']['anchors_per_output'] * len(config['model']['downsample'])
+    # num_anchors = int(args.anchors)
 
     infer_sz = config['model']['infer_shape']
 

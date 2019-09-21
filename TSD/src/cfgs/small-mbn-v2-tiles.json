@@ -1,16 +1,16 @@
 {
     "model" : {
         "main_name":            "TSD_SmallMbNv2Tiles",
-        "base":                 "SmallMobileNetv2",
+        "base":                 "SmallMbN2",
         "base_params": {
             "alpha": 0.35
         },
         "downsample":           [16, 8],
-        "anchors":              [9,9, 12,12, 15,16, 22,22, 34,33, 55,53],
+        "anchors":              [7,7, 9,10, 12,13, 17,18, 28,28, 49,48],
         "labels":               [],
         "infer_shape":          [416, 416],
         "tiles":                2,
-        "load_src_weights":     false
+        "anchors_per_output":   3
     },
 
     "train": {
@@ -42,7 +42,8 @@
         "class_scale":          1,
 
         "debug":                false,
-        "freeze":               false
+        "freeze":               false,
+        "load_src_weights":     false
     },
 
     "valid": {

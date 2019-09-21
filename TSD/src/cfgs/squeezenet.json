@@ -1,8 +1,7 @@
 {
     "model" : {
         "main_name":            "TSD_SqueezeNet",
-        "min_input_size":       [416, 416],
-        "max_input_size":       [416, 416],
+
         "base":                 "SqueezeNet",
         "anchors":              [8,8, 13,13, 24,24],
         "anchors_per_output":   3,
@@ -14,6 +13,9 @@
         "image_folder":         ["../data/GTSDB_VOC_Full/Images/"],
         "annot_folder":         ["../data/GTSDB_VOC_Full/Annotations/"],
         "cache_name":           "",
+
+        "min_input_size":       [416, 416],
+        "max_input_size":       [416, 416],
 
         "train_times":          3,
         "batch_size":           4,

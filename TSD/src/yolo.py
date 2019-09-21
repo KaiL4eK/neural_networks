@@ -324,15 +324,15 @@ class YOLO_Model:
         self.infer_sz = model_config['infer_shape']
 
         backends = {
-                    'TinyV3':           (backend.Tiny_YOLOv3,       "yolov3-tiny.h5"),
-                    'SmallTinyV3':      (backend.Small_Tiny_YOLOv3, ""),
-                    'Darknet53':        (backend.Darknet53,         "yolov3_exp.h5"),
-                    'Darknet19':        (backend.Darknet19,         "yolov2.h5"),
-                    'MobileNetv2':      (backend.MobileNetV2,       ""),
-                    'SmallMobileNetv2': (backend.SmallMobileNetV2,  ""),
-                    'MadNetv1':         (backend.MadNetv1,          ""),
-                    'SqueezeNet':       (backend.SqueezeNet,        ""),
-                    'Xception':         (backend.Xception,          "")
+                    'Tiny3':       (backend.Tiny_YOLOv3,       "yolov3-tiny.h5"),
+                    'SmallTiny3':  (backend.Small_Tiny_YOLOv3, ""),
+                    'Darknet53':   (backend.Darknet53,         "yolov3_exp.h5"),
+                    'Darknet19':   (backend.Darknet19,         "yolov2.h5"),
+                    'MbN2':        (backend.MobileNetV2,       ""),
+                    'SmallMbN2':   (backend.SmallMobileNetV2,  ""),
+                    'MadNet1':     (backend.MadNetv1,          ""),
+                    'SqueezeNet':  (backend.SqueezeNet,        ""),
+                    'Xception':    (backend.Xception,          "")
                     }
 
         base = model_config['base']

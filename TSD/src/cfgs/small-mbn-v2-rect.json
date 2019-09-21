@@ -1,7 +1,7 @@
 {
     "model" : {
         "main_name":            "TSD_SmallMbNv2Rect",
-        "base":                 "SmallMobileNetv2",
+        "base":                 "SmallMbN2",
         "base_params": {
             "alpha": 0.35
         },
@@ -10,7 +10,7 @@
         "labels":               [],
         "infer_shape":          [288, 448],
         "tiles":                1,
-        "load_src_weights":     false
+        "anchors_per_output":   3
     },
 
     "train": {
@@ -42,7 +42,8 @@
         "class_scale":          1,
 
         "debug":                false,
-        "freeze":               false
+        "freeze":               false,
+        "load_src_weights":     false
     },
 
     "valid": {

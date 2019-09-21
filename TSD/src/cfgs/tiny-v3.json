@@ -3,7 +3,7 @@
         "main_name":            "TSD_YOLOv3Tiny",
         "min_input_size":       [416, 416],
         "max_input_size":       [416, 416],
-        "base":                 "TinyV3",
+        "base":                 "Tiny3",
         "anchors":              [5,5, 6,7, 8,8, 11,12, 19,18, 31,30],
         "anchors_per_output":   3,
         "labels":               [],

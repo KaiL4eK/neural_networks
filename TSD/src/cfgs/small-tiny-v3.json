@@ -1,7 +1,7 @@
 {
     "model" : {
         "main_name":            "TSD_SmallYOLOv3Tiny",
-        "base":                 "SmallTinyV3",
+        "base":                 "SmallTiny3",
         "base_params": {
             
         },
@@ -10,7 +10,7 @@
         "labels":               [],
         "infer_shape":          [416, 416],
         "tiles":                1,
-        "load_src_weights":     false
+        "anchors_per_output":   3
     },
 
     "aug": {
@@ -47,7 +47,8 @@
         "class_scale":          1,
 
         "debug":                false,
-        "freeze":               false
+        "freeze":               false,
+        "load_src_weights":     false
     },
 
     "valid": {
