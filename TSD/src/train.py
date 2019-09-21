@@ -297,7 +297,7 @@ def start_train(
 if __name__ == '__main__':
     args = parse_args()
 
-    utils.init_session(1.0)
+    utils.init_session(0.5)
 
     config_path = args.conf
     initial_weights = args.weights

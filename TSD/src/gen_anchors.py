@@ -163,16 +163,6 @@ def _main_():
 
             new_obj_sz = (int(a_width * scale_rate), int(a_height * scale_rate))
 
-            # if new_obj_sz[0] < 5:
-                # print((a_width, a_height), scale_rate, img_sz, image['filename'], infer_sz, new_obj_sz)
-
-
-#             print(image['filename'])
-#             print( int(a_width / image['width'] * infer_sz[1]), int(a_height / image['height'] * infer_sz[0]) )
-
-#             relative_w = a_width/image['width']
-#             relative_h = a_height/image['height']
-
             annotation_dims.append(tuple(map(float, new_obj_sz)))
 
     annotation_dims = np.array(annotation_dims)

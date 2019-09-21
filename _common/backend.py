@@ -1,6 +1,7 @@
 from tensorflow.keras.layers import Conv2D, Input, BatchNormalization, LeakyReLU
 from tensorflow.keras.layers import Concatenate, MaxPooling2D, UpSampling2D
 from tensorflow.keras.layers import ZeroPadding2D, add, concatenate, Lambda
+from tensorflow.keras.layers import Conv2DTranspose
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2 as Keras_MobileNetV2
 from tensorflow.keras.applications.xception import Xception as Keras_Xception
@@ -99,31 +100,48 @@ class MadNetv1(DetBackend):
         x = mnu._inverted_residual_block(x, 320, 3, t=6, s=1, n=1, alpha=alpha, block_id=16)
         x32 = x
         
-        last_block_filters = mnu._make_divisible(1280 * alpha, 8)
-        x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='out_conv1')(x32)
-        x = mnu.BatchNormalization(axis=channel_axis, name='out_bn1')(x)
-        y1 = mnu.ReLU(6., name='out_relu1')(x)
+        last_block_filters = mnu._make_divisible(640 * alpha, 8)
+        x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='out_conv0')(x32)
+        x = mnu.BatchNormalization(axis=channel_axis, name='out_bn0')(x)
+        y1 = mnu.ReLU(6., name='out_relu0')(x)
         
         # Next branch
-        x16u = UpSampling2D(2)(x32)
+        pre_up_block_filters = mnu._make_divisible(160 * alpha, 8)
+        x = mnu.Conv2D(pre_up_block_filters, 1, padding='same', strides=1, use_bias=False, name='pre_up_conv1')(x32)
+        x = mnu.BatchNormalization(axis=channel_axis, name='pre_up_bn1')(x)
+        x = mnu.ReLU(6., name='pre_up_relu1')(x)
+
+        x16u = Conv2DTranspose(pre_up_block_filters, 3, strides=2, padding='same', use_bias=False, name='up_deconv1')(x)
+        x16u = mnu.BatchNormalization(axis=channel_axis, name='up_bn1')(x16u)
+        x16u = mnu.ReLU(6., name='up_relu1')(x16u)
+        # x16u = UpSampling2D(2, interpolation='bilinear')(x)
+
         x16n = Concatenate()([x16u, x16])
-        x16n = mnu._inverted_residual_block(x16n, 96, 3, t=6, s=1, n=1, alpha=alpha, block_id=17)
+        # x16n = mnu._inverted_residual_block(x16n, 96, 3, t=6, s=1, n=1, alpha=alpha, block_id=17)
         
-        last_block_filters = mnu._make_divisible(1280 / 4 * alpha, 8)
-        x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='out_conv2')(x16n)
-        x = mnu.BatchNormalization(axis=channel_axis, name='out_bn2')(x)
-        y2 = mnu.ReLU(6., name='out_relu2')(x)
+        last_block_filters = mnu._make_divisible(640/2 * alpha, 8)
+        x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='out_conv1')(x16n)
+        x = mnu.BatchNormalization(axis=channel_axis, name='out_bn1')(x)
+        y2 = mnu.ReLU(6., name='out_relu1')(x)
 
         # Next branch
-        # TODO - x16n == (14,14,C) - ???
-        x8u = UpSampling2D(2)(x16n)
-        x8n = Concatenate()([x8u, x8])
-        x8n = mnu._inverted_residual_block(x8n, 32, 3, t=6, s=1, n=1, alpha=alpha, block_id=19)
+        pre_up_block_filters = mnu._make_divisible(160 * alpha, 8)
+        x = mnu.Conv2D(pre_up_block_filters, 1, padding='same', strides=1, use_bias=False, name='pre_up_conv2')(x16u)
+        x = mnu.BatchNormalization(axis=channel_axis, name='pre_up_bn2')(x)
+        x = mnu.ReLU(6., name='pre_up_relu2')(x)
 
-        last_block_filters = mnu._make_divisible(1280 / 8 * alpha, 8)
-        x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='out_conv3')(x8n)
-        x = mnu.BatchNormalization(axis=channel_axis, name='out_bn3')(x)
-        y3 = mnu.ReLU(6., name='out_relu3')(x)
+        x8u = Conv2DTranspose(pre_up_block_filters, 3, strides=2, padding='same', use_bias=False, name='up_deconv2')(x)
+        x8u = mnu.BatchNormalization(axis=channel_axis, name='up_bn2')(x8u)
+        x8u = mnu.ReLU(6., name='up_relu2')(x8u)
+        # x8u = UpSampling2D(2, interpolation='bilinear')(x16n)
+
+        x8n = Concatenate()([x8u, x8])
+        # x8n = mnu._inverted_residual_block(x8n, 32, 3, t=6, s=1, n=1, alpha=alpha, block_id=19)
+
+        last_block_filters = mnu._make_divisible(640/4 * alpha, 8)
+        x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='out_conv2')(x8n)
+        x = mnu.BatchNormalization(axis=channel_axis, name='out_bn2')(x)
+        y3 = mnu.ReLU(6., name='out_relu2')(x)
 
         self.outputs = [y1, y2, y3]
         self.inputs = [image_input]

@@ -4,7 +4,7 @@
         "min_input_size":       [416, 416],
         "max_input_size":       [416, 416],
         "base":                 "Darknet19",
-        "anchors":              [8,8, 14,14, 26,25],
+        "anchors":              [0],
         "anchors_per_output":   3,
         "labels":               [],
         "infer_shape":          [416, 416]

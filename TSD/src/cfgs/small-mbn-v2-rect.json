@@ -6,7 +6,7 @@
             "alpha": 0.35
         },
         "downsample":           [16, 8],
-        "anchors":              [??],
+        "anchors":              [0],
         "labels":               [],
         "infer_shape":          [288, 448],
         "tiles":                1,
@@ -22,7 +22,7 @@
         "max_input_size":       [352, 512],
 
         "train_times":          1,
-        "batch_size":           16,
+        "batch_size":           8,
         "nb_epochs":            500,
         "warmup_epochs":        0,
         "obj_thresh":           0.5,

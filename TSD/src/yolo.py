@@ -353,13 +353,14 @@ class YOLO_Model:
 
         self.backend = backends[base][0](**backend_options)
 
-        weights_path = os.path.join('src_weights', backends[base][1])
-        if backends[base][1] and os.path.exists(weights_path) and model_config['load_src_weights']:
-            print('Loading {}'.format(backends[base][1]))
-            self.backend.model.load_weights(
-                weights_path,
-                by_name=True
-            )
+        if train_config:
+            weights_path = os.path.join('src_weights', backends[base][1])
+            if backends[base][1] and os.path.exists(weights_path) and train_config['load_src_weights']:
+                print('Loading {}'.format(backends[base][1]))
+                self.backend.model.load_weights(
+                    weights_path,
+                    by_name=True
+                )
 
         # Create infer model
         self.pred_layers = []

@@ -1,19 +1,25 @@
 {
     "model" : {
         "main_name":            "TSD_YOLOv3Tiny",
-        "min_input_size":       [416, 416],
-        "max_input_size":       [416, 416],
         "base":                 "Tiny3",
-        "anchors":              [5,5, 6,7, 8,8, 11,12, 19,18, 31,30],
-        "anchors_per_output":   3,
+        "base_params": {
+            
+        },
+        "downsample":           [32, 16],
+        "anchors":              [5,5, 6,6, 8,8, 11,11, 16,16, 27,26],
         "labels":               [],
-        "infer_shape":          [416, 416]
+        "infer_shape":          [416, 416],
+        "tiles":                1,
+        "anchors_per_output":   3
     },
 
     "train": {
         "image_folder":         ["../data/GTSDB_VOC_Full/Images/"],
         "annot_folder":         ["../data/GTSDB_VOC_Full/Annotations/"],
         "cache_name":           "",
+        
+        "min_input_size":       [416, 416],
+        "max_input_size":       [416, 416],
 
         "train_times":          5,
         "batch_size":           4,
@@ -34,7 +40,8 @@
         "class_scale":          1,
 
         "debug":                false,
-        "freeze":               false
+        "freeze":               false,
+        "load_src_weights":     false
     },
 
     "valid": {
