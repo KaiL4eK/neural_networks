@@ -96,8 +96,8 @@ class YoloLayer(Layer):
             [1, 1, 1, 1, 2]
         )
 
-        # grid_factor = tf.Print(grid_factor, [grid_h, grid_w],
-        #                         message='sz \t\t', summarize=1000)
+        # grid_factor = tf.Print(grid_factor, [grid_h, grid_w, tf.shape(y_pred)[:3]],
+        #                         message='sz \t', summarize=1000)
 
         net_h = tf.shape(input_image)[1]
         net_w = tf.shape(input_image)[2]

@@ -85,10 +85,9 @@ bool YOLO_TensorRT::init(std::string uff_fpath, bool fp16_enabled)
         return false;
     }
 
-
     parser->registerInput(mCfg._input_names[0].c_str(),
-                          nv::DimsNCHW(mCfg._tile_cnt, 3, mCfg._infer_sz.height, mCfg._infer_sz.width), 
-                          uff::UffInputOrder::kNCHW);
+                          nv::DimsCHW(3, mCfg._infer_sz.height, mCfg._infer_sz.width), 
+                          uff::UffInputOrder::kNHWC);
     
     for ( const string &name : mCfg._output_names )
         parser->registerOutput(name.c_str());
@@ -99,7 +98,7 @@ bool YOLO_TensorRT::init(std::string uff_fpath, bool fp16_enabled)
         return false;
     }
 
-    // builder->setMaxBatchSize(mCfg._tile_cnt);
+    builder->setMaxBatchSize(mCfg._tile_cnt);
     config->setMaxWorkspaceSize(1 << 28 /* 256 MB */);
     if (fp16_enabled)
     {

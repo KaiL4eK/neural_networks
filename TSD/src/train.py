@@ -29,6 +29,10 @@ def parse_args():
         '-w', '--weights', help='path to pretrained model',
         default=None
     )
+    argparser.add_argument(
+        '-d', '--dry', help='dry run',
+        action='store_true'
+    )
     return argparser.parse_args()
 
 
@@ -151,7 +155,8 @@ def start_train(
     config,
     yolo_model: yolo.YOLO_Model,
     train_generator,
-    valid_generator
+    valid_generator,
+    dry_mode: bool
 ):
     print('Full training')
 
@@ -269,11 +274,15 @@ def start_train(
         '_common/backend.py',
         '/tmp/config.json'
     ]
-    neptune.create_experiment(
-        name=utils.get_neptune_name(config),
-        upload_stdout=False,
-        upload_source_files=sources_to_upload
-    )
+
+    if not dry_mode:
+        neptune.create_experiment(
+            name=utils.get_neptune_name(config),
+            upload_stdout=False,
+            upload_source_files=sources_to_upload
+        )
+    else:
+        config['train']['nb_epochs'] = 1
 
     yolo_model.train_model.compile(loss=yolo.dummy_loss, optimizer=optimizer)
     yolo_model.train_model.fit_generator(
@@ -291,7 +300,8 @@ def start_train(
         use_multiprocessing=False
     )
 
-    neptune.send_artifact(mAP_checkpoint_static_name)
+    if not dry_mode:
+        neptune.send_artifact(mAP_checkpoint_static_name)
 
 
 if __name__ == '__main__':
@@ -301,6 +311,7 @@ if __name__ == '__main__':
 
     config_path = args.conf
     initial_weights = args.weights
+    dry_mode = args.dry
 
     with open(config_path) as config_buffer:
         config = json.loads(config_buffer.read())
@@ -312,7 +323,7 @@ if __name__ == '__main__':
     # if freezing:
     # train_freezed(config, train_model, train_generator, valid_generator)
 
-    start_train(config, yolo_model, train_generator, valid_generator)
+    start_train(config, yolo_model, train_generator, valid_generator, dry_mode)
 
     neptune.stop()
     clear_session()

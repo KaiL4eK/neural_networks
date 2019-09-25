@@ -12,9 +12,9 @@ class BatchGenerator(Sequence):
                  instances,
                  anchors,
                  labels,
+                 downsample,  # ratio between network input's size and network output's size, 32 for YOLOv3
                  min_net_size=[416, 416],
                  max_net_size=[416, 416],
-                 downsample=[32],  # ratio between network input's size and network output's size, 32 for YOLOv3
                  max_box_per_image=30,
                  batch_size=1,
                  shuffle=False,
@@ -134,6 +134,7 @@ class BatchGenerator(Sequence):
         # list of groundtruth boxes
         t_batch = np.zeros((r_bound - l_bound, 1, 1, 1, self.max_box_per_image, 4))
 
+        # [print(net_h // self.downsample[i], net_w // self.downsample[i]) for i in reversed(range(self.output_layers_count))]
         # According to reversed outputs - because of anchors
         yolos = [np.zeros((r_bound - l_bound,
                            net_h // self.downsample[i],

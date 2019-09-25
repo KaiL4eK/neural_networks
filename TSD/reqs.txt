@@ -3,4 +3,5 @@ scipy
 scikit-learn
 tqdm
 neptune-client
+psutil
 numba

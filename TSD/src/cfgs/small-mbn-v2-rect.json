@@ -6,7 +6,7 @@
             "alpha": 0.35
         },
         "downsample":           [16, 8],
-        "anchors":              [0],
+        "anchors":              [5,5, 7,7, 10,11, 15,15, 22,22, 35,34],
         "labels":               [],
         "infer_shape":          [288, 448],
         "tiles":                1,
