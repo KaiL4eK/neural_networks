@@ -553,10 +553,11 @@ class YOLO_Model:
         net_output_count = len(batch_output)
 
         for i in range(nb_images):
-            # if nb_images > 1:
-            yolos = [batch_output[b][i] for b in range(net_output_count)]
-            # else:
-                # yolos = [batch_output[i]]
+            # This is required for one-output networks!
+            if net_output_count > 1:
+                yolos = [batch_output[b][i] for b in range(net_output_count)]
+            else:
+                yolos = [batch_output[i]]
 
             boxes = []
 

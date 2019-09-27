@@ -3,10 +3,10 @@
         "main_name":            "TSD_MbNv2",
         "base":                 "MbN2",
         "base_params": {
-            "alpha": 0.35
+            "alpha": 1.0
         },
         "downsample":           [32],
-        "anchors":              [8,8, 14,14, 26,25],
+        "anchors":              [5,5, 8,9, 20,19],
         "labels":               [],
         "infer_shape":          [416, 416],
         "tiles":                1,

@@ -4,6 +4,7 @@ from _common.voc import replace_all_labels_2_one, create_training_instances
 import _common.callbacks as cbs
 from _common import utils
 
+import multiprocessing as mp
 import os
 import numpy as np
 import json
@@ -281,6 +282,8 @@ def start_train(
             upload_stdout=False,
             upload_source_files=sources_to_upload
         )
+        neptune.send_text('base_params', str(config['model']['base_params']))
+
     else:
         config['train']['nb_epochs'] = 1
 
@@ -295,8 +298,8 @@ def start_train(
         epochs=config['train']['nb_epochs'],
         verbose=1,
         callbacks=callbacks,
-        workers=8,
-        max_queue_size=100,
+        workers=mp.cpu_count(),
+        max_queue_size=500,
         use_multiprocessing=False
     )
 
@@ -307,7 +310,7 @@ def start_train(
 if __name__ == '__main__':
     args = parse_args()
 
-    utils.init_session(0.5)
+    utils.init_session(1.0)
 
     config_path = args.conf
     initial_weights = args.weights
