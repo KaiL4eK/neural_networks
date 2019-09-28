@@ -246,4 +246,4 @@ class MAP_evaluation(Callback):
             if self.neptune is not None:
                 self.neptune.send_metric('mAP', mAP)
                 self.neptune.send_metric('best_mAP', self.bestMap)
-                self.neptune.send_metric('infer_time', average_inf_time)
+                # self.neptune.send_metric('infer_time', average_inf_time)

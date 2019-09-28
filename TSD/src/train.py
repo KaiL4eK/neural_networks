@@ -221,7 +221,7 @@ def start_train(
         save_name=mAP_checkpoint_name,
         save_static_name=mAP_checkpoint_static_name,
         # tensorboard=tensorboard_cb,
-        neptune=neptune
+        neptune=neptune if not dry_mode else None
     )
 
     reduce_on_plateau = ReduceLROnPlateau(
@@ -277,13 +277,20 @@ def start_train(
     ]
 
     if not dry_mode:
+        params = {
+            'base_params': str(config['model']['base_params']),
+            'infer_size': "H{}xW{}".format(*config['model']['infer_shape']),
+            'tile_count': config['model']['tiles'],
+            'anchors_per_output': config['model']['anchors_per_output'],
+            'anchors': str(config['model']['anchors'])
+        }
+
         neptune.create_experiment(
             name=utils.get_neptune_name(config),
             upload_stdout=False,
-            upload_source_files=sources_to_upload
+            upload_source_files=sources_to_upload,
+            params=params
         )
-        neptune.send_text('base_params', str(config['model']['base_params']))
-
     else:
         config['train']['nb_epochs'] = 1
 
@@ -310,7 +317,7 @@ def start_train(
 if __name__ == '__main__':
     args = parse_args()
 
-    utils.init_session(1.0)
+    utils.init_session(0.5)
 
     config_path = args.conf
     initial_weights = args.weights
