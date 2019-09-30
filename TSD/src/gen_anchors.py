@@ -38,12 +38,12 @@ def avg_IOU(anns, centroids):
 
 
 def run_kmeans(ann_dims, anchor_num):
-    ann_num = ann_dims.shape[0]
-    iterations = 0
+    ann_num, anchor_dim = ann_dims.shape[0:2]
     prev_assignments = np.ones(ann_num)*(-1)
     iteration = 0
     old_distances = np.zeros((ann_num, anchor_num))
 
+    # Get random indices to capture random points to set them as centroids
     indices = []
     for i in range(anchor_num):
         rnd = random.randrange(ann_num)
@@ -57,19 +57,16 @@ def run_kmeans(ann_dims, anchor_num):
 
     # print(sorted(indices))
     centroids = ann_dims[indices]
-    anchor_dim = ann_dims.shape[1]
 
     while True:
         distances = []
         iteration += 1
         for i in range(ann_num):
-            d = 1 - IOU(ann_dims[i], centroids)
-            distances.append(d)
+            distances += [1 - IOU(ann_dims[i], centroids)]
         # distances.shape = (ann_num, anchor_num)
         distances = np.array(distances)
 
-        print("iteration {}: dists = {}".format(
-            iteration, np.sum(np.abs(old_distances-distances))))
+        print("iteration {}: dists = {}".format(iteration, np.sum(np.abs(old_distances-distances))))
 
         # assign samples to centroids
         assignments = np.argmin(distances, axis=1)
@@ -78,7 +75,7 @@ def run_kmeans(ann_dims, anchor_num):
             return centroids
 
         # calculate new centroids
-        centroid_sums = np.zeros((anchor_num, anchor_dim), np.float)
+        centroid_sums = np.zeros((anchor_num, anchor_dim), dtype=np.float)
         for i in range(ann_num):
             centroid_sums[assignments[i]] += ann_dims[i]
 
@@ -89,6 +86,10 @@ def run_kmeans(ann_dims, anchor_num):
                 print('-----------------------')
                 print('>>>', j)
                 print(centroid_sums)
+                print('-----------------------')
+                print(indices)
+                print('-----------------------')
+                print(assignments)
                 print('-----------------------')
 
         prev_assignments = assignments.copy()
