@@ -306,7 +306,7 @@ def start_train(
         verbose=1,
         callbacks=callbacks,
         workers=mp.cpu_count(),
-        max_queue_size=500,
+        max_queue_size=100,
         use_multiprocessing=False
     )
 
