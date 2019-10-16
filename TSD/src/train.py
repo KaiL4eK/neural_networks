@@ -13,7 +13,7 @@ import tensorflow as tf
 from generator import BatchGenerator
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
 import tensorflow.keras.optimizers as opt
-from keras_radam import RAdam
+# from keras_radam import RAdam
 from tensorflow.keras.models import load_model
 from tensorflow.keras.backend import clear_session
 
@@ -171,7 +171,7 @@ def start_train(
         'Adam': opt.Adam(lr=config['train']['learning_rate']),
         'Nadam': opt.Nadam(lr=config['train']['learning_rate']),
         'RMSprop': opt.RMSprop(lr=config['train']['learning_rate']),
-        'Radam': RAdam(lr=config['train']['learning_rate'], warmup_proportion=0.1, min_lr=1e-5)
+        # 'Radam': RAdam(lr=config['train']['learning_rate'], warmup_proportion=0.1, min_lr=1e-5)
     }
 
     optimizer = optimizers[config['train']['optimizer']]

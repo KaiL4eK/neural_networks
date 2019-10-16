@@ -35,7 +35,7 @@
         "nms_thresh":           0.5,
         "gpus":                 "0",
         
-        "optimizer":            "Radam",
+        "optimizer":            "Nadam",
         "learning_rate":        1e-3,
         "lr_decay":             0,
         "clipnorm":             0,

@@ -19,8 +19,8 @@
     },
 
     "train": {
-        "image_folder":         ["../data/RTSD_VOC_Train/Images/", "../data/GTSDB_VOC_Full/Images/"],
-        "annot_folder":         ["../data/RTSD_VOC_Train/Annotations/", "../data/GTSDB_VOC_Full/Annotations/"],
+        "image_folder":         ["../data/RTSD_VOC_Train/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Train/Annotations/"],
         "cache_name":           "",
 
         "min_input_size":       [288, 288],
@@ -35,7 +35,7 @@
         "nms_thresh":           0.5,
         "gpus":                 "0",
         
-        "optimizer":            "Radam",
+        "optimizer":            "Nadam",
         "learning_rate":        1e-3,
         "lr_decay":             0,
         "clipnorm":             0,
