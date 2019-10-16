@@ -11,7 +11,7 @@ def _main_(args):
     with open(config_path) as config_buffer:    
         config = json.loads(config_buffer.read())
 
-    init_session(0.5)
+    init_session(0.3)
 
     labels = ['sign']
     config['model']['labels'] = labels
@@ -20,6 +20,9 @@ def _main_(args):
     model_render_file = 'images/{}.png'.format(config['model']['base'])
     if not os.path.isdir(os.path.dirname(model_render_file)):
         os.makedirs(os.path.dirname(model_render_file))
+    
+    print(yolo_model.infer_model.summary())
+        
     plot_model(yolo_model.infer_model, to_file=model_render_file, show_shapes=True)
 
 if __name__ == '__main__':

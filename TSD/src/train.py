@@ -13,6 +13,7 @@ import tensorflow as tf
 from generator import BatchGenerator
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
 import tensorflow.keras.optimizers as opt
+from keras_radam import RAdam
 from tensorflow.keras.models import load_model
 from tensorflow.keras.backend import clear_session
 
@@ -170,6 +171,7 @@ def start_train(
         'Adam': opt.Adam(lr=config['train']['learning_rate']),
         'Nadam': opt.Nadam(lr=config['train']['learning_rate']),
         'RMSprop': opt.RMSprop(lr=config['train']['learning_rate']),
+        'Radam': RAdam(lr=config['train']['learning_rate'], warmup_proportion=0.1, min_lr=1e-5)
     }
 
     optimizer = optimizers[config['train']['optimizer']]
@@ -267,13 +269,13 @@ def start_train(
     ###############################
     #   Prepare fit
     ###############################
-    with open('/tmp/config.json', 'w') as f:
+    with open('config.json', 'w') as f:
         json.dump(config, f, indent=4)
 
     sources_to_upload = [
         'yolo.py',
         '_common/backend.py',
-        '/tmp/config.json'
+        'config.json'
     ]
 
     if not dry_mode:

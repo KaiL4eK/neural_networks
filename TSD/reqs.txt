@@ -5,3 +5,4 @@ tqdm
 neptune-client
 psutil
 numba
+keras-rectified-adam

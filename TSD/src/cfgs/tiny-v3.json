@@ -55,8 +55,8 @@
     },
 
     "eval": {
-        "image_folder":         ["../data/GTSDB_VOC_Full/Images/"],
-        "annot_folder":         ["../data/GTSDB_VOC_Full/Annotations/"],
-        "cache_name":           "pkl/sign_eval.pkl"
+        "image_folder":         ["../data/RTSD_VOC_Test/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Test/Annotations/"],
+        "cache_name":           ""
     }
 }

@@ -4,6 +4,7 @@ import time
 import tensorflow as tf
 from tensorflow.keras.layers import Layer, Input, Conv2D
 from tensorflow.keras.models import Model
+from tqdm import tqdm
 
 from _common import utils
 from _common import backend

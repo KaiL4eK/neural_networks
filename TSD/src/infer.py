@@ -12,6 +12,7 @@ argparser.add_argument('-c', '--conf', help='path to configuration file')
 argparser.add_argument('-i', '--input', help='input image path')
 argparser.add_argument('-w', '--weights', help='weights path')
 argparser.add_argument('-f', '--fps', action='store_true', help='FPS estimation mode')
+argparser.add_argument('-v', '--visualize', action='store_true', help='With rendering')
 
 args = argparser.parse_args()
 
@@ -81,7 +82,7 @@ def _main_():
         else:
             show_delay = 0
         
-        if not args.fps:
+        if not args.fps and args.visualize:
             draw_boxes(image, boxes, labels, obj_thresh) 
 
             # cv2.imshow('1', n_image)
