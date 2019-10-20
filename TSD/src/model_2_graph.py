@@ -4,9 +4,7 @@ from _common.utils import makedirs
 import os
 import json
 import yolo
-from tensorflow.keras.models import load_model
-from tensorflow.keras.layers import Input
-from tensorflow.keras.models import Model
+from tensorflow.keras.models import Model, load_model
 import shutil
 from _common import utils
 from pathlib import Path

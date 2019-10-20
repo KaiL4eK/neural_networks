@@ -87,7 +87,7 @@ bool YOLO_TensorRT::init(std::string uff_fpath, bool fp16_enabled)
 
     parser->registerInput(mCfg._input_names[0].c_str(),
                           nv::DimsCHW(3, mCfg._infer_sz.height, mCfg._infer_sz.width), 
-                          uff::UffInputOrder::kNHWC);
+                          uff::UffInputOrder::kNCHW);
     
     for ( const string &name : mCfg._output_names )
         parser->registerOutput(name.c_str());
@@ -130,6 +130,9 @@ bool YOLO_TensorRT::init(std::string uff_fpath, bool fp16_enabled)
     {
         return false;
     }
+
+    nv::IHostMemory *serializedModel = mEngine->serialize();
+    
 
     assert(network->getNbInputs() == 1);
     nv::Dims inputDims = network->getInput(0)->getDimensions();

@@ -1,4 +1,4 @@
-tensorflow-gpu
+tensorflow-gpu==1.14
 scipy
 scikit-learn
 tqdm

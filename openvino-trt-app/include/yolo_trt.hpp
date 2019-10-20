@@ -1,6 +1,7 @@
 #pragma once
 
 #include "yolo.hpp"
+#include <memory>
 
 #include "NvInfer.h"
 
