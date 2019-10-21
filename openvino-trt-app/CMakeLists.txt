@@ -54,7 +54,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 find_package(TensorRT)
 
 if(TensorRT_FOUND)
-    find_package(CUDA REQUIRED)
+    find_package(CUDA 10.0 REQUIRED)
 
     set(TRT_APP trt-app)
     add_executable(${TRT_APP} 
@@ -64,11 +64,13 @@ if(TensorRT_FOUND)
     target_link_libraries(${TRT_APP} 
         ${YOLO_LIB} 
         ${TensorRT_LIBRARIES}
+        ${CUDA_LIBRARIES}
     )
     target_include_directories(${TRT_APP} 
     PRIVATE
         include
         ${TensorRT_INCLUDE_DIRS}
+        ${TensorRT_SAMPLES_INCLUDE_DIR}
         ${Boost_INCLUDE_DIR}
         ${OpenCV_INCLUDE_DIR}
         ${CUDA_INCLUDE_DIRS}

@@ -17,7 +17,5 @@ private:
     InferenceEngine::ExecutableNetwork   mExecutableNetwork;
     InferenceEngine::CNNNetwork          mNetwork;
 
-    std::string                                         mInputName;
-    std::vector<std::string>                            mOutputNames;
     std::vector<InferenceEngine::InferRequest::Ptr>     mInferRequests;
 };

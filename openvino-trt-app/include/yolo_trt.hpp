@@ -20,6 +20,4 @@ private:
 
     std::shared_ptr<nvinfer1::ICudaEngine>              mEngine;
 
-    std::string                                         mInputName;
-    std::vector<std::string>                            mOutputNames;
 };

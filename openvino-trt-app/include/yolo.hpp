@@ -112,6 +112,10 @@ protected:
     cv::Mat get_roi_tile(cv::Mat raw_image, size_t idx);
 
     YOLOConfig  mCfg;
+
+    size_t                      mBatchSize;
+    std::string                 mInputName;
+    std::vector<std::string>    mOutputNames;
 };
 
 static inline double sigmoid(double x)

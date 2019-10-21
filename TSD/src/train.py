@@ -155,6 +155,7 @@ def train_freezed(config, train_model, train_generator, valid_generator):
 
 def start_train(
     config,
+    config_path,
     yolo_model: yolo.YOLO_Model,
     train_generator,
     valid_generator,
@@ -314,6 +315,7 @@ def start_train(
 
     if not dry_mode:
         neptune.send_artifact(mAP_checkpoint_static_name)
+        neptune.send_artifact('config.json')
 
 
 if __name__ == '__main__':
@@ -335,7 +337,7 @@ if __name__ == '__main__':
     # if freezing:
     # train_freezed(config, train_model, train_generator, valid_generator)
 
-    start_train(config, yolo_model, train_generator, valid_generator, dry_mode)
+    start_train(config, config_path, yolo_model, train_generator, valid_generator, dry_mode)
 
     neptune.stop()
     clear_session()
