@@ -124,11 +124,13 @@ bool YOLO_TensorRT::init(std::string uff_fpath, bool fp16_enabled)
         assert(inputDims.nbDims == 3);
 
         builder->setMaxBatchSize(mCfg._tile_cnt);
-        builder->setMaxWorkspaceSize(256_MB);
-        // if (fp16_enabled)
-        // {
+        builder->setMaxWorkspaceSize(64_MB);
+
+        if (fp16_enabled)
+        {
             // builder->setFlag(nv::BuilderFlag::kFP16);
-        // }
+            builder->setFp16Mode(true);
+        }
 
         // Calibrator life time needs to last until after the engine is built.
         // std::unique_ptr<IInt8Calibrator> calibrator;
