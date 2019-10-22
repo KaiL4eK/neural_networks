@@ -92,6 +92,12 @@ public:
 
     virtual void infer(cv::Mat raw_image, std::vector<DetectionObject> &detections) = 0;
 
+    enum ParsingFormat
+    {
+        CHW,
+        HWC
+    };
+
 protected:
     void initResizeConfig(cv::Mat in_img, 
                           ImageResizeConfig &cfg);
@@ -110,6 +116,8 @@ protected:
                      std::vector<DetectionObject> &result_boxes);
 
     cv::Mat get_roi_tile(cv::Mat raw_image, size_t idx);
+
+    void get_detections(std::vector<RawDetectionObject> &dets, void *data, size_t grid_h, size_t grid_w, size_t chnls, std::vector<cv::Point> &anchors, ParsingFormat fmt);
 
     YOLOConfig  mCfg;
 

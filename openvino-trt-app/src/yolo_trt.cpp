@@ -12,7 +12,7 @@ namespace fs = boost::filesystem;
 
 #include "buffers.h"
 // #include "logger.h"
-// #include "common.h"
+#include "common.h"
 
 namespace nv = nvinfer1;
 namespace uff = nvuffparser;
@@ -30,7 +30,7 @@ struct InferDeleter
     }
 };
 
-Logger gLogger(Logger::Severity::kVERBOSE);
+Logger gLogger(Logger::Severity::kINFO);
 
 template <typename T>
 using UniquePtr = std::unique_ptr<T, InferDeleter>;
@@ -74,12 +74,12 @@ bool YOLO_TensorRT::init(std::string uff_fpath, bool fp16_enabled)
 
         ifile.read(serializedModelData, serializedModelSz);
 
-        nv::IRuntime* runtime = nv::createInferRuntime(gLogger.getTRTLogger());
+        nv::IRuntime* runtime = nv::createInferRuntime(gLogger);
         mEngine = std::shared_ptr<nv::ICudaEngine>(runtime->deserializeCudaEngine(serializedModelData, serializedModelSz, nullptr), InferDeleter());
     }
     else
     {
-        auto builder = UniquePtr<nv::IBuilder>(nv::createInferBuilder(gLogger.getTRTLogger()));
+        auto builder = UniquePtr<nv::IBuilder>(nv::createInferBuilder(gLogger));
         if (!builder)
         {
             return false;
@@ -91,11 +91,12 @@ bool YOLO_TensorRT::init(std::string uff_fpath, bool fp16_enabled)
             return false;
         }
 
-        auto config = UniquePtr<nv::IBuilderConfig>(builder->createBuilderConfig());
-        if (!config)
-        {
-            return false;
-        }
+        // For version 6.0
+        // auto config = UniquePtr<nv::IBuilderConfig>(builder->createBuilderConfig());
+        // if (!config)
+        // {
+            // return false;
+        // }
 
         auto parser = UniquePtr<uff::IUffParser>(uff::createUffParser());
         if (!parser)
@@ -123,11 +124,11 @@ bool YOLO_TensorRT::init(std::string uff_fpath, bool fp16_enabled)
         assert(inputDims.nbDims == 3);
 
         builder->setMaxBatchSize(mCfg._tile_cnt);
-        config->setMaxWorkspaceSize(1 << 28 /* 256 MB */);
-        if (fp16_enabled)
-        {
-            config->setFlag(nv::BuilderFlag::kFP16);
-        }
+        builder->setMaxWorkspaceSize(256_MB);
+        // if (fp16_enabled)
+        // {
+            // builder->setFlag(nv::BuilderFlag::kFP16);
+        // }
 
         // Calibrator life time needs to last until after the engine is built.
         // std::unique_ptr<IInt8Calibrator> calibrator;
@@ -149,7 +150,7 @@ bool YOLO_TensorRT::init(std::string uff_fpath, bool fp16_enabled)
         //     config->setInt8Calibrator(calibrator.get());
         // }
 
-        mEngine = std::shared_ptr<nv::ICudaEngine>(builder->buildEngineWithConfig(*network, *config), InferDeleter());
+        mEngine = std::shared_ptr<nv::ICudaEngine>(builder->buildCudaEngine(*network), InferDeleter());
         if (!mEngine)
         {
             return false;
@@ -230,7 +231,7 @@ void YOLO_TensorRT::infer(cv::Mat raw_image, std::vector<DetectionObject> &detec
 
     void *inputData_CHW = buffers.getHostBuffer(mInputName);
 
-    cout << mEngine->getBindingFormatDesc(mEngine->getBindingIndex(mInputName.c_str())) << endl;
+    // cout << mEngine->getBindingFormatDesc(mEngine->getBindingIndex(mInputName.c_str())) << endl;
 
     ImageResizeConfig   rsz_cfg;
     initResizeConfig(raw_image, rsz_cfg);
@@ -280,80 +281,20 @@ void YOLO_TensorRT::infer(cv::Mat raw_image, std::vector<DetectionObject> &detec
     {
         for (size_t i_layer = 0; i_layer < mOutputNames.size(); i_layer++)
         {
-cout << "Processing!" << endl;
-            const void *output_blob = buffers.getHostBuffer(mOutputNames[i_layer]);
+            void *output_blob = buffers.getHostBuffer(mOutputNames[i_layer]);
             
             int index = mEngine->getBindingIndex(mOutputNames[i_layer].c_str());
             nv::Dims outputDims = mEngine->getBindingDimensions(index);
 
             // cout << outputDims.nbDims << ": " << outputDims.d[0] << " / " << outputDims.d[1] << " / " << outputDims.d[2] << endl;
             // cout << mEngine->getBindingFormatDesc(index) << endl;
-
-            vector<cv::Point> anchors = get_anchors(i_layer);
-
+            
             const float grid_w = outputDims.d[1];
             const float grid_h = outputDims.d[0];
             const size_t chnl_count = outputDims.d[2];
 
-            const float *detection = (float *)output_blob;
-            const size_t c_stride = 1;
-            const size_t h_stride = grid_w * chnl_count;
-            const size_t w_stride = chnl_count;
-            size_t c_idx;
-
-            const size_t class_count = chnl_count / anchors.size() - 5;
-            const size_t box_count = class_count + 5;
-
-            float obj_thresh = mCfg._objectness_thresh;
-
-            for (size_t h_idx = 0; h_idx < grid_h; h_idx++)
-            {
-                for (size_t w_idx = 0; w_idx < grid_w; w_idx++)
-                {
-                    size_t grid_offset = h_idx * h_stride + w_idx * w_stride;
-
-                    for (size_t anc_idx = 0; anc_idx < anchors.size(); anc_idx++)
-                    {
-                        RawDetectionObject det;
-                        size_t chnl_offset = anc_idx * box_count;
-
-                        // size_t box_idx_x = 0;
-                        // size_t box_idx_y = 1;
-                        // size_t box_idx_w = 2;
-                        // size_t box_idx_h = 3;
-                        // size_t obj_idx = 4;
-                        // size_t cls_idx = 5;
-
-                        float obj = detection[grid_offset + c_stride * (4 + chnl_offset)];
-                        obj = sigmoid(obj);
-                        if (obj < obj_thresh)
-                            continue;
-
-                        det.x = detection[grid_offset + c_stride * (0 + chnl_offset)];
-                        det.y = detection[grid_offset + c_stride * (1 + chnl_offset)];
-                        det.w = detection[grid_offset + c_stride * (2 + chnl_offset)];
-                        det.h = detection[grid_offset + c_stride * (3 + chnl_offset)];
-                        
-                        det.w = anchors[anc_idx].x * exp(det.w) / mCfg._infer_sz.width;
-                        det.h = anchors[anc_idx].y * exp(det.h) / mCfg._infer_sz.height;
-                        det.x = (sigmoid(det.x) + w_idx) / grid_w;
-                        det.y = (sigmoid(det.y) + h_idx) / grid_h;
-
-                        for (size_t i_cls = 0; i_cls < class_count; i_cls++)
-                        {
-                            float class_val = detection[grid_offset + c_stride * ((i_cls + 5) + chnl_offset)];
-                            det.conf = sigmoid(class_val) * obj;
-
-                            if ( det.conf < obj_thresh )
-                                continue;
-                            
-                            det.cls_idx = i_cls;
-                            global_dets.push_back(det);
-                        }
-                    }
-                }
-            }
-            
+            vector<cv::Point> anchors = get_anchors(i_layer);
+            get_detections(global_dets, output_blob, grid_h, grid_w, chnl_count, anchors, ParsingFormat::HWC);
         }
 
         rsz_cfg.tile_idx = i;

@@ -33,7 +33,7 @@ list(APPEND _TensorRT_SEARCHES _TensorRT_SEARCH_NORMAL)
 # Include dir
 foreach(search ${_TensorRT_SEARCHES})
   find_path(TensorRT_INCLUDE_DIR NAMES NvInfer.h ${${search}} PATH_SUFFIXES include)
-  find_path(TensorRT_SAMPLES_INCLUDE_DIR NAMES logging.h ${${search}} PATH_SUFFIXES samples/common)
+  find_path(TensorRT_SAMPLES_INCLUDE_DIR NAMES buffers.h ${${search}} PATH_SUFFIXES samples/common)
 endforeach()
 
 if(NOT TensorRT_LIBRARY)
