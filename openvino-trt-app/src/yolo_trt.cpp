@@ -10,7 +10,6 @@ namespace fs = boost::filesystem;
 #include "NvUffParser.h"
 #include "NvInferPlugin.h"
 
-#include "buffers.h"
 // #include "logger.h"
 #include "common.h"
 
@@ -174,6 +173,8 @@ bool YOLO_TensorRT::init(std::string uff_fpath, bool fp16_enabled)
         mOutputNames.push_back(name);
     }
 
+    mBuffers = make_shared<samplesCommon::BufferManager>(mEngine, mCfg._tile_cnt);
+
     return true;
 }
 
@@ -229,9 +230,9 @@ void YOLO_TensorRT::infer(cv::Mat raw_image, std::vector<DetectionObject> &detec
 {
     chrono::time_point<chrono::steady_clock> inf_start_time = chrono::steady_clock::now();
     
-    samplesCommon::BufferManager buffers(mEngine, mCfg._tile_cnt);
+    
 
-    void *inputData_CHW = buffers.getHostBuffer(mInputName);
+    void *inputData_CHW = mBuffers->getHostBuffer(mInputName);
 
     // cout << mEngine->getBindingFormatDesc(mEngine->getBindingIndex(mInputName.c_str())) << endl;
 
@@ -260,11 +261,11 @@ void YOLO_TensorRT::infer(cv::Mat raw_image, std::vector<DetectionObject> &detec
 
     cout << "ExecutionContext created" << endl;
 
-    cout << "Size (bytes) of input buffer: " << buffers.size(mCfg._input_names[0]) << endl;
+    cout << "Size (bytes) of input buffer: " << mBuffers->size(mCfg._input_names[0]) << endl;
 
-    buffers.copyInputToDevice();
+    mBuffers->copyInputToDevice();
 
-    bool status = context->execute(1, buffers.getDeviceBindings().data());
+    bool status = context->execute(1, mBuffers->getDeviceBindings().data());
     if (!status)
     {
         cout << "Status: failed execution" << endl;
@@ -273,7 +274,7 @@ void YOLO_TensorRT::infer(cv::Mat raw_image, std::vector<DetectionObject> &detec
     
     cout << "Status: execution processed" << endl;
 
-    buffers.copyOutputToHost();
+    mBuffers->copyOutputToHost();
 
     cout << "Processing output" << endl;
 
@@ -283,7 +284,7 @@ void YOLO_TensorRT::infer(cv::Mat raw_image, std::vector<DetectionObject> &detec
     {
         for (size_t i_layer = 0; i_layer < mOutputNames.size(); i_layer++)
         {
-            void *output_blob = buffers.getHostBuffer(mOutputNames[i_layer]);
+            void *output_blob = mBuffers->getHostBuffer(mOutputNames[i_layer]);
             
             int index = mEngine->getBindingIndex(mOutputNames[i_layer].c_str());
             nv::Dims outputDims = mEngine->getBindingDimensions(index);

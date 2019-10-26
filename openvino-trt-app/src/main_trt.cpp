@@ -105,7 +105,11 @@ int main(int argc, char **argv)
     yolo.init(g_uff_path, g_fp16_enabled);
 
     std::vector<DetectionObject> corrected_dets;
-    yolo.infer(input_image, corrected_dets);
+
+    for ( size_t i = 0; i < 10; i++ )
+    {
+        yolo.infer(input_image, corrected_dets);
+    }
 
     for (DetectionObject &det : corrected_dets)
     {
