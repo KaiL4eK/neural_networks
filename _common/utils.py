@@ -262,21 +262,12 @@ def unfreeze_model(model):
 
 
 def init_session(rate):
-
-    import tensorflow.keras.backend as K
     import tensorflow as tf
+    physical_devices = tf.config.experimental.list_physical_devices('GPU')
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
-    config = tf.ConfigProto()
-
-    config.gpu_options.allow_growth = True
-    config.gpu_options.per_process_gpu_memory_fraction = rate
-
-    sess = tf.Session(config=config)
-
-    init = tf.global_variables_initializer()
-    sess.run(init)
-
-    K.set_session(sess)
+    # tf.config.gpu.set_per_process_memory_fraction(rate)
+    # tf.config.gpu.set_per_process_memory_growth(True)
 
 
 def makedirs(path):
