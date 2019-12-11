@@ -57,8 +57,7 @@ class CustomModelCheckpoint(ModelCheckpoint):
                                      current, filepath))
                         self.best = current
                         if self.save_weights_only:
-                            self.model_to_save.save_weights(
-                                filepath, overwrite=True)
+                            self.model_to_save.save_weights(filepath, overwrite=True)
                         else:
                             self.model_to_save.save(filepath, overwrite=True)
                     else:
@@ -76,6 +75,25 @@ class CustomModelCheckpoint(ModelCheckpoint):
 
         super(CustomModelCheckpoint, self).on_batch_end(epoch, logs)
 
+
+class NeptuneMonitor(Callback):
+    """ to save the template model, not the multi-GPU model
+    """
+
+    def __init__(self, monitoring, neptune, **kwargs):
+        super(NeptuneMonitor, self).__init__(**kwargs)
+        self.neptune = neptune
+        self.monitoring = monitoring
+
+    def on_epoch_end(self, epoch, logs={}):
+
+        if self.neptune is not None:
+            for monitor in self.monitoring:
+                val = logs.get(monitor)
+                if val:
+                    self.neptune.send_metric(monitor, val)
+
+        super(NeptuneMonitor, self).on_batch_end(epoch, logs)
 
 import tensorflow.keras.backend as K
 import time

@@ -4,17 +4,14 @@ import models
 import data
 import generator as gen
 import json
-from keras.optimizers import Adam
-from keras.utils.vis_utils import plot_model
-from keras.utils.layer_utils import print_summary
+from tensorflow.keras.optimizers import Adam
 
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 
 import multiprocessing
 
-import core
 from _common import utils
-from _common.callbacks import CustomModelCheckpoint
+from _common import callbacks as cbs
 
 import argparse
 
@@ -24,6 +21,8 @@ argparser.add_argument('-w', '--weights', help='path to trained model', default=
 
 args = argparser.parse_args()
 
+import neptune
+neptune.init('kail4ek/sandbox')
 
 def main():
     config_path = args.conf
@@ -67,7 +66,7 @@ def main():
     )
 
     reduce_on_plateau = ReduceLROnPlateau(
-        monitor='loss',
+        monitor='val_loss',
         factor=0.5,
         patience=5,
         verbose=1,
@@ -89,8 +88,8 @@ def main():
     if initial_weights:
         train_model.load_weights(initial_weights)
 
-    print_summary(train_model)
-    plot_model(train_model, to_file='images/MobileNetv2.png', show_shapes=True)
+    print(train_model.summary())
+    # plot_model(train_model, to_file='images/MobileNetv2.png', show_shapes=True)
 
     optimizer = Adam(lr=config['train']['learning_rate'], clipnorm=0.001)
 
@@ -99,7 +98,10 @@ def main():
     checkpoint_name = utils.get_checkpoint_name(config)
     utils.makedirs_4_file(checkpoint_name)
 
-    checkpoint_vloss = CustomModelCheckpoint(
+    static_chk_name = utils.get_static_checkpoint_name(config)
+    utils.makedirs_4_file(static_chk_name)
+
+    checkpoint_vloss = cbs.CustomModelCheckpoint(
         model_to_save=train_model,
         filepath=checkpoint_name,
         monitor='val_loss',
@@ -108,9 +110,42 @@ def main():
         mode='min',
         period=1
     )
+    
+    neptune_mon = cbs.NeptuneMonitor(
+        monitoring=['loss', 'val_loss', 'acc', 'val_acc'],
+        neptune=neptune
+    )
 
-    callbacks = [early_stop, reduce_on_plateau, checkpoint_vloss]
+    chk_static = ModelCheckpoint(
+        filepath=static_chk_name,
+        monitor='val_loss',
+        verbose=1,
+        save_best_only=True,
+        mode='min',
+        period=1
+    )
 
+    callbacks = [early_stop, reduce_on_plateau, checkpoint_vloss, neptune_mon, chk_static]
+
+    ### NEPTUNE ###
+    sources_to_upload = [
+        'models.py',
+        'config.json'
+    ]
+
+    params = {
+        'infer_size': "H{}xW{}".format(*config['model']['infer_shape']),
+        'classes': config['model']['labels'],
+    }
+
+    neptune.create_experiment(
+        name=utils.get_neptune_name(config),
+        upload_stdout=False,
+        upload_source_files=sources_to_upload,
+        params=params
+    )
+    ### NEPTUNE ###
+    
     hist = train_model.fit_generator(
         generator=train_generator,
         steps_per_epoch=len(train_generator) * config['train']['train_times'],
@@ -124,13 +159,16 @@ def main():
         workers=multiprocessing.cpu_count(),
         max_queue_size=100
     )
+    
+    neptune.send_artifact(static_chk_name)
+    neptune.send_artifact('config.json')
 
     # Hand-made history
-    if not os.path.exists('model'):
-        os.makedirs('model')
+    # if not os.path.exists('model'):
+    #     os.makedirs('model')
 
-    df = pd.DataFrame.from_dict(hist.history)
-    df.to_csv('model/hist.csv', encoding='utf-8', index=False)
+    # df = pd.DataFrame.from_dict(hist.history)
+    # df.to_csv('model/hist.csv', encoding='utf-8', index=False)
 
 
 if __name__ == '__main__':

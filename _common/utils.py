@@ -53,10 +53,16 @@ def get_pb_graph_fpath(config):
 
 
 def _get_root_name(config):
-    root = '{}_{}x{}_t{}'.format(config['model']['base'],
+    if 'tiles' in config['model']:
+        root = '{}_{}x{}_t{}'.format(config['model']['base'],
+                                    config['model']['infer_shape'][0],
+                                    config['model']['infer_shape'][1],
+                                    config['model']['tiles']
+                                    )
+    else:
+        root = '{}_{}x{}'.format(config['model']['base'],
                                  config['model']['infer_shape'][0],
-                                 config['model']['infer_shape'][1],
-                                 config['model']['tiles']
+                                 config['model']['infer_shape'][1]
                                  )
     return root
     
@@ -66,10 +72,16 @@ def _get_root_checkpoint_name(config):
 
 
 def get_neptune_name(config):
-    root = '{}_{}x{}_t{}'.format(config['model']['base'],
+    if 'tiles' in config['model']:
+        root = '{}_{}x{}_t{}'.format(config['model']['base'],
+                                     config['model']['infer_shape'][0],
+                                     config['model']['infer_shape'][1],
+                                     config['model']['tiles']
+                                     )
+    else:
+        root = '{}_{}x{}'.format(config['model']['base'],
                                  config['model']['infer_shape'][0],
-                                 config['model']['infer_shape'][1],
-                                 config['model']['tiles']
+                                 config['model']['infer_shape'][1]
                                  )
     return root
     
@@ -81,6 +93,8 @@ def get_checkpoint_name(config):
 def get_mAP_checkpoint_name(config):
     return _get_root_checkpoint_name(config) + '_ep{epoch:03d}-val_loss{val_loss:.3f}-best_mAP{mAP:.3f}' + '.h5'
 
+def get_static_checkpoint_name(config):
+    return _get_root_checkpoint_name(config) + '.h5'
 
 def get_mAP_checkpoint_static_name(config):
     return _get_root_checkpoint_name(config) + '.h5'

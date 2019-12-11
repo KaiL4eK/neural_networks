@@ -1,8 +1,8 @@
-from keras.models import Model
-from keras.layers import Input, Conv2D, GlobalAveragePooling2D, Dropout, DepthwiseConv2D
-from keras.layers import Activation, BatchNormalization, add, Reshape, ReLU
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Conv2D, GlobalAveragePooling2D, Dropout, DepthwiseConv2D
+from tensorflow.keras.layers import Activation, BatchNormalization, add, Reshape, ReLU
 
-from keras import backend as K
+from tensorflow.keras import backend as K
 
 
 def _conv_block(inputs, filters, kernel, strides):
@@ -129,7 +129,7 @@ def create(
     :param input_shape: Integer, number of classes
     :return: Keras model
     """
-    base_list = { "CustomMobileNetv2": mobilenet_v2 }
+    base_list = { "TSR_CstmMobileNetv2": mobilenet_v2 }
 
     if base_name not in base_list:
         print('No such model {}'.format(base_name))

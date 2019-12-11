@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from keras.utils import to_categorical, Sequence
+from tensorflow.keras.utils import to_categorical, Sequence
 
 import imgaug as ia
 from imgaug import augmenters as iaa
@@ -38,6 +38,8 @@ class BatchGenerator(Sequence):
         self.norm = norm
 
         self.augment_init()
+
+        # self.shape = [len(self.instances), ]
 
         if shuffle:
             np.random.shuffle(self.instances)

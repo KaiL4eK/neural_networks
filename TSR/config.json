@@ -1,14 +1,13 @@
 {
     "model" : {
         "main_name":            "TSR",
-        "base":                 "CustomMobileNetv2",
+        "base":                 "TSR_CstmMobileNetv2",
         "labels":               ["brick", "forward", "forward_left", "forward_right", "left", "right", "traffic_light", "negative"],
         "infer_shape":          [48, 48]
     },
 
     "train": {
-        "train_folder":         "signs_ds",
-        "negatives_folder":     "signs_neg",
+        "train_folder":         "data_root",
         "cache_name":           "",
 
         "train_times":          3,
@@ -21,14 +20,14 @@
 
     "valid": {
         "valid_folder":         "signs_valid",
-        "cache_name":           "pkl/sign_test.pkl",
+        "cache_name":           "",
 
         "valid_times":          1
     },
 
     "eval": {
         "valid_image_folder":   "signs_eval",
-        "cache_name":           "pkl/sign_eval.pkl"
+        "cache_name":           ""
     },
 
     "infer": {
