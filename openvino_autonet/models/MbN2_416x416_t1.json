@@ -1,0 +1,102 @@
+{
+    "eval": {
+        "annot_folder": [
+            "../data/RTSD_VOC_Test/Annotations/"
+        ],
+        "image_folder": [
+            "../data/RTSD_VOC_Test/Images/"
+        ],
+        "cache_name": ""
+    },
+    "model": {
+        "main_name": "TSD_MbNv2",
+        "anchors_per_output": 3,
+        "labels": [
+            "brick",
+            "forward",
+            "forward_left",
+            "forward_right",
+            "left",
+            "right",
+            "traffic_light"
+        ],
+        "anchors": [
+            42,
+            47,
+            62,
+            73,
+            93,
+            101
+        ],
+        "base_params": {
+            "alpha": 0.35
+        },
+        "downsample": [
+            32
+        ],
+        "infer_shape": [
+            416,
+            416
+        ],
+        "tiles": 1,
+        "base": "MbN2",
+        "output_names": [
+            "PredictionLayer_0/BiasAdd"
+        ],
+        "input_names": [
+            "input_img"
+        ]
+    },
+    "train": {
+        "iou_thresh": 0.5,
+        "train_times": 1,
+        "obj_scale": 5,
+        "annot_folder": [
+            "../data/RF/TSD/RF17/Annotations",
+            "../data/RF/TSD/RF19/Annotations",
+            "../data/RF/TSD/Uni/Annotations"
+        ],
+        "xywh_scale": 1,
+        "nms_thresh": 0.5,
+        "obj_thresh": 0.5,
+        "class_scale": 1,
+        "mbpi": 2,
+        "optimizer": "Adam",
+        "freeze": false,
+        "grid_scales": [
+            1,
+            1,
+            1
+        ],
+        "lr_decay": 0,
+        "max_input_size": [
+            448,
+            448
+        ],
+        "min_input_size": [
+            288,
+            288
+        ],
+        "cache_name": "",
+        "load_src_weights": false,
+        "debug": false,
+        "noobj_scale": 1,
+        "clipnorm": 0.001,
+        "learning_rate": 0.0001,
+        "warmup_epochs": 0,
+        "batch_size": 32,
+        "gpus": "0",
+        "image_folder": [
+            "../data/RF/TSD/RF17/Images",
+            "../data/RF/TSD/RF19/Images",
+            "../data/RF/TSD/Uni/Images"
+        ],
+        "nb_epochs": 500
+    },
+    "valid": {
+        "annot_folder": [],
+        "image_folder": [],
+        "cache_name": "",
+        "valid_times": 1
+    }
+}
