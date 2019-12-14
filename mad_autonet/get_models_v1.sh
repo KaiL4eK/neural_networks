@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-HOST="10.139.0.105:8000"
+HOST="194.85.169.205:8000"
 
 mkdir -p models; cd models
 

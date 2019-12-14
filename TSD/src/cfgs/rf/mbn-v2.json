@@ -1,6 +1,6 @@
 {
     "model" : {
-        "main_name":            "TSD_MbNv2",
+        "main_name":            "RF_TSD_MbNv2",
         "base":                 "MbN2",
         "base_params": {
             "alpha": 0.35

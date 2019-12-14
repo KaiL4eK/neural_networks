@@ -112,7 +112,7 @@ def main():
     )
     
     neptune_mon = cbs.NeptuneMonitor(
-        monitoring=['loss', 'val_loss', 'acc', 'val_acc'],
+        monitoring=['loss', 'val_loss', 'accuracy', 'val_accuracy'],
         neptune=neptune
     )
 
