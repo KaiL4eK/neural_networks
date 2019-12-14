@@ -3,17 +3,17 @@ namespace po = boost::program_options;
 
 #include <cmath>
 #include <iostream>
-using namespace std;
+#include <chrono>
 
+using namespace std;
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 
-#include <chrono>
-
-/* Taken from intel samples */
 #include "yolo_ov.hpp"
+
+#include <ros/ros.h>
 
 string g_ir_path;
 string g_cfg_path;
@@ -31,76 +31,13 @@ string g_image_fpath;
 
 int main(int argc, char **argv)
 {
-    po::options_description desc("Options for detection app");
+    ros::init(argc, argv, "yolo_detector");
+    ros::NodeHandle nh("~");
 
-    po::options_description_easy_init opt_init = desc.add_options();
-    opt_init("help,h", "Print help messages");
-    opt_init("ir_path,r", po::value<string>(), "IR path");
-    opt_init("cfg_path,c", po::value<string>(), "Net config path");
-    opt_init("device,d", po::value<string>()->default_value("CPU"), "Device type: CPU, MYRIAD");
-    opt_init("image,i", po::value<string>(), "Path to sample image");
-
-    po::variables_map vm;
-    try
-    {
-        po::store(po::parse_command_line(argc, argv, desc), vm); // can throw
-
-        if (vm.count("help"))
-        {
-            cout << "Basic Command Line Parameter App" << endl
-                 << desc << endl;
-            return EXIT_SUCCESS;
-        }
-
-        if (vm.count("device"))
-        {
-            g_device_type = vm["device"].as<string>();
-
-            cout << "Device type: " << g_device_type << endl;
-        }
-
-        if (vm.count("image"))
-        {
-            g_image_fpath = vm["image"].as<string>();
-
-            cout << "Set image path: " << g_image_fpath << endl;
-        }
-
-        if (vm.count("ir_path"))
-        {
-            g_ir_path = vm["ir_path"].as<string>();
-
-            cout << "Parsing IR path: " << g_ir_path << endl;
-        }
-        else
-        {
-            cout << "IR path not set, reset" << endl;
-            cout << desc << endl;
-            return EXIT_FAILURE;
-        }
-
-        if (vm.count("cfg_path"))
-        {
-            g_cfg_path = vm["cfg_path"].as<string>();
-
-            cout << "Parsing Config path: " << g_cfg_path << endl;
-        }
-        else
-        {
-            cout << "Config path not set, reset" << endl;
-            cout << desc << endl;
-            return EXIT_FAILURE;
-        }
-
-        po::notify(vm);
-    }
-    catch (po::error &e)
-    {
-        cerr << "Error: " << e.what() << endl
-             << endl;
-        cerr << desc << endl;
-        return EXIT_FAILURE;
-    }
+    nh.getParam("config_path", g_cfg_path);
+    nh.getParam("ir_path", g_ir_path);
+    nh.getParam("device", g_device_type);
+    nh.getParam("input", g_image_fpath);
 
     cv::Mat input_image = cv::imread(g_image_fpath);
 
@@ -117,7 +54,10 @@ int main(int argc, char **argv)
         cout << "Detection: " << det.cls_idx << endl;
     }
 
-    cv::imshow("Boxes", input_image);
+    cv::Mat resized;
+    cv::resize(input_image, resized, cv::Size(800, 600));
+
+    cv::imshow("Boxes", resized);
     cv::waitKey(0);
 
     return EXIT_SUCCESS;
