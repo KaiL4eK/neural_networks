@@ -42,22 +42,26 @@ def prepare_generators(config):
     if config['train']['cache_name']:
         utils.makedirs(os.path.dirname(config['train']['cache_name']))
 
-    train_ints, valid_ints, labels, max_box_per_image = create_training_instances(
-        config['train']['annot_folder'],
-        config['train']['image_folder'],
-        config['train']['cache_name'],
-        config['valid']['annot_folder'],
-        config['valid']['image_folder'],
-        config['valid']['cache_name'],
-        config['model']['labels']
-    )
+    train_ints, train_labels, \
+        valid_ints, valid_labels, \
+        labels, max_box_per_image = create_training_instances(
+            config['train']['annot_folder'],
+            config['train']['image_folder'],
+            config['train']['cache_name'],
+            config['valid']['annot_folder'],
+            config['valid']['image_folder'],
+            config['valid']['cache_name'],
+            config['model']['labels']
+        )
 
     # Dirty hack
-    train_ints, train_labels = replace_all_labels_2_one(train_ints, 'sign')
-    valid_ints, valid_labels = replace_all_labels_2_one(valid_ints, 'sign')
-    labels = list(train_labels.keys())
+    # train_ints, train_labels = replace_all_labels_2_one(train_ints, 'object')
+    # valid_ints, valid_labels = replace_all_labels_2_one(valid_ints, 'object')
+    # labels = list(train_labels.keys())
 
-    print('\nTraining on: \t{}\n'.format(labels))
+    print('\nTraining on: \t{}\n'.format(train_labels))
+    print('\nValidating on: \t{}\n'.format(valid_labels))
+    print('\nLabels: \t{}\n'.format(labels))
     print('\nSamples: {} / {}\t\n'.format(len(train_ints), len(valid_ints)))
 
     ###############################
@@ -321,7 +325,7 @@ def start_train(
 if __name__ == '__main__':
     args = parse_args()
 
-    utils.init_session(0.5)
+    utils.init_session()
 
     config_path = args.conf
     initial_weights = args.weights
@@ -339,5 +343,7 @@ if __name__ == '__main__':
 
     start_train(config, config_path, yolo_model, train_generator, valid_generator, dry_mode)
 
-    neptune.stop()
+    if not dry_mode:
+        neptune.stop()
+    
     clear_session()

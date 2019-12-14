@@ -269,12 +269,18 @@ class YoloLayer(Layer):
         wh_delta = object_mask * wh_scale * (pred_box_wh-true_box_wh)
         conf_delta = object_mask * tf.nn.sigmoid_cross_entropy_with_logits(labels=true_box_conf, logits=pred_box_conf) * self.obj_scale + \
                     (1-object_mask) * conf_delta * self.noobj_scale
-        class_delta = object_mask * tf.nn.sigmoid_cross_entropy_with_logits(labels=true_box_class, logits=pred_box_class)
+        class_delta = object_mask * tf.nn.sigmoid_cross_entropy_with_logits(labels=true_box_class, logits=pred_box_class) * self.class_scale
 
         loss_xy = tf.reduce_sum(tf.square(xy_delta), list(range(1, 5)))
         loss_wh = tf.reduce_sum(tf.square(wh_delta), list(range(1, 5)))
         loss_conf = tf.reduce_sum(tf.square(conf_delta), list(range(1, 5)))
-        loss_class = tf.reduce_sum(class_delta * self.class_scale, list(range(1, 5)))
+        loss_class = tf.reduce_sum(class_delta, list(range(1, 5)))
+
+        # print('\n')
+        # print('Loss XY: {}'.format(loss_xy))
+        # print('Loss WH: {}'.format(loss_wh))
+        # print('Loss Conf: {}'.format(loss_conf))
+        # print('Loss Class: {}'.format(loss_class))
 
         loss = loss_xy + loss_wh + loss_conf + loss_class
 
@@ -643,9 +649,25 @@ class YOLO_Model:
             annotations = generator.load_full_annotation_bboxes(i)
 
             for label in range(generator.num_classes()):
-                all_annotations[i][label] = np.array([[box.xmin, box.ymin, box.xmax, box.ymax] 
-                                                     for box in annotations if box.class_idx == label])
-                
+                all_annotations[i][label] = \
+                    np.array([[box.xmin, box.ymin, box.xmax, box.ymax] 
+                              for box in annotations if box.class_idx == label])
+
+#             for pred_box in pred_boxes:
+#                 print(pred_box)
+
+            # print('Annotations:')
+            # for annot_image in all_annotations:
+            #     for label, annot in enumerate(annot_image):
+            #         if annot is not None and len(annot) > 0:
+            #             print('Annotation: {} / {}'.format(label, annot))
+
+            # print('Detections:')
+            # for det_image in all_detections:
+            #     for label, detec in enumerate(det_image):
+            #         if detec is not None and len(detec) > 0:
+            #             print('Detection: {} / {}'.format(label, detec))
+
         # compute mAP by comparing all detections and all annotations
         average_precisions = {}
 

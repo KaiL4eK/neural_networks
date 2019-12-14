@@ -153,6 +153,17 @@ def split_by_objects(instances, labels, rate):
 
     return train_entries, train_lbls, valid_entries, valid_lbls
 
+def get_labels_dict(instances):
+    labels = {}
+
+    for inst in instances:
+        for obj in inst['object']:
+            if obj['name'] in labels:
+                labels[obj['name']] += 1
+            else:
+                labels[obj['name']] = 1
+
+    return labels
 
 def create_training_instances(
         train_annot_folder,
@@ -177,9 +188,17 @@ def create_training_instances(
         print("valid_annot_folder not exists. Spliting the trainining set.")
 
         train_ints, valid_ints = train_test_split(train_ints,
-                                                  test_size=0.1,
+                                                  test_size=0.3,
                                                   random_state=42)
-        valid_labels = train_labels
+
+        train_labels = get_labels_dict(train_ints)
+        valid_labels = get_labels_dict(valid_ints)
+
+        overlap_labels = set(train_labels.keys()).intersection(set(valid_labels.keys()))
+
+        if len(overlap_labels) != len(train_labels.keys()) or \
+           len(overlap_labels) != len(valid_labels.keys()):
+            raise Exception('Invalid split of data: {} vs {}'.format(train_labels, valid_labels))
 
         # train_ints, train_labels, valid_ints, valid_labels = split_by_objects(
         # train_ints, train_labels, 0.2)
@@ -207,5 +226,5 @@ def create_training_instances(
     max_box_per_image = max([len(inst['object'])
                              for inst in (train_ints + valid_ints)])
 
-    return train_ints, valid_ints, sorted(labels), max_box_per_image
+    return train_ints, train_labels, valid_ints, valid_labels, sorted(labels), max_box_per_image
 

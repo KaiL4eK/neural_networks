@@ -18,7 +18,7 @@ class BoundBox:
         self.class_idx = label_idx
 
         # Means score of best class
-        if self.classes:
+        if self.classes is not None:
             self.label = np.argmax(self.classes)
             self.score = self.classes[self.label]
         else:
@@ -29,7 +29,7 @@ class BoundBox:
         return self.score
 
     def reset_class_score(self, class_idx):
-        if self.classes:
+        if self.classes is not None:
             self.classes[class_idx] = 0
             self.label = np.argmax(self.classes)
             self.score = self.classes[self.label]

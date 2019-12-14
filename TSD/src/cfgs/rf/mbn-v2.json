@@ -1,0 +1,62 @@
+{
+    "model" : {
+        "main_name":            "TSD_MbNv2",
+        "base":                 "MbN2",
+        "base_params": {
+            "alpha": 0.35
+        },
+        "downsample":           [32],
+        "anchors":              [42,47, 62,73, 93,101],
+        "labels":               [],
+        "infer_shape":          [416, 416],
+        "tiles":                1,
+        "anchors_per_output":   3
+    },
+
+    "train": {
+        "image_folder":         ["../data/RF/TSD/RF17/Images", "../data/RF/TSD/RF19/Images", "../data/RF/TSD/Uni/Images"],
+        "annot_folder":         ["../data/RF/TSD/RF17/Annotations", "../data/RF/TSD/RF19/Annotations", "../data/RF/TSD/Uni/Annotations"],
+        "cache_name":           "",
+        
+        "min_input_size":       [288, 288],
+        "max_input_size":       [448, 448],
+
+        "train_times":          1,
+        "batch_size":           32,
+        "nb_epochs":            500,
+        "warmup_epochs":        0,
+        "obj_thresh":           0.5,
+        "iou_thresh":           0.5,
+        "nms_thresh":           0.5,
+        "gpus":                 "0",
+        
+        "optimizer":            "Adam",
+        "learning_rate":        1e-4,
+        "lr_decay":             0,
+        "clipnorm":             0.001,
+        
+        "grid_scales":          [1,1,1],
+        "obj_scale":            5,
+        "noobj_scale":          1,
+        "xywh_scale":           1,
+        "class_scale":          1,
+
+        "debug":                false,
+        "freeze":               false,
+        "load_src_weights":     false
+    },
+
+    "valid": {
+        "image_folder":         [],
+        "annot_folder":         [],
+        "cache_name":           "",
+
+        "valid_times":          1
+    },
+
+    "eval": {
+        "image_folder":         ["../data/RTSD_VOC_Test/Images/"],
+        "annot_folder":         ["../data/RTSD_VOC_Test/Annotations/"],
+        "cache_name":           ""
+    }
+}

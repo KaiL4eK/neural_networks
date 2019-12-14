@@ -147,12 +147,18 @@ def _main_():
         config['model']['labels']
     )
 
+    average_images_ration = 0
+    average_images_ration_cnt = 0
+
     # run k_mean to find the anchors
     annotation_dims = []
     for image in train_imgs:
         img_sz = (image['height'], image['width'])
         image_width = image['width']
         image_height = image['height']
+
+        average_images_ration += image_width / image_height
+        average_images_ration_cnt += 1
 
         img_sz = utils.tiles_get_sz(img_sz, config['model']['tiles'])
 
@@ -168,6 +174,8 @@ def _main_():
 
     annotation_dims = np.array(annotation_dims)
     centroids = run_kmeans(annotation_dims, num_anchors)
+
+    print('\naverage image ration (w/h): {}'.format(average_images_ration/average_images_ration_cnt))
 
     # write anchors to file
     print('\naverage IOU for {} anchors: {:0.2f}'.format(num_anchors, avg_IOU(annotation_dims, centroids)))
