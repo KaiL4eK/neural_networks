@@ -33,15 +33,18 @@ def _main_():
 
     output_pb_fpath = utils.get_pb_graph_fpath(config)
 
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.3, allow_growth=True)
-    sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+    # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.3, allow_growth=True)
+    sess = tf.Session(config=tf.ConfigProto())
 
     K.set_session(sess)
     K.set_learning_phase(0)
 
     train_sz = config['model']['infer_shape']
 
-    labels = ['sign']
+    if config['model'].get('labels'):
+        labels = config['model'].get('labels')
+    else:
+        labels = ['object']
 
     config['model']['labels'] = labels
     yolo_model = yolo.YOLO_Model(
