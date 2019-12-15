@@ -6,26 +6,28 @@ from tensorflow.keras.utils import Sequence
 from _common.bbox import BoundBox, bbox_iou
 from _common.image import apply_random_scale_and_crop, random_distort_image, random_flip
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class BatchGenerator(Sequence):
     def __init__(self,
                  instances,
                  anchors,
                  labels,
-                 downsample,  # ratio between network input's size and network output's size, 32 for YOLOv3
-                 min_net_size=[416, 416],
-                 max_net_size=[416, 416],
+                 downsample,
                  max_box_per_image=30,
                  batch_size=1,
                  shuffle=False,
-                 jitter=0.3,
-                 scale_distr=0.25,
-                 flip=False,
+                 aug_params=None,
                  norm=None,
                  infer_sz=None,
+                 min_net_size=None,
+                 max_net_size=None,
                  mem_mode=True,
                  tile_count=1
                  ):
+
         self.instances = instances
         self.batch_size = batch_size
         self.labels = labels
@@ -35,26 +37,37 @@ class BatchGenerator(Sequence):
         self.shuffle = shuffle
         self.mem_mode = mem_mode
         self.tile_count = tile_count
-
-        self.min_net_size = (np.array(min_net_size) //
-                             self.max_downsample) * self.max_downsample
-        self.max_net_size = (np.array(max_net_size) //
-                             self.max_downsample) * self.max_downsample
-
-        self.scale_distr = scale_distr
-        self.jitter = jitter
-        self.flip = flip
-        
         self.infer_sz = infer_sz
-        if self.infer_sz:
-            self.jitter = 0.0
-            self.scale_distr = 0.0
-            self.flip = 0
+
+        if min_net_size is None:
+            self.min_net_size = self.infer_sz
+        else:
+            self.min_net_size = (np.array(min_net_size) //
+                                self.max_downsample) * self.max_downsample
+
+        if max_net_size is None:
+            self.max_net_size = self.infer_sz
+        else:
+            self.max_net_size = (np.array(max_net_size) //
+                                self.max_downsample) * self.max_downsample
+
+        # Augmentation params
+        self.aug_params = aug_params
+        if self.aug_params:
+            self.scale_distr = self.aug_params['scale_distr']
+            self.jitter = self.aug_params['jitter']
+            self.flip = self.aug_params['random_flip']
+            self.hue = self.aug_params['hue_var']
+            self.saturation = self.aug_params['saturation_var']
+            self.exposure = self.aug_params['exposure_var']
+            logger.info('Augmentation enabled')
+        else:
+            logger.warn('Augmentation disabled')
 
         self.norm = norm
         self.anchors = [BoundBox(0, 0, anchors[2 * i], anchors[2 * i + 1])
                         for i in range(len(anchors) // 2)]
-        
+
         self.net_size_h = 0
         self.net_size_w = 0
 
@@ -67,15 +80,16 @@ class BatchGenerator(Sequence):
 
         ### Prepare BoundingBoxes ###
         for sample_idx in range(len(self.instances)):
-            img_sz = (self.instances[sample_idx]['height'], self.instances[sample_idx]['width'])
+            img_sz = (self.instances[sample_idx]['height'],
+                      self.instances[sample_idx]['width'])
 
             # Create base bboxes
             self.instances[sample_idx][self._bboxes_key] = []
 
             for obj in self.instances[sample_idx]['object']:
-                annot_bbox = BoundBox(obj['xmin'], obj['ymin'], 
-                                      obj['xmax'], obj['ymax'], 
-                                      label_name=obj['name'], 
+                annot_bbox = BoundBox(obj['xmin'], obj['ymin'],
+                                      obj['xmax'], obj['ymax'],
+                                      label_name=obj['name'],
                                       label_idx=self.labels.index(obj['name']))
 
                 self.instances[sample_idx][self._bboxes_key] += [annot_bbox]
@@ -89,9 +103,9 @@ class BatchGenerator(Sequence):
                 self.instances[sample_idx][self._tile_img_bboxes_key] += [tile_bbox]
 
                 for obj in self.instances[sample_idx]['object']:
-                    annot_bbox = BoundBox(obj['xmin'], obj['ymin'], 
-                                          obj['xmax'], obj['ymax'], 
-                                          label_name=obj['name'], 
+                    annot_bbox = BoundBox(obj['xmin'], obj['ymin'],
+                                          obj['xmax'], obj['ymax'],
+                                          label_name=obj['name'],
                                           label_idx=self.labels.index(obj['name']))
 
                     if tile_bbox.intersect(annot_bbox) is None:
@@ -105,7 +119,7 @@ class BatchGenerator(Sequence):
 
                     self.instances[sample_idx][self._tile_ann_bboxes_key][tile_idx] += [annot_bbox]
         ### Prepare BoundingBoxes ###
-        
+
         if self.output_layers_count not in [1, 2, 3]:
             assert False, "Unchecked network output"
 
@@ -208,8 +222,8 @@ class BatchGenerator(Sequence):
                 yolo[instance_count, grid_y, grid_x, output_anchor_idx, 5 + obj_indx] = 1
 
                 # assign the true box to t_batch
-                true_box = [center_x, center_y, 
-                            objbox.xmax - objbox.xmin, 
+                true_box = [center_x, center_y,
+                            objbox.xmax - objbox.xmin,
                             objbox.ymax - objbox.ymin]
                 t_batch[instance_count, 0, 0, 0, true_box_index] = true_box
 
@@ -252,79 +266,100 @@ class BatchGenerator(Sequence):
     def _update_net_size(self, idx):
         if self.infer_sz:
             self.net_size_h, self.net_size_w = self.infer_sz
+
         elif idx % 10 == 0 or self.net_size_w == 0:
-            net_size_h = self.max_downsample * np.random.randint(self.min_net_size[0] / self.max_downsample,
-                                                                 self.max_net_size[0] / self.max_downsample + 1)
-            net_size_w = self.max_downsample * np.random.randint(self.min_net_size[1] / self.max_downsample,
-                                                                 self.max_net_size[1] / self.max_downsample + 1)
+            net_size_h = self.max_downsample * \
+                            np.random.randint(self.min_net_size[0] / self.max_downsample,
+                                              self.max_net_size[0] / self.max_downsample + 1)
+            net_size_w = self.max_downsample * \
+                            np.random.randint(self.min_net_size[1] / self.max_downsample,
+                                              self.max_net_size[1] / self.max_downsample + 1)
+
             self.net_size_h, self.net_size_w = net_size_h, net_size_w
 
         return self.net_size_h, self.net_size_w
 
     def _aug_image(self, idx, net_h, net_w):
         image = self._load_image(idx)
+        boxes = self._load_annotation_bboxes(idx)
 
         if image is None:
             print('Cannot find ', image_name)
 
-        # image = image[:,:,::-1] # RGB image
         image_h, image_w, _ = image.shape
-        flip = 0
-            
-        # determine the amount of scaling and cropping
-        dw = self.jitter * image_w
-        dh = self.jitter * image_h
 
-        new_ar = (image_w + np.random.uniform(-dw, dw)) / \
-                    (image_h + np.random.uniform(-dh, dh))
-        scale = np.random.uniform(1 - self.scale_distr,
-                                    1 + self.scale_distr)
+        if self.aug_params:
+            # image = image[:,:,::-1] # RGB image
+            flip = 0
 
-        if new_ar < 1:
-            new_h = int(scale * net_h)
-            new_w = int(net_h * new_ar)
-        else:
-            new_w = int(scale * net_w)
-            new_h = int(net_w / new_ar)
+            # determine the amount of scaling and cropping
+            dw = self.jitter * image_w
+            dh = self.jitter * image_h
 
-        dx = int((net_w - new_w)/2)
-        dy = int((net_h - new_h)/2)
-        if self.infer_sz is None:
+            new_ar = (image_w + np.random.uniform(-dw, dw)) / \
+                     (image_h + np.random.uniform(-dh, dh))
+            scale = np.random.uniform(
+                        1 - self.scale_distr,
+                        1 + self.scale_distr)
+
+            if new_ar < 1:
+                new_h = int(scale * net_h)
+                new_w = int(net_h * new_ar)
+            else:
+                new_w = int(scale * net_w)
+                new_h = int(net_w / new_ar)
+
             dx = int(np.random.uniform(0, net_w - new_w))
             dy = int(np.random.uniform(0, net_h - new_h))
 
-        # print(new_w, new_h, net_w, net_h, image_h, image_w)
+            # print(new_w, new_h, net_w, net_h, image_h, image_w)
 
-        # apply scaling and cropping
-        im_sized = apply_random_scale_and_crop(image, new_w, new_h, net_w, net_h, dx, dy)
+            # apply scaling and cropping
+            im_sized = apply_random_scale_and_crop(
+                image,
+                new_w, new_h,
+                net_w, net_h,
+                dx, dy)
 
-        if self.infer_sz is None:
             # randomly distort hsv space
-            im_sized = random_distort_image(im_sized, hue=18, saturation=1.1, exposure=1.1)
+            im_sized = random_distort_image(
+                im_sized,
+                hue=self.hue,
+                saturation=self.saturation,
+                exposure=self.exposure)
 
             # randomly flip
             if self.flip:
                 flip = np.random.randint(2)
                 im_sized = random_flip(im_sized, flip)
 
-        # print('  Source image sz: {}x{}'.format(image_w, image_h))
-        # print('  New image sz: {}x{}'.format(new_w, new_h))
-        # print('  Correction to {}x{}'.format(net_w, net_h))
-        # print('  Correected sz: {}x{}'.format(im_sized.shape[1], im_sized.shape[0]))
+            # correct the size and pos of bounding boxes
+            boxes = self._correct_bounding_boxes(
+                    boxes,
+                    new_w, new_h,
+                    net_h, net_w,
+                    image_w, image_h,
+                    dx, dy,
+                    flip)
+        else:
+            new_h, new_w = cutls.get_embedded_img_sz(
+                            image.shape[0:2],
+                            (net_h, net_w))
 
-        # boxes = instance['object']
-        boxes = self._load_annotation_bboxes(idx)
-        
-        # for objbox in boxes:
-        #     print('    Bbox for {}: {}'.format(idx, objbox.get_str()))
+            im_sized = cutls.image2net_input_sz(
+                        image, net_h, net_w)
 
-        # correct the size and pos of bounding boxes
-        all_objs = self._correct_bounding_boxes(boxes, new_w, new_h, net_h, net_w, dx, dy, flip, image_w, image_h)
+            dx = int(net_w - new_w)/2
+            dy = int(net_h - new_h)/2
 
-        # for objbox in all_objs:
-        #     print('    Corrected bbox for {}: {}'.format(idx, objbox.get_str()))
+            boxes = self._correct_bounding_boxes(
+                    boxes,
+                    new_w, new_h,
+                    net_h, net_w,
+                    image_w, image_h,
+                    dx, dy)
 
-        return im_sized, all_objs
+        return im_sized, boxes
 
     def on_epoch_end(self):
         if self.shuffle:
@@ -350,25 +385,21 @@ class BatchGenerator(Sequence):
 
         return anchors
 
-    def _correct_bounding_boxes(self, boxes, new_w, new_h, net_h, net_w, dx, dy, flip, image_w, image_h):
+    def _correct_bounding_boxes(self, boxes, new_w, new_h, net_h, net_w,
+                                image_w, image_h, dx=0, dy=0, flip=0):
         # randomize boxes' order
         np.random.shuffle(boxes)
 
         # correct sizes and positions
         sx, sy = float(new_w)/image_w, float(new_h)/image_h
 
-        def _constrain(min_v, max_v, value):
-            if value < min_v: return min_v
-            if value > max_v: return max_v
-            return value 
-
         corrected_boxes = []
 
         for box in boxes:
-            box.xmin = int(_constrain(0, net_w, box.xmin*sx + dx))
-            box.xmax = int(_constrain(0, net_w, box.xmax*sx + dx))
-            box.ymin = int(_constrain(0, net_h, box.ymin*sy + dy))
-            box.ymax = int(_constrain(0, net_h, box.ymax*sy + dy))
+            box.xmin = int(np.clip(box.xmin*sx + dx, 0, net_w))
+            box.xmax = int(np.clip(box.xmax*sx + dx, 0, net_w))
+            box.ymin = int(np.clip(box.ymin*sy + dy, 0, net_h))
+            box.ymax = int(np.clip(box.ymax*sy + dy, 0, net_h))
 
             if box.xmax <= box.xmin or box.ymax <= box.ymin:
                 continue

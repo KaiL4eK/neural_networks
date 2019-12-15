@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 
-from _common.voc import replace_all_labels_2_one, create_training_instances
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+from _common import voc
 import _common.callbacks as cbs
 from _common import utils
 
@@ -16,6 +20,7 @@ import tensorflow.keras.optimizers as opt
 # from keras_radam import RAdam
 from tensorflow.keras.models import load_model
 from tensorflow.keras.backend import clear_session
+
 
 import neptune
 neptune.init('kail4ek/sandbox')
@@ -39,30 +44,74 @@ def parse_args():
 
 
 def prepare_generators(config):
-    if config['train']['cache_name']:
-        utils.makedirs(os.path.dirname(config['train']['cache_name']))
+    utils.makedirs_4_file(config['train']['cache_name'])
+    utils.makedirs_4_file(config['valid']['cache_name'])
 
-    train_ints, train_labels, \
-        valid_ints, valid_labels, \
-        labels, max_box_per_image = create_training_instances(
-            config['train']['annot_folder'],
-            config['train']['image_folder'],
-            config['train']['cache_name'],
+    labels = config['model']['labels']
+
+    # parse annotations of the training set
+    train_ints, train_labels = voc.parse_voc_annotation(
+        config['train']['annot_folder'],
+        config['train']['image_folder'],
+        config['train']['cache_name'],
+        labels)
+
+    # parse annotations of the validation set, if any, otherwise split the training set
+    if config['valid']['annot_folder']:
+        valid_ints, valid_labels = voc.parse_voc_annotation(
             config['valid']['annot_folder'],
             config['valid']['image_folder'],
             config['valid']['cache_name'],
-            config['model']['labels']
-        )
+            labels)
+    else:
+        from sklearn.model_selection import train_test_split
+
+        print("valid_annot_folder not exists. Spliting the trainining set.")
+
+        train_ints, valid_ints = train_test_split(train_ints,
+                                                  test_size=0.3)
+
+        train_labels = voc.get_labels_dict(train_ints)
+        valid_labels = voc.get_labels_dict(valid_ints)
+
+        overlap_labels = set(train_labels.keys()).intersection(set(valid_labels.keys()))
+
+        if len(overlap_labels) != len(train_labels.keys()) or \
+           len(overlap_labels) != len(valid_labels.keys()):
+            raise Exception('Invalid split of data: {} vs {}'.format(train_labels, valid_labels))
+
+    print('After split: {} / {}'.format(len(train_ints), len(valid_ints)))
+
+    # compare the seen labels with the given labels in config.json
+    if len(labels) > 0:
+        overlap_labels = set(labels).intersection(set(train_labels.keys()))
+
+        print('Seen labels: \t' + str(train_labels) + '\n')
+        print('Given labels: \t' + str(labels))
+
+        # return None, None, None if some given label is not in the dataset
+        if len(overlap_labels) != len(labels):
+            raise Exception('Some labels have no annotations! Please revise the list of labels in the config.json.')
+    else:
+        print('No labels are provided. Train on all seen labels.')
+        print(train_labels)
+        print(valid_labels)
+        labels = list(train_labels.keys())
+
+    max_box_per_image = max([len(inst['object'])
+                             for inst in (train_ints + valid_ints)])
 
     # Dirty hack
-    # train_ints, train_labels = replace_all_labels_2_one(train_ints, 'object')
-    # valid_ints, valid_labels = replace_all_labels_2_one(valid_ints, 'object')
+    # train_ints, train_labels = voc.replace_all_labels_2_one(train_ints, 'object')
+    # valid_ints, valid_labels = voc.replace_all_labels_2_one(valid_ints, 'object')
     # labels = list(train_labels.keys())
 
-    print('\nTraining on: \t{}\n'.format(train_labels))
-    print('\nValidating on: \t{}\n'.format(valid_labels))
-    print('\nLabels: \t{}\n'.format(labels))
-    print('\nSamples: {} / {}\t\n'.format(len(train_ints), len(valid_ints)))
+    print('\n')
+    print('Training on: \t{}'.format(train_labels))
+    print('Validating on: \t{}'.format(valid_labels))
+    print('Labels: \t{}'.format(labels))
+    print('Samples: {} / {}\t'.format(len(train_ints), len(valid_ints)))
+    print('\n')
 
     ###############################
     #   Create the generators
@@ -78,7 +127,7 @@ def prepare_generators(config):
         min_net_size=config['train']['min_input_size'],
         max_net_size=config['train']['max_input_size'],
         shuffle=True,
-        jitter=0.1,
+        aug_params=config['train'].get('augmentation', None),
         norm=utils.image_normalize,
         tile_count=config['model']['tiles']
     )
@@ -96,6 +145,7 @@ def prepare_generators(config):
         tile_count=config['model']['tiles']
     )
 
+    # Updated based on data parsing
     config['train']['mbpi'] = max_box_per_image
     config['model']['labels'] = labels
 
@@ -345,5 +395,5 @@ if __name__ == '__main__':
 
     if not dry_mode:
         neptune.stop()
-    
+
     clear_session()

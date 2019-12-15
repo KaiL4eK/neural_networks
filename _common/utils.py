@@ -45,7 +45,7 @@ def get_ncs_graph_fpath(config):
 def get_pb_graph_fpath(config):
     output_dir = '_gen/pb_graphs'
     main_fname = _get_root_name(config)
-    
+
     output_fpath = os.path.join(output_dir, main_fname)
     makedirs_4_file(output_fpath)
 
@@ -65,8 +65,8 @@ def _get_root_name(config):
                                  config['model']['infer_shape'][1]
                                  )
     return root
-    
-    
+
+
 def _get_root_checkpoint_name(config):
     return 'chk/{}'.format(_get_root_name(config))
 
@@ -84,7 +84,7 @@ def get_neptune_name(config):
                                  config['model']['infer_shape'][1]
                                  )
     return root
-    
+
 
 def get_checkpoint_name(config):
     return _get_root_checkpoint_name(config) + '_ep{epoch:03d}-val_loss{val_loss:.3f}-loss{loss:.3f}' + '.h5'
@@ -188,6 +188,9 @@ def makedirs(dirpath):
 
 
 def makedirs_4_file(filepath):
+    if not filepath:
+        return
+
     dirpath = os.path.dirname(filepath)
     makedirs(dirpath)
 
