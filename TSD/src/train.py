@@ -69,7 +69,7 @@ def prepare_generators(config):
         print("valid_annot_folder not exists. Spliting the trainining set.")
 
         train_ints, valid_ints = train_test_split(train_ints,
-                                                  test_size=0.3)
+                                                  test_size=0.4)
 
         train_labels = voc.get_labels_dict(train_ints)
         valid_labels = voc.get_labels_dict(valid_ints)

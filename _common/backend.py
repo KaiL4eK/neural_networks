@@ -71,6 +71,58 @@ class SmallMobileNetV2(DetBackend):
         self.model = Model(*self.inputs, *self.outputs)
 
 
+class RFMobileNetV2(DetBackend):
+    def __init__(self, **kwargs):
+        train_shape = kwargs['train_shape']
+        base_params = kwargs['base_params']
+
+        image_input = Input(shape=train_shape, name='input_img')
+
+        alpha = base_params['alpha']
+
+        channel_axis = 1 if mnu.K.image_data_format() == 'channels_first' else -1
+
+        first_block_filters = mnu._make_divisible(32 * alpha, 8)
+        x = mnu.Conv2D(first_block_filters, 3, padding='same', strides=2, use_bias=False, name='Conv1')(image_input)
+        x = mnu.BatchNormalization(axis=channel_axis, name='bn_Conv1')(x)
+        x = mnu.ReLU(6., name='Conv1_relu')(x)
+
+        x = mnu._inverted_residual_block(x, 16, 3, t=1, s=1, n=1, alpha=alpha, block_id=0)
+        x = mnu._inverted_residual_block(x, 24, 3, t=6, s=2, n=2, alpha=alpha, block_id=1)
+        x4 = x
+        x = mnu._inverted_residual_block(x, 32, 3, t=6, s=2, n=3, alpha=alpha, block_id=3)
+        x8 = x
+        x = mnu._inverted_residual_block(x, 64, 3, t=6, s=2, n=4, alpha=alpha, block_id=6)
+        x = mnu._inverted_residual_block(x, 96, 3, t=6, s=1, n=3, alpha=alpha, block_id=10)
+        x16 = x
+
+        x = mnu._inverted_residual_block(x, 160, 3, t=6, s=2, n=3, alpha=alpha, block_id=13)
+        x = mnu._inverted_residual_block(x, 320, 3, t=6, s=1, n=1, alpha=alpha, block_id=16)
+        x32 = x
+        
+        last_block_filters = mnu._make_divisible(1280 * alpha, 8)
+        x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='out_conv1')(x32)
+        x = mnu.BatchNormalization(axis=channel_axis, name='out_bn1')(x)
+        y1 = mnu.ReLU(6., name='out_relu1')(x)
+
+        # Next branch
+        x16u = UpSampling2D(2)(x32)
+        x = Concatenate()([x16u, x16])
+
+        x = mnu._inverted_residual_block(x, 32, 3, t=6, s=1, n=2, alpha=alpha, block_id=17)
+
+        last_block_filters = mnu._make_divisible(1280 / 4 * alpha, 8)
+        x = mnu.Conv2D(last_block_filters, 1, padding='same', strides=1, use_bias=False, name='out_conv2')(x)
+        x = mnu.BatchNormalization(axis=channel_axis, name='out_bn2')(x)
+        y2 = mnu.ReLU(6., name='out_relu2')(x)
+
+        self.outputs = [y1, y2]
+        self.inputs = [image_input]
+        self.downgrades = [32, 16]
+
+        self.model = Model(*self.inputs, *self.outputs)
+        
+
 # MobileNetv2 but as like TinyYOLOv3
 class MadNetv1(DetBackend):
     def __init__(self, **kwargs):
