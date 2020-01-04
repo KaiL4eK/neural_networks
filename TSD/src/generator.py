@@ -25,7 +25,8 @@ class BatchGenerator(Sequence):
                  min_net_size=None,
                  max_net_size=None,
                  mem_mode=True,
-                 tile_count=1
+                 tile_count=1,
+                 anchors_per_output=3
                  ):
 
         self.instances = instances
@@ -71,8 +72,8 @@ class BatchGenerator(Sequence):
         self.net_size_h = 0
         self.net_size_w = 0
 
-        self.anchors_per_output = 3
-        self.output_layers_count = len(self.anchors) // self.anchors_per_output
+        self.anchors_per_output = anchors_per_output
+        self.output_layers_count = len(self.downsample)  # len(self.anchors) // self.anchors_per_output
 
         self._bboxes_key = '__bboxes'
         self._tile_ann_bboxes_key = '__tile_annot_bboxes'

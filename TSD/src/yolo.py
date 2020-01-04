@@ -25,8 +25,9 @@ class YoloLayer(Layer):
         # make the model settings persistent
         self.iou_thresh = iou_thresh
         self.warmup_batches = warmup_batches
+        self.anchors_per_output = len(anchors) // 2
         self.anchors = tf.constant(
-            anchors, dtype='float', shape=[1, 1, 1, len(anchors)/2, 2])
+            anchors, dtype='float', shape=[1, 1, 1, self.anchors_per_output, 2])
         self.grid_scale = grid_scale
         self.obj_scale = obj_scale
         self.noobj_scale = noobj_scale
@@ -61,7 +62,7 @@ class YoloLayer(Layer):
         cell_y = tf.transpose(cell_y, (0, 2, 1, 3, 4))
         self.cell_grid = tf.tile(
             tf.concat([cell_x, cell_y], -1),
-            [batch_size, 1, 1, 3, 1]
+            [batch_size, 1, 1, self.anchors_per_output, 1]
         )
 
         super(YoloLayer, self).__init__(**kwargs)
@@ -75,10 +76,10 @@ class YoloLayer(Layer):
 
         t_batch_size = tf.cast(tf.shape(y_pred)[0], tf.float32)
 
-        # adjust the shape of the y_predict [batch, grid_h, grid_w, 3, 4+1+nb_class]
+        # adjust the shape of the y_predict [batch, grid_h, grid_w, n_anchors, 4+1+nb_class]
         y_pred = tf.reshape(
             y_pred, tf.concat(
-                [tf.shape(y_pred)[:3], tf.constant([3, -1])],
+                [tf.shape(y_pred)[:3], tf.constant([self.anchors_per_output, -1])],
                 axis=0
             )
         )
@@ -461,7 +462,7 @@ class YOLO_Model:
                     corrected_boxes += [pred_box]
 
             return corrected_boxes
-        
+
     def timed_infer_image(self, image):
         tile_count = self.model_config.get('tiles', 1)
 
@@ -476,7 +477,7 @@ class YOLO_Model:
             'raw_boxes_count': 0,
             'out_boxes_count': 0
         }
-        
+
         start_time = time.time()
         if tile_count == 1:
             images_batch = np.expand_dims(image, axis=0)
@@ -495,7 +496,7 @@ class YOLO_Model:
         time_stat['net_preproc'] = time.time() - start_time
 
         start_time = time.time()
-        batch_output = self.infer_model.predict_on_batch(batch_input)      
+        batch_output = self.infer_model.predict_on_batch(batch_input)
         time_stat['infer'] = time.time() - start_time
 
         start_time = time.time()
@@ -523,7 +524,7 @@ class YOLO_Model:
 
         pred_batch_boxes = batch_boxes
         time_stat['net_postproc'] = time.time() - start_time
-        
+
         start_time = time.time()
         if tile_count == 1:
             result = pred_batch_boxes[0]
@@ -542,7 +543,7 @@ class YOLO_Model:
 
             result = corrected_boxes
         time_stat['correction'] = time.time() - start_time
-        
+
         return result, time_stat
 
     def _infer_on_batch(self, images, return_boxes=True):
@@ -554,7 +555,7 @@ class YOLO_Model:
 
         batch_input = utils.image_normalize(batch_input)
 
-        batch_output = self.infer_model.predict_on_batch(batch_input)        
+        batch_output = self.infer_model.predict_on_batch(batch_input)
         batch_boxes = [None] * nb_images
         if not return_boxes:
             return None
@@ -579,7 +580,7 @@ class YOLO_Model:
 
             # for yolo_bbox in boxes:
                 # print("Before NMS: {}".format(yolo_bbox))
-                
+
             boxes = utils.correct_yolo_boxes(boxes, image_h, image_w, self.infer_sz[0], self.infer_sz[1])
             boxes = utils.do_nms(boxes, self.nms_thresh)
 
@@ -619,7 +620,7 @@ class YOLO_Model:
 
         _sum_inference_time = 0
         _inference_cnt = 0
-        
+
         for i in iterator:
             raw_image = generator.load_full_image(i)
 
@@ -628,13 +629,13 @@ class YOLO_Model:
             pred_boxes = self.infer_image(raw_image)
             _sum_inference_time += time.time() - _start_inf_time
             _inference_cnt += 1
-            
+
             score = np.array([box.get_best_class_score() for box in pred_boxes])
             pred_labels = np.array([box.label for box in pred_boxes])
 
             if len(pred_boxes) > 0:
                 pred_boxes = np.array(
-                    [[box.xmin, box.ymin, box.xmax, box.ymax, box.get_best_class_score()] 
+                    [[box.xmin, box.ymin, box.xmax, box.ymax, box.get_best_class_score()]
                         for box in pred_boxes])
             else:
                 pred_boxes = np.array([[]])
@@ -652,7 +653,7 @@ class YOLO_Model:
 
             for label in range(generator.num_classes()):
                 all_annotations[i][label] = \
-                    np.array([[box.xmin, box.ymin, box.xmax, box.ymax] 
+                    np.array([[box.xmin, box.ymin, box.xmax, box.ymax]
                               for box in annotations if box.class_idx == label])
 
 #             for pred_box in pred_boxes:
@@ -725,7 +726,7 @@ class YOLO_Model:
                     else:
                         false_positives = np.append(false_positives, 1)
                         true_positives = np.append(true_positives, 0)
-        
+
                 if save_path:
                     cv2.imwrite(fpath, render_image)
 

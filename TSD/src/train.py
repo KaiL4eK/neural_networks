@@ -119,6 +119,7 @@ def prepare_generators(config):
     train_generator = BatchGenerator(
         instances=train_ints,
         anchors=config['model']['anchors'],
+        anchors_per_output=config['model']['anchors_per_output'],
         labels=labels,
         # ratio between network input's size and network output's size, 32 for YOLOv3
         downsample=config['model']['downsample'],
@@ -135,6 +136,7 @@ def prepare_generators(config):
     valid_generator = BatchGenerator(
         instances=valid_ints,
         anchors=config['model']['anchors'],
+        anchors_per_output=config['model']['anchors_per_output'],
         labels=labels,
         # ratio between network input's size and network output's size, 32 for YOLOv3
         downsample=config['model']['downsample'],
@@ -258,15 +260,15 @@ def start_train(
         period=1
     )
 
-    tensorboard_logdir = utils.get_tensorboard_name(config)
-    utils.makedirs(tensorboard_logdir)
-    print('Tensorboard dir: {}'.format(tensorboard_logdir))
+    # tensorboard_logdir = utils.get_tensorboard_name(config)
+    # utils.makedirs(tensorboard_logdir)
+    # print('Tensorboard dir: {}'.format(tensorboard_logdir))
 
-    tensorboard_cb = TensorBoard(
-        log_dir=tensorboard_logdir,
-        histogram_freq=0,
-        write_graph=False
-    )
+    # tensorboard_cb = TensorBoard(
+    #     log_dir=tensorboard_logdir,
+    #     histogram_freq=0,
+    #     write_graph=False
+    # )
 
     mAP_checkpoint_name = utils.get_mAP_checkpoint_name(config)
     mAP_checkpoint_static_name = utils.get_mAP_checkpoint_static_name(config)
@@ -318,7 +320,6 @@ def start_train(
         early_stop
     ]
     callbacks += [reduce_on_plateau]
-    # callbacks += [fps_logger]
     # callbacks += [checkpoint_vloss]
 
     ###############################

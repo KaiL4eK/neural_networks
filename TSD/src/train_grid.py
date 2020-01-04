@@ -6,7 +6,6 @@ import numpy as np
 import json
 import yolo
 import tensorflow as tf
-from generator import BatchGenerator
 from _common.utils import normalize, evaluate, makedirs, init_session, unfreeze_model
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
