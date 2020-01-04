@@ -302,6 +302,11 @@ def start_train(
         verbose=1
     )
 
+    neptune_mon = cbs.NeptuneMonitor(
+        monitoring=['loss', 'val_loss'],
+        neptune=neptune
+    )
+
     # logger_cb = cbs.CustomLogger(
     #     config=config,
     #     tensorboard=tensorboard_cb
@@ -317,10 +322,10 @@ def start_train(
     callbacks = [
         # tensorboard_cb,
         map_evaluator_cb,
-        early_stop
+        early_stop,
+        reduce_on_plateau,
+        neptune_mon,
     ]
-    callbacks += [reduce_on_plateau]
-    # callbacks += [checkpoint_vloss]
 
     ###############################
     #   Prepare fit

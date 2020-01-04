@@ -48,7 +48,7 @@
         "obj_scale":            5,
         "noobj_scale":          1,
         "xywh_scale":           1,
-        "class_scale":          7,
+        "class_scale":          1,
 
         "debug":                false,
         "freeze":               false,
