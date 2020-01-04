@@ -339,6 +339,7 @@ class YOLO_Model:
                     'MbN2':        (backend.MobileNetV2,       ""),
                     'SmallMbN2':   (backend.SmallMobileNetV2,  ""),
                     'RF_MbN2':     (backend.RFMobileNetV2,     ""),
+                    'RF2_MbN2':    (backend.RF2MobileNetV2,    ""),
                     'MadNet1':     (backend.MadNetv1,          ""),
                     'SqueezeNet':  (backend.SqueezeNet,        ""),
                     'Xception':    (backend.Xception,          "")
