@@ -69,6 +69,7 @@ def prepare_generators(config):
         print("valid_annot_folder not exists. Spliting the trainining set.")
 
         train_ints, valid_ints = train_test_split(train_ints,
+                                                  random_state=37,
                                                   test_size=0.4)
 
         train_labels = voc.get_labels_dict(train_ints)
@@ -324,22 +325,24 @@ def start_train(
         map_evaluator_cb,
         early_stop,
         reduce_on_plateau,
-        neptune_mon,
     ]
 
     ###############################
     #   Prepare fit
     ###############################
-    with open('config.json', 'w') as f:
-        json.dump(config, f, indent=4)
-
-    sources_to_upload = [
-        'yolo.py',
-        '_common/backend.py',
-        'config.json'
-    ]
 
     if not dry_mode:
+        callbacks.append(neptune_mon)
+
+        with open('config.json', 'w') as f:
+            json.dump(config, f, indent=4)
+
+        sources_to_upload = [
+            'yolo.py',
+            '_common/backend.py',
+            'config.json'
+        ]
+
         params = {
             'base_params': str(config['model']['base_params']),
             'infer_size': "H{}xW{}".format(*config['model']['infer_shape']),
@@ -355,7 +358,7 @@ def start_train(
             params=params
         )
     else:
-        config['train']['nb_epochs'] = 1
+        config['train']['nb_epochs'] = 10
 
     yolo_model.train_model.compile(loss=yolo.dummy_loss, optimizer=optimizer)
     yolo_model.train_model.fit_generator(

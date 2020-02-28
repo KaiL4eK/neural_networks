@@ -6,8 +6,53 @@ from tensorflow.keras.utils import Sequence
 from _common.bbox import BoundBox, bbox_iou
 from _common.image import apply_random_scale_and_crop, random_distort_image, random_flip
 
+import albumentations as albu
+
 import logging
 logger = logging.getLogger(__name__)
+
+
+
+
+from albumentations.augmentations import functional as F
+from albumentations.core.transforms_interface import DualTransform
+
+class ResizeKeepingRatio(DualTransform):
+    """Rescale an image so that maximum side is equal to max_size, keeping the aspect ratio of the initial image.
+
+    Args:
+        target_wh (tuple): target size to embed image.
+        interpolation (OpenCV flag): interpolation method. Default: cv2.INTER_LINEAR.
+        p (float): probability of applying the transform. Default: 1.
+
+    Targets:
+        image, mask, bboxes, keypoints
+
+    Image types:
+        uint8, float32
+    """
+
+    def __init__(self, target_wh=(1024, 768), interpolation=1, always_apply=False, p=1):
+        super(ResizeKeepingRatio, self).__init__(always_apply, p)
+        self.interpolation = interpolation
+        self.target_wh = np.array(target_wh).astype(np.float32)
+
+    def apply(self, img, interpolation=1, **params):
+        im_sz = np.array([params["cols"], params["rows"]])
+        scale = min(self.target_wh/im_sz)
+        return F.scale(img, scale=scale, interpolation=interpolation)
+
+    def apply_to_bbox(self, bbox, **params):
+        # Bounding box coordinates are scale invariant
+        return bbox
+
+    def apply_to_keypoint(self, keypoint, **params):
+        im_sz = np.array([params["cols"], params["rows"]])
+        scale = min(self.target_wh/im_sz)
+        return F.keypoint_scale(keypoint, scale, scale)
+
+    def get_transform_init_args_names(self):
+        return ("target_wh", "interpolation")
 
 
 class BatchGenerator(Sequence):
@@ -26,7 +71,7 @@ class BatchGenerator(Sequence):
                  max_net_size=None,
                  mem_mode=True,
                  tile_count=1,
-                 anchors_per_output=3
+                 anchors_per_output=3 # Deprecated
                  ):
 
         self.instances = instances
@@ -53,17 +98,17 @@ class BatchGenerator(Sequence):
                                 self.max_downsample) * self.max_downsample
 
         # Augmentation params
-        self.aug_params = aug_params
-        if self.aug_params:
-            self.scale_distr = self.aug_params['scale_distr']
-            self.jitter = self.aug_params['jitter']
-            self.flip = self.aug_params['random_flip']
-            self.hue = self.aug_params['hue_var']
-            self.saturation = self.aug_params['saturation_var']
-            self.exposure = self.aug_params['exposure_var']
-            logger.info('Augmentation enabled')
-        else:
-            logger.warn('Augmentation disabled')
+#         self.aug_params = aug_params
+#         if self.aug_params:
+#             self.scale_distr = self.aug_params['scale_distr']
+#             self.jitter = self.aug_params['jitter']
+#             self.flip = self.aug_params['random_flip']
+#             self.hue = self.aug_params['hue_var']
+#             self.saturation = self.aug_params['saturation_var']
+#             self.exposure = self.aug_params['exposure_var']
+#             logger.info('Augmentation enabled')
+#         else:
+#             logger.warn('Augmentation disabled')
 
         self.norm = norm
         self.anchors = [BoundBox(0, 0, anchors[2 * i], anchors[2 * i + 1])
@@ -72,8 +117,8 @@ class BatchGenerator(Sequence):
         self.net_size_h = 0
         self.net_size_w = 0
 
-        self.anchors_per_output = anchors_per_output
-        self.output_layers_count = len(self.downsample)  # len(self.anchors) // self.anchors_per_output
+        self.anchors_per_output = len(self.anchors) // len(self.downsample)
+        self.output_layers_count = len(self.downsample)
 
         self._bboxes_key = '__bboxes'
         self._tile_ann_bboxes_key = '__tile_annot_bboxes'
@@ -161,10 +206,58 @@ class BatchGenerator(Sequence):
         instance_count = 0
         true_box_index = 0
 
+        fill_value = [127]*3
+
+        if self.infer_sz is None:
+            augmentations = [
+                albu.OneOf([
+                    albu.IAAAdditiveGaussianNoise(),
+                    albu.GaussNoise(),
+                ], p=0.2),
+                albu.OneOf([
+                    albu.MotionBlur(p=0.2),
+                    albu.MedianBlur(blur_limit=3, p=0.1),
+                    albu.Blur(blur_limit=3, p=0.1),
+                ], p=0.2),
+                albu.OneOf([
+                    albu.CLAHE(clip_limit=2),
+                    albu.IAASharpen(),
+                    albu.IAAEmboss(),
+                    albu.RandomBrightnessContrast(),
+                ], p=0.3),
+                albu.HueSaturationValue(p=0.3),
+                albu.JpegCompression(quality_lower=50, quality_upper=100, p=.5),
+                albu.MultiplicativeNoise(multiplier=[.5, 1.5], per_channel=True, p=.5),
+
+                ResizeKeepingRatio(target_wh=(net_w, net_h), always_apply=True),
+                albu.PadIfNeeded(min_height=net_h,
+                                min_width=net_w,
+                                border_mode=0,
+                                value=fill_value,
+                                always_apply=True),
+
+                albu.ShiftScaleRotate(shift_limit=.15, scale_limit=.1,
+                                      rotate_limit=15, interpolation=3,
+                                      border_mode=0, value=fill_value, p=.5),
+            ]
+        else:
+            augmentations = [
+                ResizeKeepingRatio(target_wh=(net_w, net_h), always_apply=True),
+                albu.PadIfNeeded(min_height=net_h,
+                                min_width=net_w,
+                                border_mode=0,
+                                value=fill_value,
+                                always_apply=True),
+            ]
+
+        transform = albu.Compose(augmentations,
+                                bbox_params=albu.BboxParams(format='pascal_voc',
+                                                            label_fields=['cat_name']))
+
         # do the logic to fill in the inputs and the output
         for inst_idx in range(l_bound, r_bound):
             # augment input image and fix object's position and size
-            img, all_objs = self._aug_image(inst_idx, net_h, net_w)
+            img, all_objs = self._aug_image(inst_idx, net_h, net_w, transform)
 
             for objbox in all_objs:
                 # find the best anchor box for this object
@@ -205,6 +298,8 @@ class BatchGenerator(Sequence):
                            float(max_anchor.xmax))  # t_w
                 h = np.log((objbox.ymax - objbox.ymin) /
                            float(max_anchor.ymax))  # t_h
+                if max_anchor.ymax == 0:
+                    print(max_anchor)
 
                 box = [center_x, center_y, w, h]
 
@@ -264,103 +359,49 @@ class BatchGenerator(Sequence):
     def _get_net_size(self, idx):
         return self._update_net_size(idx)
 
+    def _get_random_input_size(self):
+        net_size_h = self.max_downsample * \
+                        np.random.randint(self.min_net_size[0] / self.max_downsample,
+                                            self.max_net_size[0] / self.max_downsample + 1)
+        net_size_w = self.max_downsample * \
+                        np.random.randint(self.min_net_size[1] / self.max_downsample,
+                                            self.max_net_size[1] / self.max_downsample + 1)
+
+        return net_size_h, net_size_w
+
     def _update_net_size(self, idx):
         if self.infer_sz:
             self.net_size_h, self.net_size_w = self.infer_sz
 
         elif idx % 10 == 0 or self.net_size_w == 0:
-            net_size_h = self.max_downsample * \
-                            np.random.randint(self.min_net_size[0] / self.max_downsample,
-                                              self.max_net_size[0] / self.max_downsample + 1)
-            net_size_w = self.max_downsample * \
-                            np.random.randint(self.min_net_size[1] / self.max_downsample,
-                                              self.max_net_size[1] / self.max_downsample + 1)
-
-            self.net_size_h, self.net_size_w = net_size_h, net_size_w
+            self.net_size_h, self.net_size_w = self._get_random_input_size()
 
         return self.net_size_h, self.net_size_w
 
-    def _aug_image(self, idx, net_h, net_w):
+    def _aug_image(self, idx, net_h, net_w, transform):
         image = self._load_image(idx)
-        boxes = self._load_annotation_bboxes(idx)
+        boxes, cat_names = self._load_annotation_bboxes_voc(idx)
 
         if image is None:
             print('Cannot find ', image_name)
 
         image_h, image_w, _ = image.shape
 
-        if self.aug_params:
-            # image = image[:,:,::-1] # RGB image
-            flip = 0
+        _input = {
+            'image': image,
+            'bboxes': boxes,
+            'cat_name': cat_names
+        }
 
-            # determine the amount of scaling and cropping
-            dw = self.jitter * image_w
-            dh = self.jitter * image_h
+        transformed = transform(**_input)
 
-            new_ar = (image_w + np.random.uniform(-dw, dw)) / \
-                     (image_h + np.random.uniform(-dh, dh))
-            scale = np.random.uniform(
-                        1 - self.scale_distr,
-                        1 + self.scale_distr)
+        boxes = [BoundBox(*(np.array(box, dtype=int)),
+                        label_name=lbl_name,
+                        label_idx=self.labels.index(lbl_name))
+                for box, lbl_name in zip(transformed['bboxes'],
+                                        transformed['cat_name'])]
 
-            if new_ar < 1:
-                new_h = int(scale * net_h)
-                new_w = int(net_h * new_ar)
-            else:
-                new_w = int(scale * net_w)
-                new_h = int(net_w / new_ar)
-
-            dx = int(np.random.uniform(0, net_w - new_w))
-            dy = int(np.random.uniform(0, net_h - new_h))
-
-            # print(new_w, new_h, net_w, net_h, image_h, image_w)
-
-            # apply scaling and cropping
-            im_sized = apply_random_scale_and_crop(
-                image,
-                new_w, new_h,
-                net_w, net_h,
-                dx, dy)
-
-            # randomly distort hsv space
-            im_sized = random_distort_image(
-                im_sized,
-                hue=self.hue,
-                saturation=self.saturation,
-                exposure=self.exposure)
-
-            # randomly flip
-            if self.flip:
-                flip = np.random.randint(2)
-                im_sized = random_flip(im_sized, flip)
-
-            # correct the size and pos of bounding boxes
-            boxes = self._correct_bounding_boxes(
-                    boxes,
-                    new_w, new_h,
-                    net_h, net_w,
-                    image_w, image_h,
-                    dx, dy,
-                    flip)
-        else:
-            new_h, new_w = cutls.get_embedded_img_sz(
-                            image.shape[0:2],
-                            (net_h, net_w))
-
-            im_sized = cutls.image2net_input_sz(
-                        image, net_h, net_w)
-
-            dx = int(net_w - new_w)/2
-            dy = int(net_h - new_h)/2
-
-            boxes = self._correct_bounding_boxes(
-                    boxes,
-                    new_w, new_h,
-                    net_h, net_w,
-                    image_w, image_h,
-                    dx, dy)
-
-        return im_sized, boxes
+        return transformed['image'], boxes
 
     def on_epoch_end(self):
         if self.shuffle:
@@ -386,34 +427,6 @@ class BatchGenerator(Sequence):
 
         return anchors
 
-    def _correct_bounding_boxes(self, boxes, new_w, new_h, net_h, net_w,
-                                image_w, image_h, dx=0, dy=0, flip=0):
-        # randomize boxes' order
-        np.random.shuffle(boxes)
-
-        # correct sizes and positions
-        sx, sy = float(new_w)/image_w, float(new_h)/image_h
-
-        corrected_boxes = []
-
-        for box in boxes:
-            box.xmin = int(np.clip(box.xmin*sx + dx, 0, net_w))
-            box.xmax = int(np.clip(box.xmax*sx + dx, 0, net_w))
-            box.ymin = int(np.clip(box.ymin*sy + dy, 0, net_h))
-            box.ymax = int(np.clip(box.ymax*sy + dy, 0, net_h))
-
-            if box.xmax <= box.xmin or box.ymax <= box.ymin:
-                continue
-
-            if flip == 1:
-                swap = box.xmin
-                box.xmin = net_w - box.xmax
-                box.xmax = net_w - swap
-
-            corrected_boxes += [box]
-
-        return corrected_boxes
-
     def load_full_image(self, i):
         img_idx = int(i / self.tile_count)
         return cv2.imread(self.instances[img_idx]['filename'])
@@ -438,3 +451,10 @@ class BatchGenerator(Sequence):
         tile_idx = i % self.tile_count
 
         return copy.deepcopy(self.instances[img_idx][self._tile_ann_bboxes_key][tile_idx])
+
+    def _load_annotation_bboxes_voc(self, i):
+        img_idx = int(i / self.tile_count)
+        tile_idx = i % self.tile_count
+        boxes = self.instances[img_idx][self._tile_ann_bboxes_key][tile_idx]
+
+        return [box.as_voc_list() for box in boxes], [box.class_name for box in boxes]

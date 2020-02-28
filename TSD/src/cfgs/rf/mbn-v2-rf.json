@@ -3,10 +3,10 @@
         "main_name":            "RF_TSD_MbNv2",
         "base":                 "RF_MbN2",
         "base_params": {
-            "alpha": 0.5
+            "alpha": 0.75
         },
         "downsample":           [32, 16],
-        "anchors":              [27,36, 45,48, 56,63, 67,82, 87,92, 110,119],
+        "anchors":              [26,36, 44,50, 58,63, 59,87, 80,85, 106,114],
         "labels":               [],
         "infer_shape":          [384, 416],
         "tiles":                1,
@@ -14,13 +14,13 @@
     },
 
     "train": {
-        "image_folder":         ["../data/RF/TSD/RF17/Images", "../data/RF/TSD/RF19/Images", "../data/RF/TSD/Uni/Images"],
-        "annot_folder":         ["../data/RF/TSD/RF17/Annotations", "../data/RF/TSD/RF19/Annotations", "../data/RF/TSD/Uni/Annotations"],
+        "image_folder":         ["../data/RF/TSD/RF17/Images", "../data/RF/TSD/RF19/Images", "../data/RF/TSD/RF19_2/Images", "../data/RF/TSD/Uni/Images"],
+        "annot_folder":         ["../data/RF/TSD/RF17/Annotations", "../data/RF/TSD/RF19/Annotations", "../data/RF/TSD/RF19_2/Annotations", "../data/RF/TSD/Uni/Annotations"],
         "cache_name":           "",
 
         "augmentation": {
             "jitter":           0.2,
-            "scale_distr":      0.25,
+            "scale_distr":      0.2,
             "random_flip":      false,
             "hue_var":          20,
             "saturation_var":   1.2,
@@ -28,7 +28,7 @@
         },
 
         "min_input_size":       [288, 288],
-        "max_input_size":       [416, 448],
+        "max_input_size":       [448, 448],
 
         "train_times":          1,
         "batch_size":           16,
@@ -40,12 +40,12 @@
         "gpus":                 "0",
 
         "optimizer":            "Adam",
-        "learning_rate":        1e-4,
-        "lr_decay":             0.00001,
+        "learning_rate":        1e-3,
+        "lr_decay":             0.0001,
         "clipnorm":             0.001,
 
         "grid_scales":          [1,1,1],
-        "obj_scale":            1,
+        "obj_scale":            5,
         "noobj_scale":          1,
         "xywh_scale":           1,
         "class_scale":          1,

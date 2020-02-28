@@ -6,21 +6,21 @@
 
         },
         "downsample":           [32, 16],
-        "anchors":              [24,33, 39,65, 45,47, 58,64, 73,86, 103,112],
+        "anchors":              [26,36, 44,50, 58,63, 59,87, 80,85, 106,114],
         "labels":               [],
-        "infer_shape":          [416, 416],
+        "infer_shape":          [384, 416],
         "tiles":                1,
         "anchors_per_output":   3
     },
 
     "train": {
-        "image_folder":         ["../data/RF/TSD/RF17/Images", "../data/RF/TSD/RF19/Images", "../data/RF/TSD/Uni/Images"],
-        "annot_folder":         ["../data/RF/TSD/RF17/Annotations", "../data/RF/TSD/RF19/Annotations", "../data/RF/TSD/Uni/Annotations"],
+        "image_folder":         ["../data/RF/TSD/RF17/Images", "../data/RF/TSD/RF19/Images", "../data/RF/TSD/RF19_2/Images", "../data/RF/TSD/Uni/Images"],
+        "annot_folder":         ["../data/RF/TSD/RF17/Annotations", "../data/RF/TSD/RF19/Annotations", "../data/RF/TSD/RF19_2/Annotations", "../data/RF/TSD/Uni/Annotations"],
         "cache_name":           "",
 
         "augmentation": {
             "jitter":           0.2,
-            "scale_distr":      0.25,
+            "scale_distr":      0.2,
             "random_flip":      false,
             "hue_var":          20,
             "saturation_var":   1.2,
@@ -48,7 +48,7 @@
         "obj_scale":            5,
         "noobj_scale":          1,
         "xywh_scale":           1,
-        "class_scale":          7,
+        "class_scale":          1,
 
         "debug":                false,
         "freeze":               false,

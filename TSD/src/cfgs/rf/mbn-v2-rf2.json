@@ -3,14 +3,14 @@
         "main_name":            "RF2_TSD_MbNv2",
         "base":                 "RF2_MbN2",
         "base_params": {
-            "alpha": 0.5
+            "alpha": 1.25
         },
         "downsample":           [16],
         "anchors":              [26,37, 46,51, 63,75, 95,102],
         "labels":               [],
         "infer_shape":          [384, 416],
         "tiles":                1,
-        "anchors_per_output":   4
+        "anchors_per_output":   3
     },
 
     "train": {
@@ -22,16 +22,16 @@
             "jitter":           0.2,
             "scale_distr":      0.2,
             "random_flip":      false,
-            "hue_var":          5,
-            "saturation_var":   1.03,
-            "exposure_var":     1.03
+            "hue_var":          20,
+            "saturation_var":   1.2,
+            "exposure_var":     1.2
         },
 
         "min_input_size":       [288, 288],
-        "max_input_size":       [416, 448],
+        "max_input_size":       [448, 448],
 
         "train_times":          1,
-        "batch_size":           16,
+        "batch_size":           8,
         "nb_epochs":            500,
         "warmup_epochs":        0,
         "obj_thresh":           0.5,
@@ -39,11 +39,11 @@
         "nms_thresh":           0.5,
         "gpus":                 "0",
 
-        "optimizer":            "Adam",
+        "optimizer":            "Nadam",
         "learning_rate":        1e-4,
-        "lr_decay":             0.00001,
-        "clipnorm":             0.001,
-
+        "lr_decay":             0.0000,
+        "clipnorm":             0.00,
+        
         "grid_scales":          [1,1,1],
         "obj_scale":            5,
         "noobj_scale":          1,
