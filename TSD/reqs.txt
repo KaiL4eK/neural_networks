@@ -6,3 +6,4 @@ neptune-client
 psutil
 numba
 keras-rectified-adam
+opencv-python-headless==4.2.0.32

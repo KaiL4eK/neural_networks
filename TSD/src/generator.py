@@ -228,7 +228,12 @@ class BatchGenerator(Sequence):
                 albu.HueSaturationValue(p=0.3),
                 albu.JpegCompression(quality_lower=50, quality_upper=100, p=.5),
                 albu.MultiplicativeNoise(multiplier=[.5, 1.5], per_channel=True, p=.5),
-
+                albu.OneOf([
+                    albu.RandomRain(),
+                    albu.RandomFog(),
+                    albu.RandomSunFlare(),
+                    albu.RandomShadow(),
+                ], p=0.1),
                 ResizeKeepingRatio(target_wh=(net_w, net_h), always_apply=True),
                 albu.PadIfNeeded(min_height=net_h,
                                 min_width=net_w,
@@ -294,12 +299,13 @@ class BatchGenerator(Sequence):
                 center_y = center_y / float(net_h) * grid_h  # sigma(t_y) + c_y
 
                 # determine the sizes of the bounding box
+                if max_anchor.xmax == 0 or max_anchor.ymax == 0:
+                    print(max_anchor)
+
                 w = np.log((objbox.xmax - objbox.xmin) /
                            float(max_anchor.xmax))  # t_w
                 h = np.log((objbox.ymax - objbox.ymin) /
                            float(max_anchor.ymax))  # t_h
-                if max_anchor.ymax == 0:
-                    print(max_anchor)
 
                 box = [center_x, center_y, w, h]
 
@@ -321,6 +327,8 @@ class BatchGenerator(Sequence):
                 true_box = [center_x, center_y,
                             objbox.xmax - objbox.xmin,
                             objbox.ymax - objbox.ymin]
+
+                # print(true_box)
                 t_batch[instance_count, 0, 0, 0, true_box_index] = true_box
 
                 true_box_index += 1
@@ -330,6 +338,8 @@ class BatchGenerator(Sequence):
             if self.norm:
                 # print(net_h, net_w, x_batch.shape, img.shape)
                 x_batch[instance_count] = self.norm(img)
+                # assert np.amax(x_batch) <= 1
+                # assert np.amin(x_batch) >= 0
             else:
                 # plot image and bounding boxes for sanity check
                 for objbox in all_objs:

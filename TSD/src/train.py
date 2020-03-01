@@ -225,14 +225,15 @@ def start_train(
     ###############################
 
     optimizers = {
-        'SGD': opt.SGD(lr=config['train']['learning_rate']),
-        'Adam': opt.Adam(lr=config['train']['learning_rate']),
-        'Nadam': opt.Nadam(lr=config['train']['learning_rate']),
-        'RMSprop': opt.RMSprop(lr=config['train']['learning_rate']),
+        'sgd': opt.SGD(lr=config['train']['learning_rate']),
+        'adam': opt.Adam(lr=config['train']['learning_rate']),
+        'adamax': opt.Adamax(lr=config['train']['learning_rate']),
+        'nadam': opt.Nadam(lr=config['train']['learning_rate']),
+        'rmsprop': opt.RMSprop(lr=config['train']['learning_rate']),
         # 'Radam': RAdam(lr=config['train']['learning_rate'], warmup_proportion=0.1, min_lr=1e-5)
     }
 
-    optimizer = optimizers[config['train']['optimizer']]
+    optimizer = optimizers[config['train']['optimizer'].lower()]
 
     if config['train']['clipnorm'] > 0:
         optimizer.clipnorm = config['train']['clipnorm']
@@ -346,16 +347,22 @@ def start_train(
         params = {
             'base_params': str(config['model']['base_params']),
             'infer_size': "H{}xW{}".format(*config['model']['infer_shape']),
-            'tile_count': config['model']['tiles'],
             'anchors_per_output': config['model']['anchors_per_output'],
             'anchors': str(config['model']['anchors'])
         }
+        
+        tags = [
+            config['model']['base']
+        ]
 
+        logger.info('Tags: {}'.format(tags))
+        
         neptune.create_experiment(
             name=utils.get_neptune_name(config),
             upload_stdout=False,
             upload_source_files=sources_to_upload,
-            params=params
+            params=params,
+            tags=tags
         )
     else:
         config['train']['nb_epochs'] = 10

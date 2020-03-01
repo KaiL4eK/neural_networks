@@ -17,7 +17,10 @@ import os
 
 
 def dummy_loss(y_true, y_pred):
-    return tf.sqrt(tf.reduce_sum(y_pred))
+    tf.debugging.check_numerics(y_pred, 'Bad pred dummy')
+
+    t_batch_size = tf.cast(tf.shape(y_pred)[0], tf.float32)
+    return tf.sqrt(tf.reduce_sum(y_pred)/t_batch_size)
 
 
 class YoloLayer(Layer):
@@ -78,7 +81,10 @@ class YoloLayer(Layer):
     def call(self, x):
         input_image, y_pred, y_true, true_boxes = x
 
-        t_batch_size = tf.cast(tf.shape(y_pred)[0], tf.float32)
+        # tf.debugging.check_numerics(input_image, 'Bad input image')
+        # tf.debugging.check_numerics(true_boxes, 'Bad true boxes')
+        # tf.debugging.check_numerics(y_true, 'Bad true')
+        # tf.debugging.check_numerics(y_pred, 'Bad pred: {}'.format(tf.shape(y_pred)))
 
         # adjust the shape of the y_predict [batch, grid_h, grid_w, n_anchors, 4+1+nb_class]
         y_pred = tf.reshape(
@@ -174,14 +180,22 @@ class YoloLayer(Layer):
         bce_class = binary_crossentropy(true_box_class, pred_box_class)
         class_delta = object_mask * tf.expand_dims(bce_class, 4) * self.class_scale
 
-        loss_xy = tf.reduce_sum(tf.square(xy_delta), list(range(1, 5)))
-        loss_wh = tf.reduce_sum(tf.square(wh_delta), list(range(1, 5)))
-        loss_conf = tf.reduce_sum(tf.square(conf_delta), list(range(1, 5)))
+        loss_xy = tf.reduce_sum(tf.abs(xy_delta), list(range(1, 5)))
+        loss_wh = tf.reduce_sum(tf.abs(wh_delta), list(range(1, 5)))
+        loss_conf = tf.reduce_sum(conf_delta, list(range(1, 5)))
         loss_class = tf.reduce_sum(class_delta, list(range(1, 5)))
+        # print(loss_xy)
         # print(loss_wh)
+        # print(loss_conf)
+        # print(loss_class)
+
+        # tf.debugging.check_numerics(loss_xy, 'Bad loss_xy')
+        # tf.debugging.check_numerics(loss_wh, 'Bad loss_wh')
+        # tf.debugging.check_numerics(loss_conf, 'Bad loss_conf')
+        # tf.debugging.check_numerics(loss_class, 'Bad loss_class')
 
         loss = loss_xy + loss_wh + loss_conf + loss_class
-        return loss * self.grid_scale / t_batch_size
+        return loss * self.grid_scale
 
     def compute_output_shape(self, input_shape):
         return [(None, 1)]
@@ -276,7 +290,7 @@ class YOLO_Model:
         for i in range(len(self.backend.outputs)):
             # grid_h, grid_w, nb_anchor, 5+nb_class
             true_yolo = Input(shape=(None, None, apo, 4+1+self.nb_classes),
-                            name='input_true_yolo_{}_x{}'.format(i, self.backend.downgrades[i]))
+                              name='input_true_yolo_{}_x{}'.format(i, self.backend.downgrades[i]))
             true_yolos += [true_yolo]
 
         yolo_anchors = []
@@ -305,9 +319,6 @@ class YOLO_Model:
             loss_yolos += [loss_yolo]
 
         self.train_model = Model([image_input, true_boxes] + true_yolos, loss_yolos)
-
-        # import tensorflow.keras.backend as K
-        # print('>>>> {}'.format(K.shape(out)[1]))
 
     def load_weights(self, weights_fpath: str):
         if os.path.exists(weights_fpath):
