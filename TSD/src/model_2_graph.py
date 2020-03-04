@@ -124,14 +124,15 @@ def _main_():
     if ir_flag:
         try:
             import mo_tf
-            
-            from subprocess import call
             openvino_found = True
         except ModuleNotFoundError:
             print('OpenVINO environment not found')
             openvino_found = False
 
         if openvino_found:
+            from subprocess import call
+            import sys
+            
             output_folder = "_gen/ir_models"
             makedirs(output_folder)
             result_pb_fname = Path(frozen_graph_filename).name

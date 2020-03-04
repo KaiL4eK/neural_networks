@@ -81,10 +81,10 @@ class YoloLayer(Layer):
     def call(self, x):
         input_image, y_pred, y_true, true_boxes = x
 
-        # tf.debugging.check_numerics(input_image, 'Bad input image')
-        # tf.debugging.check_numerics(true_boxes, 'Bad true boxes')
-        # tf.debugging.check_numerics(y_true, 'Bad true')
-        # tf.debugging.check_numerics(y_pred, 'Bad pred: {}'.format(tf.shape(y_pred)))
+        tf.debugging.check_numerics(input_image, 'Bad input image')
+        tf.debugging.check_numerics(true_boxes, 'Bad true boxes')
+        tf.debugging.check_numerics(y_true, 'Bad true')
+        tf.debugging.check_numerics(y_pred, 'Bad pred: {}'.format(tf.shape(y_pred)))
 
         # adjust the shape of the y_predict [batch, grid_h, grid_w, n_anchors, 4+1+nb_class]
         y_pred = tf.reshape(
@@ -121,6 +121,7 @@ class YoloLayer(Layer):
         pred_box_conf = tf.expand_dims(tf.sigmoid(y_pred[..., 4]), 4)
         # adjust class probabilities
         pred_box_class = tf.sigmoid(y_pred[..., 5:])
+#         pred_box_class = y_pred[..., 5:]
 
         """
         Adjust ground truth
@@ -189,10 +190,10 @@ class YoloLayer(Layer):
         # print(loss_conf)
         # print(loss_class)
 
-        # tf.debugging.check_numerics(loss_xy, 'Bad loss_xy')
-        # tf.debugging.check_numerics(loss_wh, 'Bad loss_wh')
-        # tf.debugging.check_numerics(loss_conf, 'Bad loss_conf')
-        # tf.debugging.check_numerics(loss_class, 'Bad loss_class')
+        tf.debugging.check_numerics(loss_xy, 'Bad loss_xy')
+        tf.debugging.check_numerics(loss_wh, 'Bad loss_wh')
+        tf.debugging.check_numerics(loss_conf, 'Bad loss_conf')
+        tf.debugging.check_numerics(loss_class, 'Bad loss_class')
 
         loss = loss_xy + loss_wh + loss_conf + loss_class
         return loss * self.grid_scale
