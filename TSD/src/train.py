@@ -14,7 +14,7 @@ import numpy as np
 import json
 import yolo
 import tensorflow as tf
-from generator import BatchGenerator
+from my_generator import BatchGenerator
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard
 import tensorflow.keras.optimizers as opt
 # from keras_radam import RAdam
@@ -293,7 +293,7 @@ def start_train(
         mode='min',
         min_delta=0,
         cooldown=10,
-        min_lr=1e-5
+        min_lr=1e-8
     )
 
     early_stop = EarlyStopping(
@@ -324,7 +324,7 @@ def start_train(
     callbacks = [
         # tensorboard_cb,
         map_evaluator_cb,
-        early_stop,
+        # early_stop,
         reduce_on_plateau,
     ]
 

@@ -241,9 +241,9 @@ class BatchGenerator(Sequence):
                                 value=fill_value,
                                 always_apply=True),
 
-                albu.ShiftScaleRotate(shift_limit=.15, scale_limit=.1,
+                albu.ShiftScaleRotate(shift_limit=.25, scale_limit=.25,
                                       rotate_limit=15, interpolation=3,
-                                      border_mode=0, value=fill_value, p=.5),
+                                      border_mode=0, value=fill_value, p=.7),
             ]
         else:
             augmentations = [
@@ -257,6 +257,7 @@ class BatchGenerator(Sequence):
 
         transform = albu.Compose(augmentations,
                                 bbox_params=albu.BboxParams(format='pascal_voc',
+                                                            min_visibility=0.1,
                                                             label_fields=['cat_name']))
 
         # do the logic to fill in the inputs and the output
@@ -269,12 +270,14 @@ class BatchGenerator(Sequence):
                 max_anchor = None
                 max_index = -1
                 max_iou = -1
+                # print(objbox)
 
                 shifted_box = BoundBox(0,
                                        0,
                                        objbox.xmax - objbox.xmin,
                                        objbox.ymax - objbox.ymin)
 
+                # Get best matching anchor
                 for i in range(len(self.anchors)):
                     anchor = self.anchors[i]
                     iou = bbox_iou(shifted_box, anchor)
@@ -298,16 +301,19 @@ class BatchGenerator(Sequence):
                 center_y = .5 * (objbox.ymin + objbox.ymax)
                 center_y = center_y / float(net_h) * grid_h  # sigma(t_y) + c_y
 
-                # determine the sizes of the bounding box
-                if max_anchor.xmax == 0 or max_anchor.ymax == 0:
-                    print(max_anchor)
+                # if max_anchor.xmax == 0 or max_anchor.ymax == 0:
+                # print('>>>>> {}'.format(max_anchor))
 
+                # determine the sizes of the bounding box
                 w = np.log((objbox.xmax - objbox.xmin) /
                            float(max_anchor.xmax))  # t_w
                 h = np.log((objbox.ymax - objbox.ymin) /
                            float(max_anchor.ymax))  # t_h
 
                 box = [center_x, center_y, w, h]
+
+                if any(np.isinf(box)):
+                    print(objbox, box, np.isinf(box))
 
                 # determine the index of the label
                 obj_indx = self.labels.index(objbox.class_name)
